@@ -1,0 +1,6 @@
+{
+  "name": "DeutschMeister - Schritte Neu A1-B1 Trainer",
+  "description": "A comprehensive German learning platform based on Schritte International Neu A1 to B1 with 6 core skill areas (Vocabulary, Grammar & Verbs, Listening, Speaking, Reading, Writing), Spaced Repetition (SRS), native audio pronunciation, and interactive drills.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
