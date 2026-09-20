@@ -110,6 +110,9 @@ export default function App() {
   // Dark Mode active flag
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
+      const saved = localStorage.getItem(THEME_MODE_STORAGE_KEY);
+      if (saved === 'dark') return true;
+      if (saved === 'light') return false;
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     } catch {
       return false;
@@ -252,8 +255,22 @@ export default function App() {
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+
+    const themeHex = isDark ? '#2b303a' : '#f8f9fa';
+    document.documentElement.style.backgroundColor = themeHex;
+    document.body.style.backgroundColor = themeHex;
+
+    const themeMetas = document.querySelectorAll('meta[name="theme-color"]');
+    themeMetas.forEach((meta) => meta.setAttribute('content', themeHex));
+
+    const appleStatusMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (appleStatusMeta) {
+      appleStatusMeta.setAttribute('content', isDark ? 'black-translucent' : 'default');
     }
   }, [isDark]);
 
@@ -419,7 +436,7 @@ export default function App() {
 
   return (
     <div
-      className={`w-full bg-[#f8f9fa] dark:bg-[#1a1d24] text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200 ${
+      className={`w-full bg-[#f8f9fa] dark:bg-[#2b303a] text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200 ${
         isScrollableTab
           ? 'min-h-screen h-auto overflow-y-auto custom-scrollbar'
           : 'h-[100dvh] max-h-[100dvh] overflow-hidden select-none'

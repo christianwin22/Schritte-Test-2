@@ -14,6 +14,7 @@ import {
   MicOff,
   Keyboard,
   RotateCcw,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
@@ -104,13 +105,104 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         if (!isNaN(num) && num >= 1 && num <= 14) return num;
       }
     } catch {}
-    return 'ALL';
+    return 1;
   });
   const [isLessonDropdownOpen, setIsLessonDropdownOpen] = useState(false);
+
+  // Lesson Completion Tracking (requires completing at least 1 round of Learn AND 1 round of Practice)
+  // Pre-seeded with Lesson 1 (A1_L1) completed for immediate testing and verification
+  const [lessonProgress, setLessonProgress] = useState<
+    Record<string, { learnCompleted: boolean; practiceCompleted: boolean }>
+  >(() => {
+    const DEFAULT_LESSON_PROGRESS: Record<string, { learnCompleted: boolean; practiceCompleted: boolean }> = {
+      'A1_L1': { learnCompleted: true, practiceCompleted: true },
+    };
+    try {
+      const saved = localStorage.getItem('schritte_lesson_progress_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...DEFAULT_LESSON_PROGRESS, ...parsed };
+      }
+    } catch {}
+    return DEFAULT_LESSON_PROGRESS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('schritte_lesson_progress_v2', JSON.stringify(lessonProgress));
+    } catch {}
+  }, [lessonProgress]);
+
+  const [isLearnComplete, setIsLearnComplete] = useState(false);
+
+  const getLessonKey = (level: string, lektion: number | string) => `${level}_L${lektion}`;
+
+  const isLessonFullyCompleted = (level: string, lektion: number | 'ALL' | 'PART_1' | 'PART_2') => {
+    if (typeof lektion === 'number') {
+      const prog = lessonProgress[getLessonKey(level, lektion)];
+      return Boolean(prog?.learnCompleted && prog?.practiceCompleted);
+    }
+    if (lektion === 'PART_1') {
+      return [1, 2, 3, 4, 5, 6, 7].every((num) => {
+        const p = lessonProgress[getLessonKey(level, num)];
+        return Boolean(p?.learnCompleted && p?.practiceCompleted);
+      });
+    }
+    if (lektion === 'PART_2') {
+      return [8, 9, 10, 11, 12, 13, 14].every((num) => {
+        const p = lessonProgress[getLessonKey(level, num)];
+        return Boolean(p?.learnCompleted && p?.practiceCompleted);
+      });
+    }
+    return false;
+  };
+
+  const isLessonPracticeDone = (level: string, lektion: number) => {
+    return Boolean(lessonProgress[getLessonKey(level, lektion)]?.practiceCompleted);
+  };
+
+  const isLessonLearnDone = (level: string, lektion: number) => {
+    return Boolean(lessonProgress[getLessonKey(level, lektion)]?.learnCompleted);
+  };
+
+  const recordLessonLearnCompleted = (level: string, lektion: number) => {
+    const key = getLessonKey(level, lektion);
+    setLessonProgress((prev) => ({
+      ...prev,
+      [key]: {
+        learnCompleted: true,
+        practiceCompleted: prev[key]?.practiceCompleted || false,
+      },
+    }));
+  };
+
+  const recordLessonPracticeCompleted = (level: string, lektion: number) => {
+    const key = getLessonKey(level, lektion);
+    setLessonProgress((prev) => ({
+      ...prev,
+      [key]: {
+        learnCompleted: prev[key]?.learnCompleted || false,
+        practiceCompleted: true,
+      },
+    }));
+  };
 
   // Flashcard state
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
+  const [learnDirection, setLearnDirection] = useState<'DE_TO_EN' | 'EN_TO_DE'>(() => {
+    try {
+      const saved = localStorage.getItem('schritte_saved_learn_direction');
+      if (saved === 'EN_TO_DE' || saved === 'DE_TO_EN') return saved;
+    } catch {}
+    return 'DE_TO_EN';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('schritte_saved_learn_direction', learnDirection);
+    } catch {}
+  }, [learnDirection]);
 
   // Flashcard Sub-Mode: 'learn' (Flip) vs 'practice' vs 'review' - Persisted
   const [flashcardSubMode, setFlashcardSubMode] = useState<FlashcardSubMode>(() => {
@@ -537,6 +629,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         if (flashcardSubMode === 'practice') {
           const completedWordIds = filteredWords.map((w) => w.id);
           setFsrsRecords((prev) => unlockWordsAfterPractice(completedWordIds, prev));
+          if (typeof selectedLektion === 'number') {
+            recordLessonPracticeCompleted(selectedLevel, selectedLektion);
+          }
         }
       }
     }
@@ -579,7 +674,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setPracticeTypeInput('');
     setIsCardFlipped(false);
     setIsListening(false);
-    setFlashcardIndex((prev) => (prev + 1) % (filteredWords.length || 1));
+    if (flashcardIndex + 1 >= (filteredWords.length || 1)) {
+      if (typeof selectedLektion === 'number') {
+        recordLessonLearnCompleted(selectedLevel, selectedLektion);
+      }
+      setIsLearnComplete(true);
+      playSound('correct');
+    } else {
+      setFlashcardIndex((prev) => prev + 1);
+    }
   };
 
   const handlePrevFlashcard = () => {
@@ -588,6 +691,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setPracticeTypeInput('');
     setIsCardFlipped(false);
     setIsListening(false);
+    if (isLearnComplete) {
+      setIsLearnComplete(false);
+      setFlashcardIndex(Math.max(0, (filteredWords.length || 1) - 1));
+      return;
+    }
     setFlashcardIndex((prev) => (prev > 0 ? prev - 1 : (filteredWords.length || 1) - 1));
   };
 
@@ -648,6 +756,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       setMistakeWords([]);
       setPracticeScore(0);
       setIsPracticeComplete(false);
+      setIsLearnComplete(false);
       setPracticeFeedback(null);
       setPracticeTypeInput('');
       setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
@@ -672,6 +781,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       playSound('tap');
       setFlashcardSubMode(mode);
       setIsPracticeComplete(false);
+      setIsLearnComplete(false);
       setPracticeQueueIndex(0);
       setCurrentRedoBatch([]);
       setRoundNumber(1);
@@ -1098,12 +1208,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 className="fixed inset-0 z-20"
                 onClick={() => setIsLessonDropdownOpen(false)}
               />
-              <div className="absolute right-0 mt-1.5 z-30 w-72 sm:w-80 bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 space-y-2 animate-fadeIn">
+              <div className="absolute right-0 mt-1.5 z-30 w-80 sm:w-[360px] bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 space-y-2.5 animate-fadeIn">
                 {/* Header with All Button */}
-                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100 dark:border-zinc-800 gap-1">
+                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100 dark:border-zinc-800">
                   <span className="text-[11px] font-black text-zinc-500 dark:text-zinc-400">
                     {appLanguage === 'en' ? 'Lesson Filter:' : 'Lektionsfilter:'}
                   </span>
+
                   <button
                     onClick={() => {
                       playSound('tap');
@@ -1119,68 +1230,90 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   </button>
                 </div>
 
-                {/* 8-Column Grid: Row 1 = 1 to 7 + Level.1, Row 2 = 8 to 14 + Level.2 */}
-                <div className="space-y-1 p-0.5">
-                  <div className="grid grid-cols-8 gap-1">
-                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => {
-                          playSound('tap');
-                          handleFilterChange(undefined, num);
-                        }}
-                        className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                          selectedLektion === num
-                            ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    ))}
+                {/* Grid: Row 1 = 1 to 7 + Level.1, Row 2 = 8 to 14 + Level.2 */}
+                <div className="space-y-1.5 p-0.5">
+                  <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.35fr)] gap-1.5">
+                    {[1, 2, 3, 4, 5, 6, 7].map((num) => {
+                      const isDone = isLessonFullyCompleted(selectedLevel, num);
+                      const isSelected = selectedLektion === num;
+                      return (
+                        <button
+                          key={num}
+                          onClick={() => {
+                            playSound('tap');
+                            handleFilterChange(undefined, num);
+                          }}
+                          title={
+                            isDone
+                              ? (appLanguage === 'en' ? `Lesson ${num}: Completed` : `Lektion ${num}: Abgeschlossen`)
+                              : (appLanguage === 'en' ? `Lesson ${num}` : `Lektion ${num}`)
+                          }
+                          className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                            isSelected
+                              ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ring-zinc-400/80 dark:ring-zinc-500/80'
+                              : isDone
+                              ? 'bg-zinc-400 hover:bg-zinc-450 text-zinc-950 dark:bg-zinc-500 dark:hover:bg-zinc-450 dark:text-zinc-950 border border-zinc-500/70 dark:border-zinc-400/70 shadow-2xs'
+                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      );
+                    })}
                     {/* Level.1 button e.g. A1.1, A2.1, B1.1 */}
                     <button
                       onClick={() => {
                         playSound('tap');
                         handleFilterChange(undefined, 'PART_1');
                       }}
-                      className={`py-1.5 px-0.5 rounded-lg text-[10.5px] sm:text-xs font-black transition-all cursor-pointer ${
+                      className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
                         selectedLektion === 'PART_1'
                           ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                          : 'bg-zinc-200/80 dark:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+                          : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-250 dark:hover:bg-zinc-650'
                       }`}
                     >
                       {selectedLevel}.1
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-8 gap-1">
-                    {[8, 9, 10, 11, 12, 13, 14].map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => {
-                          playSound('tap');
-                          handleFilterChange(undefined, num);
-                        }}
-                        className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                          selectedLektion === num
-                            ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.35fr)] gap-1.5">
+                    {[8, 9, 10, 11, 12, 13, 14].map((num) => {
+                      const isDone = isLessonFullyCompleted(selectedLevel, num);
+                      const isSelected = selectedLektion === num;
+                      return (
+                        <button
+                          key={num}
+                          onClick={() => {
+                            playSound('tap');
+                            handleFilterChange(undefined, num);
+                          }}
+                          title={
+                            isDone
+                              ? (appLanguage === 'en' ? `Lesson ${num}: Completed` : `Lektion ${num}: Abgeschlossen`)
+                              : (appLanguage === 'en' ? `Lesson ${num}` : `Lektion ${num}`)
+                          }
+                          className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                            isSelected
+                              ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ring-zinc-400/80 dark:ring-zinc-500/80'
+                              : isDone
+                              ? 'bg-zinc-400 hover:bg-zinc-450 text-zinc-950 dark:bg-zinc-500 dark:hover:bg-zinc-450 dark:text-zinc-950 border border-zinc-500/70 dark:border-zinc-400/70 shadow-2xs'
+                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      );
+                    })}
                     {/* Level.2 button e.g. A1.2, A2.2, B1.2 */}
                     <button
                       onClick={() => {
                         playSound('tap');
                         handleFilterChange(undefined, 'PART_2');
                       }}
-                      className={`py-1.5 px-0.5 rounded-lg text-[10.5px] sm:text-xs font-black transition-all cursor-pointer ${
+                      className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
                         selectedLektion === 'PART_2'
                           ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                          : 'bg-zinc-200/80 dark:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+                          : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-250 dark:hover:bg-zinc-650'
                       }`}
                     >
                       {selectedLevel}.2
@@ -1286,80 +1419,329 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </button>
               </div>
             ) : flashcardSubMode === 'learn' ? (
-              /* LEARN SUB-MODE: Classic interactive flip card */
-              <>
-                {/* Interactive Flip Card */}
-                <div
-                  onClick={() => {
-                    playSound('tap');
-                    setIsCardFlipped(!isCardFlipped);
-                  }}
-                  className="flex-1 min-h-[170px] sm:min-h-[200px] p-5 sm:p-7 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-center cursor-pointer hover:border-zinc-950 dark:hover:border-white transition-all select-none group"
-                >
-                  {!isCardFlipped ? (
-                    <div className="flex flex-col items-center justify-center space-y-1.5 w-full">
-                      {currentFlashcard?.nounDetails?.gender ? (
-                        <>
-                          {/* Singular Noun Line: Article only colored & not bold; Word in bold black/white */}
-                          <h3 className="text-2xl sm:text-3xl tracking-tight flex items-baseline justify-center gap-2">
-                            <span className={`font-normal font-sans ${getNounColorClass(currentFlashcard.nounDetails.gender)}`}>
-                              {currentFlashcard.nounDetails.gender}
-                            </span>
-                            <span className="font-black text-zinc-900 dark:text-zinc-100">
-                              {currentFlashcard.lemma}
-                            </span>
-                          </h3>
+              isLearnComplete ? (
+                /* LEARN ROUND COMPLETE VIEW */
+                <div className="flex-1 flex flex-col justify-between items-center text-center p-3 sm:p-5 animate-fadeIn w-full space-y-3 sm:space-y-4">
+                  <div className="text-center space-y-1 pt-2">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-black mb-1">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>{appLanguage === 'en' ? 'Learn Round Complete' : 'Lernrunde Abgeschlossen'}</span>
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+                      {selectedLevel} • {typeof selectedLektion === 'number' ? `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}` : (selectedLektion === 'PART_1' ? `${selectedLevel}.1` : selectedLektion === 'PART_2' ? `${selectedLevel}.2` : (appLanguage === 'en' ? 'All Lessons' : 'Alle Lektionen'))}
+                    </h3>
+                    <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                      {appLanguage === 'en'
+                        ? `You have browsed all ${filteredWords.length} flashcards in this round.`
+                        : `Du hast alle ${filteredWords.length} Lernkarten in dieser Runde angesehen.`}
+                    </p>
+                  </div>
 
-                          {/* Plural Divider & Plural Noun Line */}
-                          {getCleanPluralString(currentFlashcard) && (
-                            <>
-                              <div className="w-24 sm:w-28 border-t border-zinc-200 dark:border-zinc-700 my-1.5 relative flex items-center justify-center">
-                                <span className="bg-zinc-50 dark:bg-zinc-800/90 px-2 text-[10px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-                                  Plural
-                                </span>
-                              </div>
-                              <h3 className="text-2xl sm:text-3xl tracking-tight flex items-baseline justify-center gap-2">
-                                <span className="font-normal font-sans text-pink-600 dark:text-pink-400">
-                                  die
-                                </span>
-                                <span className="font-black text-zinc-900 dark:text-zinc-100">
-                                  {getCleanPluralString(currentFlashcard)!.replace(/^die\s+/i, '')}
-                                </span>
-                              </h3>
-                            </>
-                          )}
-                        </>
+                  {/* Lesson Mastery Card */}
+                  {typeof selectedLektion === 'number' && (
+                    <div className="w-full max-w-sm bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl p-3.5 border border-zinc-200 dark:border-zinc-700 space-y-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                        {appLanguage === 'en' ? 'Lesson Mastery Progress' : 'Lektions-Fortschritt'}
+                      </span>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60">
+                          <span className="font-bold text-emerald-800 dark:text-emerald-300">1. {appLanguage === 'en' ? 'Learn Cards' : 'Lernkarten'}</span>
+                          <span className="font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5 stroke-[3]" /> {appLanguage === 'en' ? 'Completed' : 'Erledigt'}
+                          </span>
+                        </div>
+                        <div className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl border ${
+                          isLessonPracticeDone(selectedLevel, selectedLektion)
+                            ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
+                            : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400'
+                        }`}>
+                          <span className="font-bold">2. {appLanguage === 'en' ? 'Practice Drill' : 'Übungsrunde'}</span>
+                          <span className="font-black">
+                            {isLessonPracticeDone(selectedLevel, selectedLektion) ? (
+                              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                <Check className="w-3.5 h-3.5 stroke-[3]" /> {appLanguage === 'en' ? 'Completed' : 'Erledigt'}
+                              </span>
+                            ) : (
+                              <span className="text-amber-600 dark:text-amber-400">
+                                {appLanguage === 'en' ? 'Pending' : 'Ausstehend'}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {isLessonFullyCompleted(selectedLevel, selectedLektion) ? (
+                        <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 pt-1">
+                          🌟 {appLanguage === 'en' ? 'Lesson Mastered! Sign of completion added to filter.' : 'Lektion gemeistert! Abzeichen im Filter freigeschaltet.'}
+                        </p>
                       ) : (
-                        <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                          {currentFlashcard?.lemma}
-                        </h3>
+                        <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 pt-1">
+                          💡 {appLanguage === 'en' ? 'Complete 1 round of Practice to mark this lesson as completed in the lesson filter!' : 'Schließe 1 Übungsrunde ab, um diese Lektion im Filter als fertig zu markieren!'}
+                        </p>
                       )}
                     </div>
-                  ) : (
-                    <div className="space-y-1.5 text-center w-full">
-                      {(() => {
-                        const parts = formatTranslationList(currentFlashcard?.translation);
-                        if (parts.length > 1) {
-                          return (
-                            <div className="space-y-1.5 text-center">
-                              {parts.map((p, idx) => (
-                                <div key={idx} className="text-xl sm:text-2xl font-black text-zinc-950 dark:text-white">
-                                  <span className="text-zinc-400 font-bold mr-1.5 text-base sm:text-lg">{idx + 1}.</span>
-                                  {p}
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        }
-                        return (
-                          <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">
-                            {parts[0] || currentFlashcard?.translation}
-                          </h3>
-                        );
-                      })()}
-                    </div>
                   )}
+
+                  {/* Action Buttons */}
+                  <div className="w-full max-w-sm flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLearnComplete(false);
+                        setFlashcardIndex(0);
+                      }}
+                      className="w-full sm:flex-1 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95 transition-all"
+                    >
+                      {appLanguage === 'en' ? 'Review Cards Again' : 'Karten wiederholen'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSubModeChange('practice')}
+                      className="w-full sm:flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent shadow-xs cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <span>{appLanguage === 'en' ? 'Go to Practice' : 'Zu den Übungen'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                /* LEARN SUB-MODE: Layout adhering to reference card specification */
+                <>
+                  {/* Top Info Bar: Progress Counter & Direction Toggle (styled matching Practice & Review) */}
+                <div className="flex items-center justify-between text-xs font-bold text-zinc-400 mb-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('tap');
+                      setIsCardFlipped(false);
+                      setLearnDirection((prev) => (prev === 'DE_TO_EN' ? 'EN_TO_DE' : 'DE_TO_EN'));
+                    }}
+                    className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer active:scale-95 transition-all"
+                    title={
+                      learnDirection === 'DE_TO_EN'
+                        ? (appLanguage === 'en' ? 'Click to switch to EN → DE' : 'Klicken für EN → DE')
+                        : (appLanguage === 'en' ? 'Click to switch to DE → EN' : 'Klicken für DE → EN')
+                    }
+                  >
+                    <span>{learnDirection === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}</span>
+                  </button>
+
+                  <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
+                    {flashcardIndex + 1} / {filteredWords.length}
+                  </span>
+                </div>
+
+                {/* Interactive Flip Card */}
+                {(() => {
+                  const cleanPlural = getCleanPluralString(currentFlashcard);
+                  const example = currentFlashcard ? getExampleSentence(currentFlashcard) : null;
+
+                  return (
+                    <div
+                      onClick={() => {
+                        playSound('tap');
+                        setIsCardFlipped(!isCardFlipped);
+                      }}
+                      className="flex-1 min-h-[220px] sm:min-h-[260px] p-5 sm:p-7 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-between cursor-pointer hover:border-zinc-950 dark:hover:border-white transition-all select-none group"
+                    >
+                      {/* Top spacer for optical centering */}
+                      <div className="w-full shrink-0" />
+
+                      {/* Card Center: Direction 1 (DE_TO_EN) or Direction 2 (EN_TO_DE) */}
+                      <div className="w-full flex flex-col items-center justify-center text-center">
+                        {learnDirection === 'DE_TO_EN' ? (
+                          !isCardFlipped ? (
+                            /* Direction 1 Front: German Singular + Plural directly underneath */
+                            <div className="space-y-1.5 w-full">
+                              {currentFlashcard?.nounDetails?.gender ? (
+                                <>
+                                  <h3 className="text-2xl sm:text-3xl tracking-tight flex items-baseline justify-center gap-2">
+                                    <span className={`font-normal font-sans ${getNounColorClass(currentFlashcard.nounDetails.gender)}`}>
+                                      {currentFlashcard.nounDetails.gender}
+                                    </span>
+                                    <span className="font-black text-zinc-900 dark:text-zinc-100">
+                                      {currentFlashcard.lemma}
+                                    </span>
+                                  </h3>
+
+                                  {/* Plural directly underneath singular with subtle Pl. indicator */}
+                                  {cleanPlural && (
+                                    <div className="flex items-center justify-center gap-2 mt-1">
+                                      <h4 className="text-xl sm:text-2xl tracking-tight flex items-baseline justify-center gap-2">
+                                        <span className="font-normal font-sans text-pink-600 dark:text-pink-400">
+                                          die
+                                        </span>
+                                        <span className="font-black text-zinc-900 dark:text-zinc-100">
+                                          {cleanPlural.replace(/^die\s+/i, '')}
+                                        </span>
+                                      </h4>
+                                      <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-200/70 dark:bg-zinc-700/60 px-2 py-0.5 rounded-md self-center whitespace-nowrap">
+                                        Plural
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+                                  {currentFlashcard?.lemma}
+                                </h3>
+                              )}
+                            </div>
+                          ) : (
+                            /* Direction 1 Back: English meaning directly without plural */
+                            <div className="space-y-1.5 text-center w-full">
+                              {(() => {
+                                const parts = formatTranslationList(currentFlashcard?.translation);
+                                if (parts.length > 1) {
+                                  return (
+                                    <div className="space-y-1.5 text-center">
+                                      {parts.map((p, idx) => (
+                                        <div key={idx} className="text-xl sm:text-2xl font-black text-zinc-950 dark:text-white">
+                                          <span className="text-zinc-400 font-bold mr-1.5 text-base sm:text-lg">{idx + 1}.</span>
+                                          {p}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">
+                                    {parts[0] || currentFlashcard?.translation}
+                                  </h3>
+                                );
+                              })()}
+                            </div>
+                          )
+                        ) : (
+                          /* Direction 2 (EN_TO_DE) */
+                          !isCardFlipped ? (
+                            /* Direction 2 Front: English meaning directly without plural */
+                            <div className="space-y-1.5 text-center w-full">
+                              {(() => {
+                                const parts = formatTranslationList(currentFlashcard?.translation);
+                                if (parts.length > 1) {
+                                  return (
+                                    <div className="space-y-1.5 text-center">
+                                      {parts.map((p, idx) => (
+                                        <div key={idx} className="text-xl sm:text-2xl font-black text-zinc-950 dark:text-white">
+                                          <span className="text-zinc-400 font-bold mr-1.5 text-base sm:text-lg">{idx + 1}.</span>
+                                          {p}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">
+                                    {parts[0] || currentFlashcard?.translation}
+                                  </h3>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            /* Direction 2 Back: German Singular + Plural directly underneath */
+                            <div className="space-y-1.5 w-full">
+                              {currentFlashcard?.nounDetails?.gender ? (
+                                <>
+                                  <h3 className="text-2xl sm:text-3xl tracking-tight flex items-baseline justify-center gap-2">
+                                    <span className={`font-normal font-sans ${getNounColorClass(currentFlashcard.nounDetails.gender)}`}>
+                                      {currentFlashcard.nounDetails.gender}
+                                    </span>
+                                    <span className="font-black text-zinc-900 dark:text-zinc-100">
+                                      {currentFlashcard.lemma}
+                                    </span>
+                                  </h3>
+                                  {cleanPlural && (
+                                    <div className="flex items-center justify-center gap-2 mt-1">
+                                      <h4 className="text-xl sm:text-2xl tracking-tight flex items-baseline justify-center gap-2">
+                                        <span className="font-normal font-sans text-pink-600 dark:text-pink-400">
+                                          die
+                                        </span>
+                                        <span className="font-black text-zinc-900 dark:text-zinc-100">
+                                          {cleanPlural.replace(/^die\s+/i, '')}
+                                        </span>
+                                      </h4>
+                                      <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-200/70 dark:bg-zinc-700/60 px-2 py-0.5 rounded-md self-center whitespace-nowrap">
+                                        Plural
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+                                  {currentFlashcard?.lemma}
+                                </h3>
+                              )}
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      {/* Bottom of Card: Example sentence as shown in mockup */}
+                      {example && (
+                        (learnDirection === 'DE_TO_EN' && isCardFlipped) ||
+                        (learnDirection === 'EN_TO_DE')
+                      ) ? (
+                        <div className="mt-4 pt-3 border-t border-zinc-200/80 dark:border-zinc-700/80 w-full max-w-sm mx-auto text-center space-y-1 shrink-0">
+                          {learnDirection === 'DE_TO_EN' && isCardFlipped ? (
+                            <>
+                              <div className="flex items-center justify-center gap-2">
+                                <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 leading-snug">
+                                  {example.german}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    playSound('tap');
+                                    speakGerman(example.german);
+                                  }}
+                                  title={appLanguage === 'en' ? 'Listen to sentence' : 'Satz anhören'}
+                                  className="p-1 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                                ({example.english})
+                              </p>
+                            </>
+                          ) : learnDirection === 'EN_TO_DE' && !isCardFlipped ? (
+                            <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                              ({example.english})
+                            </p>
+                          ) : (
+                            <>
+                              <div className="flex items-center justify-center gap-2">
+                                <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 leading-snug">
+                                  {example.german}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    playSound('tap');
+                                    speakGerman(example.german);
+                                  }}
+                                  title={appLanguage === 'en' ? 'Listen to sentence' : 'Satz anhören'}
+                                  className="p-1 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                                ({example.english})
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-full shrink-0 h-4" />
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Action Buttons: Prev + Audio (1 or 2 buttons) + Next */}
                 <div className="flex items-center gap-2 mt-3 shrink-0">
@@ -1432,7 +1814,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   </button>
                 </div>
               </>
-            ) : (
+            )) : (
               /* PRACTICE & REVIEW SUB-MODE: Unified Type & Speak input with Contextual Feedback */
               isPracticeComplete ? (
                 /* Practice / Review Session Complete View */
@@ -1493,6 +1875,31 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             </p>
                           </div>
                         </div>
+
+                        {/* Lesson Mastery Banner when in Practice mode */}
+                        {flashcardSubMode === 'practice' && typeof selectedLektion === 'number' && (
+                          <div className="w-full flex items-center justify-between p-2 sm:p-2.5 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                                ✓
+                              </span>
+                              <span className="text-xs font-black text-zinc-900 dark:text-zinc-100">
+                                {appLanguage === 'en' ? `Lesson ${selectedLektion} Practice Round Complete` : `Lektion ${selectedLektion} Übungsrunde abgeschlossen`}
+                              </span>
+                            </div>
+                            <span className="text-xs font-black">
+                              {isLessonFullyCompleted(selectedLevel, selectedLektion) ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                  <Check className="w-3.5 h-3.5 stroke-[3]" /> {appLanguage === 'en' ? 'Mastered ✓' : 'Gemeistert ✓'}
+                                </span>
+                              ) : (
+                                <span className="text-amber-600 dark:text-amber-400">
+                                  {appLanguage === 'en' ? 'Learn round pending' : 'Lernrunde noch offen'}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        )}
 
                         {/* Box Container with Mistakes List Line-by-Line & Mistake Count on the Right */}
                         <div className="w-full flex-1 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-2.5 sm:p-3 space-y-2">
@@ -1759,42 +2166,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               )
             )}
           </div>
-
-          {/* Example Sentence Banner (Stuck to bottom in Learn Mode) */}
-          {flashcardSubMode === 'learn' && currentFlashcard && (
-            <div className="mt-2.5 sm:mt-3 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs animate-fadeIn shrink-0">
-              {(() => {
-                const example = getExampleSentence(currentFlashcard);
-
-                return (
-                  <div className="flex items-center justify-between gap-3">
-                    {/* Centered German sentence (bold) and English translation */}
-                    <div className="flex-1 text-center space-y-0.5 min-w-0 pl-1">
-                      <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 leading-snug">
-                        {example.german}
-                      </p>
-                      <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                        {example.english}
-                      </p>
-                    </div>
-
-                    {/* Small Audio Button on farthest right, centered vertically in the middle */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('tap');
-                        speakGerman(example.german);
-                      }}
-                      title={appLanguage === 'en' ? 'Listen to example sentence (Command key)' : 'Beispielsatz anhören (Command-Taste)'}
-                      className="p-2 sm:p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer flex items-center justify-center shrink-0 self-center shadow-2xs"
-                    >
-                      <Volume2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-zinc-800 dark:text-zinc-200" />
-                    </button>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
         </div>
       )}
 

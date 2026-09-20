@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  --color-zinc-950: #222834;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
 html, body, #root {
   height: 100%;
   height: 100dvh;
@@ -11,51 +17,122 @@ html, body, #root {
   touch-action: manipulation;
 }
 
-/* Refined Light-Grey Slate Dark Theme (soothing light graphite / slate grey, never pitch black) */
-html.dark {
-  color-scheme: dark;
-  background-color: #2b303a;
+/* Match buttons and active segment pills directly to the darkest step of the logo (#222834) */
+html:not(.dark) .bg-zinc-950,
+:not(.dark) .bg-zinc-950 {
+  background-color: #222834 !important;
 }
 
-html.dark body {
+html:not(.dark) .hover\:bg-zinc-800:hover,
+:not(.dark) .hover\:bg-zinc-800:hover {
+  background-color: #313848 !important;
+}
+
+html:not(.dark) .border-zinc-950,
+:not(.dark) .border-zinc-950 {
+  border-color: #222834 !important;
+}
+
+html:not(.dark) .border-zinc-900,
+:not(.dark) .border-zinc-900 {
+  border-color: #2b3342 !important;
+}
+
+/* Light Mode Text: Soften harsh pitch-black text to a readable, elegant deep slate/charcoal */
+html:not(.dark) .text-zinc-950,
+:not(.dark) .text-zinc-950 {
+  color: #222834 !important;
+}
+
+html:not(.dark) .hover\:text-zinc-950:hover,
+:not(.dark) .hover\:text-zinc-950:hover {
+  color: #222834 !important;
+}
+
+html:not(.dark) .text-zinc-900,
+:not(.dark) .text-zinc-900 {
+  color: #333b47 !important;
+}
+
+html:not(.dark) .hover\:text-zinc-900:hover,
+:not(.dark) .hover\:text-zinc-900:hover {
+  color: #333b47 !important;
+}
+
+html:not(.dark) .text-zinc-800,
+:not(.dark) .text-zinc-800 {
+  color: #475363 !important;
+}
+
+/* Base text on body & root in light mode */
+html:not(.dark) body,
+:not(.dark) #root {
+  color: #333b47;
+}
+
+/* Ensure white buttons in dark mode remain vibrant */
+.dark .dark\:bg-white,
+:where(.dark, .dark *) .dark\:bg-white {
+  background-color: #ffffff !important;
+}
+
+.dark .dark\:text-zinc-950,
+:where(.dark, .dark *) .dark\:text-zinc-950 {
+  color: #242831 !important;
+}
+
+/* Refined Light-Grey Slate Dark Theme (soothing light graphite / slate grey, never pitch black) */
+html.dark,
+html.dark body,
+.dark body {
+  color-scheme: dark;
   background-color: #2b303a;
   color: #f8fafc;
 }
 
 /* Light-Grey Dark Theme Palette Overrides */
-.dark .dark\:bg-zinc-950 {
+.dark .dark\:bg-zinc-950,
+:where(.dark, .dark *) .dark\:bg-zinc-950 {
   background-color: #2b303a !important;
 }
 
-.dark .dark\:bg-zinc-900 {
+.dark .dark\:bg-zinc-900,
+:where(.dark, .dark *) .dark\:bg-zinc-900 {
   background-color: #383e4c !important;
 }
 
-.dark .dark\:bg-zinc-800 {
+.dark .dark\:bg-zinc-800,
+:where(.dark, .dark *) .dark\:bg-zinc-800 {
   background-color: #454d5d !important;
 }
 
-.dark .dark\:bg-zinc-700 {
+.dark .dark\:bg-zinc-700,
+:where(.dark, .dark *) .dark\:bg-zinc-700 {
   background-color: #545e71 !important;
 }
 
-.dark .dark\:bg-zinc-800\/80 {
+.dark .dark\:bg-zinc-800\/80,
+:where(.dark, .dark *) .dark\:bg-zinc-800\/80 {
   background-color: rgba(69, 77, 93, 0.85) !important;
 }
 
-.dark .dark\:bg-zinc-800\/60 {
+.dark .dark\:bg-zinc-800\/60,
+:where(.dark, .dark *) .dark\:bg-zinc-800\/60 {
   background-color: rgba(69, 77, 93, 0.65) !important;
 }
 
-.dark .dark\:bg-zinc-800\/40 {
+.dark .dark\:bg-zinc-800\/40,
+:where(.dark, .dark *) .dark\:bg-zinc-800\/40 {
   background-color: rgba(69, 77, 93, 0.45) !important;
 }
 
-.dark .dark\:border-zinc-800 {
+.dark .dark\:border-zinc-800,
+:where(.dark, .dark *) .dark\:border-zinc-800 {
   border-color: #4d5668 !important;
 }
 
-.dark .dark\:border-zinc-700 {
+.dark .dark\:border-zinc-700,
+:where(.dark, .dark *) .dark\:border-zinc-700 {
   border-color: #5d677c !important;
 }
 
