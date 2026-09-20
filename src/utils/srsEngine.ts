@@ -1,7 +1,180 @@
-import { SRSRating, SRSItemState, SRSHistoryEntry } from '../types';
+import { SRSRating, SRSItemState, SRSHistoryEntry, FSRSCardRecord } from '../types';
 
 const SRS_STORAGE_KEY = 'deutschmeister_srs_state_v1';
+const FSRS_STORAGE_KEY = 'deutschmeister_fsrs_records_v1';
 export const INITIAL_EASE_FACTOR = 2.5;
+
+/**
+ * Binary FSRS (Free Spaced Repetition Scheduler) Configuration
+ */
+export const FSRS_PARAMS = {
+  w: [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61],
+  targetRetention: 0.90, // 90% memory recall probability target
+};
+
+/**
+ * Core Binary FSRS Function: calculates new stability, difficulty, interval and next review date
+ */
+export function processFSRSReview(
+  passed: boolean,
+  currentStability: number = 1.0,
+  currentDifficulty: number = 5.0,
+  daysElapsed: number = 0
+) {
+  let newDifficulty: number;
+  let newStability: number;
+
+  if (!passed) {
+    // FAIL (Rating = 1 / Again)
+    newDifficulty = Math.min(10, Math.max(1, currentDifficulty + 1.5));
+    newStability =
+      FSRS_PARAMS.w[11] *
+      Math.pow(newDifficulty, -FSRS_PARAMS.w[12]) *
+      (Math.pow(currentStability + 1, FSRS_PARAMS.w[13]) - 1);
+    newStability = Math.max(0.1, newStability);
+  } else {
+    // PASS (Rating = 3 / Good)
+    newDifficulty = Math.min(10, Math.max(1, currentDifficulty - 0.2));
+    const retrievability = Math.pow(1 + daysElapsed / (9 * currentStability), -1);
+
+    newStability =
+      currentStability *
+      (1 +
+        Math.exp(FSRS_PARAMS.w[8]) *
+          (11 - newDifficulty) *
+          Math.pow(currentStability, -FSRS_PARAMS.w[9]) *
+          (Math.exp((1 - retrievability) * FSRS_PARAMS.w[10]) - 1));
+  }
+
+  // Calculate interval in days to hit target memory retention
+  const nextInterval = Math.max(1, Math.round(newStability * 9 * (1 / FSRS_PARAMS.targetRetention - 1)));
+
+  const nextReviewDate = new Date();
+  nextReviewDate.setDate(nextReviewDate.getDate() + nextInterval);
+
+  return {
+    nextInterval,
+    newStability,
+    newDifficulty,
+    nextReviewDate: nextReviewDate.toISOString(),
+  };
+}
+
+const INITIAL_SEEDED_WORD_IDS = [
+  'l1_name',
+  'l1_land',
+  'l1_stadt',
+  'l1_herr',
+  'l1_frau',
+  'l1_telefon',
+  'l1_bild',
+  'l1_buch',
+  'l1_stuhl',
+  'l1_tisch',
+];
+
+/**
+ * Load all FSRS card records from localStorage
+ * Seeds 10 words ready for immediate Spaced Repetition Review on initial launch
+ */
+export function loadAllFSRSRecords(): Record<string, FSRSCardRecord> {
+  try {
+    const raw = localStorage.getItem(FSRS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Object.keys(parsed).length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load FSRS records from localStorage', err);
+  }
+
+  // Initial seed: 10 starter words due for review right away
+  const seededRecords: Record<string, FSRSCardRecord> = {};
+  const pastDate = new Date(Date.now() - 3600000).toISOString(); // Due 1 hour ago
+  const yesterday = new Date(Date.now() - 86400000).toISOString();
+
+  INITIAL_SEEDED_WORD_IDS.forEach((id) => {
+    seededRecords[id] = {
+      wordId: id,
+      status: 'review',
+      isUnlocked: true,
+      stability: 1.0,
+      difficulty: 5.0,
+      intervalDays: 1,
+      lastReviewedAt: yesterday,
+      nextReviewDate: pastDate,
+      repetitionCount: 1,
+    };
+  });
+
+  saveAllFSRSRecords(seededRecords);
+  return seededRecords;
+}
+
+/**
+ * Save all FSRS card records to localStorage
+ */
+export function saveAllFSRSRecords(records: Record<string, FSRSCardRecord>): void {
+  try {
+    localStorage.setItem(FSRS_STORAGE_KEY, JSON.stringify(records));
+  } catch (err) {
+    console.warn('Failed to save FSRS records to localStorage', err);
+  }
+}
+
+/**
+ * Check if a card record is currently due for Review
+ * Rule: isUnlocked === true AND status === 'review' AND nextReviewDate <= CurrentTimestamp
+ */
+export function isCardDueForReview(record?: FSRSCardRecord | null): boolean {
+  if (!record) return false;
+  if (!record.isUnlocked || record.status !== 'review') return false;
+  if (!record.nextReviewDate) return false;
+  return new Date(record.nextReviewDate).getTime() <= Date.now();
+}
+
+/**
+ * Activation Rule:
+ * When a user finishes the "Practice" session for a lesson, set a flag
+ * (isUnlocked: true, status: 'review', nextReviewDate: tomorrow)
+ * so those words are injected into the "Review" pool starting the next day.
+ * If a word is ALREADY unlocked from a previous practice session, do not re-inject or overwrite its review state.
+ */
+export function unlockWordsAfterPractice(
+  wordIds: string[],
+  existingRecords: Record<string, FSRSCardRecord>
+): Record<string, FSRSCardRecord> {
+  const updated = { ...existingRecords };
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  let changed = false;
+
+  for (const id of wordIds) {
+    const existing = updated[id];
+    // 1-Time injection rule: Only inject words that haven't been unlocked yet
+    if (!existing || !existing.isUnlocked) {
+      updated[id] = {
+        wordId: id,
+        status: 'review',
+        isUnlocked: true,
+        stability: 1.0,
+        difficulty: 5.0,
+        intervalDays: 1,
+        lastReviewedAt: now.toISOString(),
+        nextReviewDate: tomorrow.toISOString(),
+        repetitionCount: 1,
+      };
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveAllFSRSRecords(updated);
+  }
+  return updated;
+}
 
 /**
  * Creates a fresh SRS state for a new word

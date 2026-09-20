@@ -70,6 +70,20 @@ export interface SentenceStemExercise {
 
 export type SRSRating = 'again' | 'hard' | 'good' | 'easy';
 
+export type FlashcardSubMode = 'learn' | 'practice' | 'review';
+
+export interface FSRSCardRecord {
+  wordId: string;
+  status: 'unlearned' | 'learned' | 'practiced' | 'review';
+  isUnlocked: boolean;
+  stability: number; // default: 1.0
+  difficulty: number; // default: 5.0
+  intervalDays: number; // default: 1
+  nextReviewDate: string; // ISO Date string / Timestamp
+  lastReviewedAt?: string; // ISO Date string / Timestamp
+  repetitionCount?: number;
+}
+
 export interface SRSHistoryEntry {
   timestamp: string;
   rating: SRSRating;
@@ -91,7 +105,7 @@ export interface SRSItemState {
 export type ExerciseMode = 'gender' | 'conjugator' | 'cloze' | 'mixed';
 export type GrammarMode = 'table_all_persons' | 'sentence_cloze_stem';
 
-// 6 Core Skill Areas + Profile
+// 6 Core Skill Areas + Profile & Settings
 export type DuolingoTab =
   | 'vocab'      // Icon 1: Lektion-by-Lektion Wortschatz (Schritte A1 Lektion 1-14)
   | 'grammar'    // Icon 2: Verb Conjugator (Full table ich->sie & Sentence with verbstamm)
@@ -99,7 +113,9 @@ export type DuolingoTab =
   | 'speaking'   // Icon 4: Sprechen (Speech recognition & pronunciation)
   | 'reading'    // Icon 5: Lesen (Stories & Reading comprehension)
   | 'writing'    // Icon 6: Schreiben (Word order & sentence assembler)
-  | 'profile';   // Icon 7: Profile (Duolingo stats, league, badges, streak)
+  | 'profile'    // Icon 7: Profile (Duolingo stats, league, badges, streak)
+  | 'settings';  // Icon 8: Settings (Full settings & audio configurations)
+
 
 export type EvaluationType = 'exact' | 'partial_slip' | 'umlaut_warning' | 'typo_minor' | 'wrong';
 

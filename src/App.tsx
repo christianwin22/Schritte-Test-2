@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { WordEntry, DuolingoTab } from './types';
 import { INITIAL_VOCABULARY } from './data/vocabulary';
 import { DuolingoTopBar } from './components/DuolingoTopBar';
@@ -7,10 +7,13 @@ import { SchritteVocabView } from './components/SchritteVocabView';
 import { SchritteGrammarView } from './components/SchritteGrammarView';
 import { SkillsView } from './components/SkillsView';
 import { DuolingoProfileView } from './components/DuolingoProfileView';
+import { SettingsView } from './components/SettingsView';
+import { ThemeMode } from './components/SettingsModal';
 import { AbandonExerciseModal } from './components/AbandonExerciseModal';
 import { OrientationGuard } from './components/OrientationGuard';
-import { playSound, setGlobalSoundEnabled } from './utils/audioEffects';
+import { playSound, setGlobalSoundEnabled, setGlobalMusicEnabled } from './utils/audioEffects';
 import { AppLanguage, getTranslation } from './utils/translations';
+import { loadAllFSRSRecords, isCardDueForReview } from './utils/srsEngine';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
 const STREAK_STORAGE_KEY = 'deutschmeister_streak_v2';
@@ -18,6 +21,9 @@ const XP_STORAGE_KEY = 'deutschmeister_xp_v2';
 const GEMS_STORAGE_KEY = 'deutschmeister_gems_v2';
 const HEARTS_STORAGE_KEY = 'deutschmeister_hearts_v2';
 const LANG_STORAGE_KEY = 'deutschmeister_app_lang_v2';
+const THEME_MODE_STORAGE_KEY = 'deutschmeister_theme_mode_v2';
+const MUSIC_STORAGE_KEY = 'deutschmeister_music_enabled_v2';
+const NOTIF_STORAGE_KEY = 'deutschmeister_notif_enabled_v2';
 
 export default function App() {
   // App UI Language (English default)
@@ -35,7 +41,9 @@ export default function App() {
 
   // Navigation State (defaults to 'home' Langey Guide Dashboard)
   const [currentTab, setCurrentTab] = useState<'home' | DuolingoTab>('home');
+  const [previousTab, setPreviousTab] = useState<'home' | DuolingoTab>('home');
   const [activeExerciseMode, setActiveExerciseMode] = useState<string | null>(null);
+  const [isQuizActive, setIsQuizActive] = useState(false);
 
   // Abandon Confirmation Modal State
   const [isAbandonModalOpen, setIsAbandonModalOpen] = useState(false);
@@ -90,7 +98,16 @@ export default function App() {
     }
   });
 
-  // Dark Mode Theme State
+  // 3-Way Theme Mode: 'light' | 'dark' | 'system'
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    try {
+      const saved = localStorage.getItem(THEME_MODE_STORAGE_KEY);
+      if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    } catch {}
+    return 'system';
+  });
+
+  // Dark Mode active flag
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -101,6 +118,44 @@ export default function App() {
 
   // Sound FX State
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Study Music / Ambient Lo-Fi State
+  const [musicEnabled, setMusicEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(MUSIC_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Notifications State
+  const [notificationEnabled, setNotificationEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(NOTIF_STORAGE_KEY) !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  // FSRS Records for global due badge on Vocabulary button
+  const [fsrsRecords, setFsrsRecords] = useState(() => loadAllFSRSRecords());
+
+  // Listen to FSRS storage changes to keep global due count synchronized
+  useEffect(() => {
+    const syncFsrs = () => {
+      setFsrsRecords(loadAllFSRSRecords());
+    };
+    window.addEventListener('storage', syncFsrs);
+    const interval = setInterval(syncFsrs, 3000);
+    return () => {
+      window.removeEventListener('storage', syncFsrs);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const globalDueCount = useMemo(() => {
+    return INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id])).length;
+  }, [fsrsRecords]);
 
   // Persist State Changes
   useEffect(() => {
@@ -152,6 +207,49 @@ export default function App() {
   }, [appLanguage]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
+    } catch {}
+  }, [themeMode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(MUSIC_STORAGE_KEY, String(musicEnabled));
+    } catch {}
+    setGlobalMusicEnabled(musicEnabled);
+  }, [musicEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(NOTIF_STORAGE_KEY, String(notificationEnabled));
+    } catch {}
+  }, [notificationEnabled]);
+
+  // Handle Theme Mode changes (Light / Dark / System)
+  useEffect(() => {
+    const updateDarkState = () => {
+      if (themeMode === 'dark') {
+        setIsDark(true);
+      } else if (themeMode === 'light') {
+        setIsDark(false);
+      } else {
+        setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      }
+    };
+
+    updateDarkState();
+
+    if (themeMode === 'system') {
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = (e: MediaQueryListEvent) => {
+        setIsDark(e.matches);
+      };
+      media.addEventListener('change', listener);
+      return () => media.removeEventListener('change', listener);
+    }
+  }, [themeMode]);
+
+  useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -201,29 +299,66 @@ export default function App() {
   // Safe Navigation with Active Exercise Abandon Protection
   const handleSelectTab = (tab: 'home' | DuolingoTab) => {
     if (tab === currentTab && !activeExerciseMode) return;
-    if (activeExerciseMode) {
+    if (isQuizActive) {
       setPendingAbandonCallback(() => () => {
+        setIsQuizActive(false);
         setActiveExerciseMode(null);
+        setPreviousTab(currentTab);
         setCurrentTab(tab);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
       setIsAbandonModalOpen(true);
       return;
     }
+    setPreviousTab(currentTab);
+    setActiveExerciseMode(null);
     setCurrentTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Dedicated Home Logo handler (always jumps to Home)
+  const handleGoHome = () => {
+    if (currentTab === 'home' && !activeExerciseMode) return;
+    if (isQuizActive) {
+      setPendingAbandonCallback(() => () => {
+        setIsQuizActive(false);
+        setActiveExerciseMode(null);
+        setPreviousTab(currentTab);
+        setCurrentTab('home');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      setIsAbandonModalOpen(true);
+      return;
+    }
+    setPreviousTab(currentTab);
+    setActiveExerciseMode(null);
+    setCurrentTab('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Top Bar Back button handler
   const handleTopBack = () => {
-    if (activeExerciseMode) {
+    if (isQuizActive) {
       setPendingAbandonCallback(() => () => {
+        setIsQuizActive(false);
         setActiveExerciseMode(null);
       });
       setIsAbandonModalOpen(true);
       return;
     }
+    if (activeExerciseMode) {
+      setActiveExerciseMode(null);
+      return;
+    }
+    if (currentTab === 'settings') {
+      const target = previousTab === 'profile' ? 'profile' : 'home';
+      setPreviousTab(currentTab);
+      setCurrentTab(target);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (currentTab !== 'home') {
+      setPreviousTab(currentTab);
       setCurrentTab('home');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -236,6 +371,7 @@ export default function App() {
 
   const handleConfirmAbandon = () => {
     setIsAbandonModalOpen(false);
+    setIsQuizActive(false);
     if (pendingAbandonCallback) {
       pendingAbandonCallback();
       setPendingAbandonCallback(null);
@@ -275,32 +411,48 @@ export default function App() {
     if (currentTab === 'reading') return 'Reading';
     if (currentTab === 'writing') return 'Writing';
     if (currentTab === 'profile') return t.myProfileTitle;
+    if (currentTab === 'settings') return t.settingsTitle;
     return undefined;
   };
 
+  const isScrollableTab = currentTab === 'profile' || currentTab === 'settings';
+
   return (
-    <div className={`w-full bg-[#fafafa] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200 ${
-      currentTab === 'profile'
-        ? 'min-h-screen overflow-y-auto'
-        : 'h-[100dvh] max-h-[100dvh] overflow-hidden select-none'
-    }`}>
+    <div
+      className={`w-full bg-[#f8f9fa] dark:bg-[#1a1d24] text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200 ${
+        isScrollableTab
+          ? 'min-h-screen h-auto overflow-y-auto custom-scrollbar'
+          : 'h-[100dvh] max-h-[100dvh] overflow-hidden select-none'
+      }`}
+    >
       {/* Mobile Landscape Orientation Warning */}
       <OrientationGuard appLanguage={appLanguage} />
 
       {/* Top Bar */}
       <DuolingoTopBar
         onOpenProfile={() => handleSelectTab('profile')}
+        onOpenSettings={() => handleSelectTab('settings')}
         canGoBack={currentTab !== 'home' || activeExerciseMode !== null}
         onBack={handleTopBack}
+        onGoHome={handleGoHome}
         title={getTopBarTitle()}
         appLanguage={appLanguage}
+        currentTab={currentTab}
       />
 
       {/* Main Content View Container */}
-      <div className={`flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 py-2 sm:py-4 flex flex-col justify-center ${
-        currentTab === 'profile' ? 'py-5 sm:py-6 overflow-visible' : 'overflow-hidden'
-      }`}>
-        <main className="w-full h-full flex flex-col justify-center overflow-hidden">
+      <div
+        className={`flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 flex flex-col ${
+          isScrollableTab ? 'py-5 sm:py-6 overflow-visible' : 'py-2 sm:py-4 justify-center overflow-hidden'
+        }`}
+      >
+        <main
+          className={`w-full flex flex-col ${
+            isScrollableTab
+              ? 'flex-1 justify-start overflow-visible min-h-0'
+              : 'h-full justify-center overflow-hidden'
+          }`}
+        >
           {/* HOME GUIDE VIEW */}
           {currentTab === 'home' && (
             <HomeGuideView
@@ -309,6 +461,7 @@ export default function App() {
               xp={xp}
               gems={gems}
               vocabCount={vocabulary.length}
+              dueReviewCount={globalDueCount}
               appLanguage={appLanguage}
             />
           )}
@@ -321,6 +474,7 @@ export default function App() {
               activeExerciseMode={activeExerciseMode}
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
+              onQuizActiveChange={setIsQuizActive}
               appLanguage={appLanguage}
             />
           )}
@@ -333,6 +487,7 @@ export default function App() {
               activeExerciseMode={activeExerciseMode}
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
+              onQuizActiveChange={setIsQuizActive}
               appLanguage={appLanguage}
             />
           )}
@@ -389,7 +544,7 @@ export default function App() {
             />
           )}
 
-          {/* PROFIL & SETTINGS */}
+          {/* PROFIL TAB (FULL PAGE) */}
           {currentTab === 'profile' && (
             <DuolingoProfileView
               streak={streak}
@@ -399,13 +554,33 @@ export default function App() {
               xp={xp}
               vocabulary={vocabulary}
               onRefillHearts={handleRefillHearts}
-              onResetProgress={handleResetProgress}
-              isDark={isDark}
-              soundEnabled={soundEnabled}
-              onToggleTheme={() => setIsDark(!isDark)}
-              onToggleSound={() => setSoundEnabled(!soundEnabled)}
-              onSelectLanguage={setAppLanguage}
               appLanguage={appLanguage}
+              onNavigateToSettings={() => handleSelectTab('settings')}
+            />
+          )}
+
+          {/* SETTINGS TAB (FULL PAGE) */}
+          {currentTab === 'settings' && (
+            <SettingsView
+              isDark={isDark}
+              themeMode={themeMode}
+              onSetThemeMode={setThemeMode}
+              soundEnabled={soundEnabled}
+              musicEnabled={musicEnabled}
+              notificationEnabled={notificationEnabled}
+              onToggleTheme={() => {
+                const nextMode = themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light';
+                setThemeMode(nextMode);
+              }}
+              onToggleSound={() => setSoundEnabled(!soundEnabled)}
+              onToggleMusic={() => setMusicEnabled(!musicEnabled)}
+              onToggleNotification={() => setNotificationEnabled(!notificationEnabled)}
+              onResetProgress={handleResetProgress}
+              appLanguage={appLanguage}
+              onSelectLanguage={setAppLanguage}
+              onBackToHome={() => handleSelectTab('home')}
+              onBackToProfile={previousTab === 'profile' ? () => handleSelectTab('profile') : undefined}
+              totalWordsCount={vocabulary.length}
             />
           )}
         </main>

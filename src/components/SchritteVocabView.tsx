@@ -16,10 +16,17 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
-import { CEFRLevel, Gender, WordEntry } from '../types';
+import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
 import { speakGerman, listenToGermanSpeech, isSpeechRecognitionSupported } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
+import {
+  loadAllFSRSRecords,
+  saveAllFSRSRecords,
+  processFSRSReview,
+  isCardDueForReview,
+  unlockWordsAfterPractice,
+} from '../utils/srsEngine';
 
 export interface FlashcardHotkeys {
   next: string;
@@ -63,6 +70,7 @@ interface SchritteVocabViewProps {
   activeExerciseMode: string | null;
   onSelectExerciseMode: (mode: string | null) => void;
   onRequestAbandon: (onConfirmLeave: () => void) => void;
+  onQuizActiveChange?: (isActive: boolean) => void;
   appLanguage?: AppLanguage;
 }
 
@@ -72,6 +80,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   activeExerciseMode,
   onSelectExerciseMode,
   onRequestAbandon,
+  onQuizActiveChange,
   appLanguage = 'en',
 }) => {
   const t = getTranslation(appLanguage);
@@ -103,18 +112,28 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
 
-  // Flashcard Sub-Mode: 'learn' (Flip) vs 'practice' - Persisted
-  const [flashcardSubMode, setFlashcardSubMode] = useState<'learn' | 'practice'>(() => {
+  // Flashcard Sub-Mode: 'learn' (Flip) vs 'practice' vs 'review' - Persisted
+  const [flashcardSubMode, setFlashcardSubMode] = useState<FlashcardSubMode>(() => {
     try {
       const saved = localStorage.getItem('schritte_saved_submode');
-      if (saved === 'learn' || saved === 'practice') return saved;
+      if (saved === 'learn' || saved === 'practice' || saved === 'review') return saved as FlashcardSubMode;
     } catch {}
     return 'learn';
   });
 
-  // Practice Redo Queue & Mistake Tracking state
+  // FSRS Records State
+  const [fsrsRecords, setFsrsRecords] = useState<Record<string, FSRSCardRecord>>(() => loadAllFSRSRecords());
+
+  // Save FSRS records whenever updated
+  useEffect(() => {
+    saveAllFSRSRecords(fsrsRecords);
+  }, [fsrsRecords]);
+
+  // Practice & Review Redo Queue & Mistake Tracking state
   const [practiceQueue, setPracticeQueue] = useState<WordEntry[]>([]);
   const [practiceQueueIndex, setPracticeQueueIndex] = useState(0);
+  const [sessionInitialCount, setSessionInitialCount] = useState(0);
+  const [initialMistakeWordIds, setInitialMistakeWordIds] = useState<string[]>([]);
   const [currentRedoBatch, setCurrentRedoBatch] = useState<WordEntry[]>([]);
   const [roundNumber, setRoundNumber] = useState(1); // 1 = Initial round, 2 = 1st Redo, 3 = 2nd Redo...
   const [mistakeCounts, setMistakeCounts] = useState<Record<string, number>>({});
@@ -151,9 +170,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     } catch {}
   }, [flashcardSubMode]);
 
-  // Auto-focus input when in practice mode
+  // Auto-focus input when in practice or review mode
   useEffect(() => {
-    if (flashcardSubMode === 'practice' && !practiceFeedback && !isPracticeComplete) {
+    if ((flashcardSubMode === 'practice' || flashcardSubMode === 'review') && !practiceFeedback && !isPracticeComplete) {
       practiceTypeInputRef.current?.focus();
     }
   }, [practiceQueueIndex, flashcardSubMode, practiceFeedback, practiceDirection, isPracticeComplete]);
@@ -203,12 +222,40 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     return list;
   }, [selectedLevel, selectedLektion]);
 
+  // Global due words across all lessons in the app (decoupled from lesson selector!)
+  const globalDueWords = useMemo(() => {
+    return INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id]));
+  }, [fsrsRecords]);
+
+  const globalDueCount = globalDueWords.length;
+
+  const globalUnlockedWords = useMemo(() => {
+    return INITIAL_VOCABULARY.filter(
+      (w) => fsrsRecords[w.id]?.isUnlocked && fsrsRecords[w.id]?.status === 'review'
+    );
+  }, [fsrsRecords]);
+
+  // Due review words count (globally driven)
+  const dueReviewCount = globalDueCount;
+
   // Sync practiceQueue when filteredWords changes or when queue is empty
   useEffect(() => {
-    if (practiceQueue.length === 0 && filteredWords.length > 0) {
-      setPracticeQueue(filteredWords);
+    if (practiceQueue.length === 0) {
+      if (flashcardSubMode === 'review') {
+        const targetQueue =
+          globalDueWords.length > 0
+            ? globalDueWords.slice(0, 10)
+            : globalUnlockedWords.length > 0
+            ? globalUnlockedWords.slice(0, 10)
+            : INITIAL_VOCABULARY.slice(0, 10);
+        setPracticeQueue([...targetQueue]);
+        setSessionInitialCount(targetQueue.length);
+      } else if (filteredWords.length > 0) {
+        setPracticeQueue([...filteredWords]);
+        setSessionInitialCount(filteredWords.length);
+      }
     }
-  }, [filteredWords, practiceQueue.length]);
+  }, [filteredWords, practiceQueue.length, flashcardSubMode, globalDueWords, globalUnlockedWords]);
 
   // Nouns only for blitz and plural exercises
   const nounWords = useMemo(() => {
@@ -218,11 +265,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const currentPracticeWord = (practiceQueue.length > 0 ? practiceQueue : filteredWords)[
     practiceQueueIndex % ((practiceQueue.length > 0 ? practiceQueue : filteredWords).length || 1)
   ];
-  const currentFlashcard = flashcardSubMode === 'practice' ? currentPracticeWord : filteredWords[flashcardIndex % (filteredWords.length || 1)];
+  const currentFlashcard =
+    flashcardSubMode === 'practice' || flashcardSubMode === 'review'
+      ? currentPracticeWord
+      : filteredWords[flashcardIndex % (filteredWords.length || 1)];
   const currentBlitzNoun = nounWords[blitzIndex % (nounWords.length || 1)];
   const currentPluralNoun = nounWords[pluralIndex % (nounWords.length || 1)];
 
-  // Helper to evaluate answer for practice
+  // Helper to evaluate answer for practice & review
   const evaluateAnswer = (inputVal: string, card: WordEntry, direction: 'EN_TO_DE' | 'DE_TO_EN') => {
     const rawUser = inputVal.trim().toLowerCase();
     if (!rawUser) return { isCorrect: false, expectedDisplay: '' };
@@ -271,7 +321,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
   };
 
-  // Flashcard Practice - Check Handler
+  // Flashcard Practice & Review - Check Handler
   const handlePracticeCheck = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!currentPracticeWord || practiceFeedback || !practiceTypeInput.trim()) return;
@@ -292,7 +342,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       if (onWrongAnswer) {
         onWrongAnswer();
       }
-      // Record mistake
+      // Record mistake on initial first attempt before redo
+      if (roundNumber === 1) {
+        setInitialMistakeWordIds((prev) =>
+          prev.includes(currentPracticeWord.id) ? prev : [...prev, currentPracticeWord.id]
+        );
+      }
       setMistakeCounts((prev) => ({
         ...prev,
         [currentPracticeWord.id]: (prev[currentPracticeWord.id] || 0) + 1,
@@ -307,6 +362,44 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       });
     }
 
+    // Process FSRS review algorithm if in Review mode
+    if (flashcardSubMode === 'review') {
+      const existing = fsrsRecords[currentPracticeWord.id] || {
+        wordId: currentPracticeWord.id,
+        status: 'review' as const,
+        isUnlocked: true,
+        stability: 1.0,
+        difficulty: 5.0,
+        intervalDays: 1,
+        nextReviewDate: new Date().toISOString(),
+      };
+
+      const lastReviewedTime = existing.lastReviewedAt ? new Date(existing.lastReviewedAt).getTime() : Date.now();
+      const daysElapsed = Math.max(0, (Date.now() - lastReviewedTime) / (1000 * 60 * 60 * 24));
+
+      const fsrsResult = processFSRSReview(
+        isCorrect,
+        existing.stability,
+        existing.difficulty,
+        daysElapsed
+      );
+
+      setFsrsRecords((prev) => ({
+        ...prev,
+        [currentPracticeWord.id]: {
+          ...existing,
+          status: 'review',
+          isUnlocked: true,
+          stability: fsrsResult.newStability,
+          difficulty: fsrsResult.newDifficulty,
+          intervalDays: fsrsResult.nextInterval,
+          nextReviewDate: fsrsResult.nextReviewDate,
+          lastReviewedAt: new Date().toISOString(),
+          repetitionCount: (existing.repetitionCount || 0) + 1,
+        },
+      }));
+    }
+
     setPracticeFeedback({
       correct: isCorrect,
       userText: practiceTypeInput.trim(),
@@ -314,7 +407,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     });
   };
 
-  // Flashcard Practice - Voice / Speech Recognition Handler
+  // Flashcard Practice & Review - Voice / Speech Recognition Handler
   const handleStartListening = () => {
     if (isListening) {
       activeRecognitionRef.current?.stop();
@@ -345,6 +438,45 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           if (practiceDirection === 'EN_TO_DE') {
             speakGerman(expectedDisplay);
           }
+
+          // Process FSRS review algorithm if in Review mode
+          if (flashcardSubMode === 'review') {
+            const existing = fsrsRecords[currentPracticeWord.id] || {
+              wordId: currentPracticeWord.id,
+              status: 'review' as const,
+              isUnlocked: true,
+              stability: 1.0,
+              difficulty: 5.0,
+              intervalDays: 1,
+              nextReviewDate: new Date().toISOString(),
+            };
+
+            const lastReviewedTime = existing.lastReviewedAt ? new Date(existing.lastReviewedAt).getTime() : Date.now();
+            const daysElapsed = Math.max(0, (Date.now() - lastReviewedTime) / (1000 * 60 * 60 * 24));
+
+            const fsrsResult = processFSRSReview(
+              true,
+              existing.stability,
+              existing.difficulty,
+              daysElapsed
+            );
+
+            setFsrsRecords((prev) => ({
+              ...prev,
+              [currentPracticeWord.id]: {
+                ...existing,
+                status: 'review',
+                isUnlocked: true,
+                stability: fsrsResult.newStability,
+                difficulty: fsrsResult.newDifficulty,
+                intervalDays: fsrsResult.nextInterval,
+                nextReviewDate: fsrsResult.nextReviewDate,
+                lastReviewedAt: new Date().toISOString(),
+                repetitionCount: (existing.repetitionCount || 0) + 1,
+              },
+            }));
+          }
+
           setPracticeFeedback({
             correct: true,
             userText: trimmedTranscript,
@@ -399,14 +531,35 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         setPracticeFeedback(null);
         setPracticeTypeInput('');
         setIsListening(false);
+
+        // Activation Rule: When a user finishes the "Practice" session for a lesson,
+        // set isUnlocked: true and status: 'review' so those words enter Review pool starting the next day.
+        if (flashcardSubMode === 'practice') {
+          const completedWordIds = filteredWords.map((w) => w.id);
+          setFsrsRecords((prev) => unlockWordsAfterPractice(completedWordIds, prev));
+        }
       }
     }
   };
 
   const restartPracticeSession = () => {
     playSound('tap');
-    const freshQueue = filteredWords.length > 0 ? [...filteredWords] : [];
+    let freshQueue: WordEntry[] = [];
+    if (flashcardSubMode === 'review') {
+      const source =
+        globalDueWords.length > 0
+          ? globalDueWords
+          : globalUnlockedWords.length > 0
+          ? globalUnlockedWords
+          : INITIAL_VOCABULARY;
+      freshQueue = source.slice(0, 10);
+    } else {
+      freshQueue = filteredWords.length > 0 ? [...filteredWords] : [];
+    }
+
     setPracticeQueue(freshQueue);
+    setSessionInitialCount(freshQueue.length);
+    setInitialMistakeWordIds([]);
     setPracticeQueueIndex(0);
     setCurrentRedoBatch([]);
     setRoundNumber(1);
@@ -438,11 +591,18 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setFlashcardIndex((prev) => (prev > 0 ? prev - 1 : (filteredWords.length || 1) - 1));
   };
 
-  // Check if practice is actively in progress (not completed, and user has made progress)
+  // Check if practice or review is actively in progress (not completed, and user has made progress)
   const isPracticeInProgress =
-    flashcardSubMode === 'practice' &&
+    activeExerciseMode === 'explorer' &&
+    (flashcardSubMode === 'practice' || flashcardSubMode === 'review') &&
     !isPracticeComplete &&
     (practiceQueueIndex > 0 || practiceFeedback !== null || roundNumber > 1 || Object.keys(mistakeCounts).length > 0);
+
+  useEffect(() => {
+    if (onQuizActiveChange) {
+      onQuizActiveChange(isPracticeInProgress);
+    }
+  }, [isPracticeInProgress, onQuizActiveChange]);
 
   // Protected Filter and Submode Handlers with Abandon Confirmation
   const handleFilterChange = (newLevel?: CEFRLevel, newLektion?: number | 'ALL' | 'PART_1' | 'PART_2') => {
@@ -453,7 +613,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       if (newLevel) setSelectedLevel(newLevel);
       if (newLektion !== undefined) setSelectedLektion(newLektion);
 
-      // Compute new filtered list for fresh practice queue
+      // Compute new filtered list for fresh queue
       let list = INITIAL_VOCABULARY.filter((w) => w.level === updatedLevel);
       if (updatedLektion === 'PART_1') {
         list = list.filter((w) => typeof w.lektion === 'number' && w.lektion >= 1 && w.lektion <= 7);
@@ -464,7 +624,23 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       }
 
       setFlashcardIndex(0);
-      setPracticeQueue(list);
+
+      if (flashcardSubMode === 'review') {
+        const source =
+          globalDueWords.length > 0
+            ? globalDueWords
+            : globalUnlockedWords.length > 0
+            ? globalUnlockedWords
+            : INITIAL_VOCABULARY;
+        const q = source.slice(0, 10);
+        setPracticeQueue(q);
+        setSessionInitialCount(q.length);
+      } else {
+        setPracticeQueue(list);
+        setSessionInitialCount(list.length);
+      }
+
+      setInitialMistakeWordIds([]);
       setPracticeQueueIndex(0);
       setCurrentRedoBatch([]);
       setRoundNumber(1);
@@ -489,43 +665,48 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
   };
 
-  const handleSubModeChange = (mode: 'learn' | 'practice') => {
+  const handleSubModeChange = (mode: FlashcardSubMode) => {
     if (mode === flashcardSubMode) return;
 
-    if (flashcardSubMode === 'practice') {
-      const doSwitchToLearn = () => {
-        setFlashcardSubMode('learn');
-        setIsPracticeComplete(false);
-        setPracticeQueueIndex(0);
-        setCurrentRedoBatch([]);
-        setRoundNumber(1);
-        setMistakeCounts({});
-        setMistakeWords([]);
-        setPracticeScore(0);
-        setPracticeFeedback(null);
-        setPracticeTypeInput('');
-      };
-
-      if (isPracticeInProgress && onRequestAbandon) {
-        onRequestAbandon(doSwitchToLearn);
-      } else {
-        doSwitchToLearn();
-      }
-    } else {
-      // Switching from learn to practice: immediately start fresh practice session
+    const doSwitch = () => {
       playSound('tap');
-      setFlashcardSubMode('practice');
+      setFlashcardSubMode(mode);
       setIsPracticeComplete(false);
-      setPracticeQueue([...filteredWords]);
       setPracticeQueueIndex(0);
       setCurrentRedoBatch([]);
       setRoundNumber(1);
       setMistakeCounts({});
       setMistakeWords([]);
+      setInitialMistakeWordIds([]);
       setPracticeScore(0);
       setPracticeFeedback(null);
       setPracticeTypeInput('');
-      setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
+      setIsListening(false);
+
+      if (mode === 'learn') {
+        setIsCardFlipped(false);
+      } else if (mode === 'practice') {
+        setPracticeQueue([...filteredWords]);
+        setSessionInitialCount(filteredWords.length);
+        setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
+      } else if (mode === 'review') {
+        const source =
+          globalDueWords.length > 0
+            ? globalDueWords
+            : globalUnlockedWords.length > 0
+            ? globalUnlockedWords
+            : INITIAL_VOCABULARY;
+        const q = source.slice(0, 10);
+        setPracticeQueue(q);
+        setSessionInitialCount(q.length);
+        setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
+      }
+    };
+
+    if (isPracticeInProgress && onRequestAbandon) {
+      onRequestAbandon(doSwitch);
+    } else {
+      doSwitch();
     }
   };
 
@@ -588,7 +769,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             speakGerman(example.german);
           }
         }
-      } else if (flashcardSubMode === 'practice') {
+      } else if (flashcardSubMode === 'practice' || flashcardSubMode === 'review') {
         if (isPracticeComplete) {
           if (matchesKey(hotkeys.practiceCheck) || e.key === 'Enter' || matchesKey(hotkeys.practiceAudio) || e.code === 'Space') {
             e.preventDefault();
@@ -809,8 +990,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 playSound('tap');
                 onSelectExerciseMode(ex.id);
               }}
-              className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-white shadow-xs hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 sm:hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center text-center min-h-[72px] sm:min-h-[150px] group"
+              className="relative bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-white shadow-xs hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 sm:hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center text-center min-h-[72px] sm:min-h-[150px] group"
             >
+              {/* Red notification badge on Flashcards card if Spaced Repetition words are due */}
+              {ex.id === 'explorer' && globalDueCount > 0 && (
+                <span
+                  id="vocab-flashcard-due-badge"
+                  className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-md animate-pulse z-10"
+                >
+                  {globalDueCount}
+                </span>
+              )}
               <h4 className="font-black text-zinc-900 dark:text-zinc-100 text-base sm:text-xl tracking-tight group-hover:scale-105 transition-transform">
                 {ex.title}
               </h4>
@@ -851,12 +1041,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       .filter(Boolean);
   };
 
-  // Filter Bar Component inside every Vocab Exercise
-  const renderVocabFilterBar = (showLearnPracticeToggle = false) => (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-2 sm:p-2.5 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
-      <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-2">
+  // Banner 1: Filter Selector (Level & Lesson)
+  const renderFilterBanner = () => (
+    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2">
+      <div className="flex flex-row items-center justify-between gap-1 sm:gap-2">
         {/* Filter 1: A1 / A2 / B1 Level Selector */}
-        <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+        <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shrink-0">
           {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
             <button
               key={lvl}
@@ -864,7 +1054,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 playSound('tap');
                 handleFilterChange(lvl);
               }}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 selectedLevel === lvl
                   ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
                   : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
@@ -875,8 +1065,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           ))}
         </div>
 
-        {/* Filter 2: Lesson 1 to 14 Selector Button / Dropdown */}
-        <div className="relative">
+        {/* Filter 2: Lesson Selector Button / Dropdown */}
+        <div className="relative shrink-0">
           <button
             id="lesson-filter-button"
             onClick={() => {
@@ -886,20 +1076,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             className="px-2.5 sm:px-3 py-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-98 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl shadow-xs border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <span>
-              {selectedLektion === 'ALL' ? (
-                appLanguage === 'en' ? 'All' : 'Alle'
-              ) : selectedLektion === 'PART_1' ? (
-                `${selectedLevel}.1`
-              ) : selectedLektion === 'PART_2' ? (
-                `${selectedLevel}.2`
-              ) : (
-                <>
-                  <span className="sm:hidden">{selectedLektion}</span>
-                  <span className="hidden sm:inline">
-                    {appLanguage === 'en' ? 'Lesson' : 'Lektion'} {selectedLektion}
-                  </span>
-                </>
-              )}
+              {selectedLektion === 'ALL'
+                ? (appLanguage === 'en' ? 'All' : 'Alle')
+                : selectedLektion === 'PART_1'
+                ? `${selectedLevel}.1`
+                : selectedLektion === 'PART_2'
+                ? `${selectedLevel}.2`
+                : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}
             </span>
             <ChevronDown
               className={`w-3 h-3 text-zinc-500 transition-transform ${
@@ -908,24 +1091,25 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             />
           </button>
 
-          {/* Dropdown Popover for Lesson 1 to 14 */}
+          {/* Dropdown Popover for Lessons & Ranges */}
           {isLessonDropdownOpen && (
             <>
               <div
                 className="fixed inset-0 z-20"
                 onClick={() => setIsLessonDropdownOpen(false)}
               />
-              <div className="absolute left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-0 mt-1.5 z-30 w-72 sm:w-80 bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 space-y-2 animate-fadeIn">
-                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="absolute right-0 mt-1.5 z-30 w-72 sm:w-80 bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 space-y-2 animate-fadeIn">
+                {/* Header with All Button */}
+                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100 dark:border-zinc-800 gap-1">
                   <span className="text-[11px] font-black text-zinc-500 dark:text-zinc-400">
-                    {appLanguage === 'en' ? 'Choose Lesson:' : 'Lektion wählen:'}
+                    {appLanguage === 'en' ? 'Lesson Filter:' : 'Lektionsfilter:'}
                   </span>
                   <button
                     onClick={() => {
                       playSound('tap');
                       handleFilterChange(undefined, 'ALL');
                     }}
-                    className={`text-[11px] font-black px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                    className={`text-[11px] font-black px-2.5 py-0.5 rounded-lg transition-all cursor-pointer ${
                       selectedLektion === 'ALL'
                         ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
                         : 'text-zinc-500 hover:text-zinc-950 dark:hover:text-white'
@@ -936,110 +1120,142 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
 
                 {/* 8-Column Grid: Row 1 = 1 to 7 + Level.1, Row 2 = 8 to 14 + Level.2 */}
-                <div className="grid grid-cols-8 gap-1 p-0.5">
-                  {/* Row 1: Lessons 1 to 7 */}
-                  {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                <div className="space-y-1 p-0.5">
+                  <div className="grid grid-cols-8 gap-1">
+                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => {
+                          playSound('tap');
+                          handleFilterChange(undefined, num);
+                        }}
+                        className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                          selectedLektion === num
+                            ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                    {/* Level.1 button e.g. A1.1, A2.1, B1.1 */}
                     <button
-                      key={num}
                       onClick={() => {
                         playSound('tap');
-                        handleFilterChange(undefined, num);
+                        handleFilterChange(undefined, 'PART_1');
                       }}
-                      className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                        selectedLektion === num
+                      className={`py-1.5 px-0.5 rounded-lg text-[10.5px] sm:text-xs font-black transition-all cursor-pointer ${
+                        selectedLektion === 'PART_1'
                           ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                          : 'bg-zinc-200/80 dark:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600'
                       }`}
                     >
-                      {num}
+                      {selectedLevel}.1
                     </button>
-                  ))}
+                  </div>
 
-                  {/* Level.1 (e.g. A1.1) button right after 7 */}
-                  <button
-                    onClick={() => {
-                      playSound('tap');
-                      handleFilterChange(undefined, 'PART_1');
-                    }}
-                    title={`${selectedLevel}.1`}
-                    className={`py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black transition-all cursor-pointer ${
-                      selectedLektion === 'PART_1'
-                        ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-600'
-                    }`}
-                  >
-                    {selectedLevel}.1
-                  </button>
-
-                  {/* Row 2: Lessons 8 to 14 */}
-                  {[8, 9, 10, 11, 12, 13, 14].map((num) => (
+                  <div className="grid grid-cols-8 gap-1">
+                    {[8, 9, 10, 11, 12, 13, 14].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => {
+                          playSound('tap');
+                          handleFilterChange(undefined, num);
+                        }}
+                        className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                          selectedLektion === num
+                            ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                    {/* Level.2 button e.g. A1.2, A2.2, B1.2 */}
                     <button
-                      key={num}
                       onClick={() => {
                         playSound('tap');
-                        handleFilterChange(undefined, num);
+                        handleFilterChange(undefined, 'PART_2');
                       }}
-                      className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                        selectedLektion === num
+                      className={`py-1.5 px-0.5 rounded-lg text-[10.5px] sm:text-xs font-black transition-all cursor-pointer ${
+                        selectedLektion === 'PART_2'
                           ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                          : 'bg-zinc-200/80 dark:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600'
                       }`}
                     >
-                      {num}
+                      {selectedLevel}.2
                     </button>
-                  ))}
-
-                  {/* Level.2 (e.g. A1.2) button right after 14 */}
-                  <button
-                    onClick={() => {
-                      playSound('tap');
-                      handleFilterChange(undefined, 'PART_2');
-                    }}
-                    title={`${selectedLevel}.2`}
-                    className={`py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black transition-all cursor-pointer ${
-                      selectedLektion === 'PART_2'
-                        ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-600'
-                    }`}
-                  >
-                    {selectedLevel}.2
-                  </button>
+                  </div>
                 </div>
               </div>
             </>
           )}
         </div>
-
-        {/* Group 3: Learn & Practice Switcher inside Flashcard Mode */}
-        {showLearnPracticeToggle && (
-          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => handleSubModeChange('learn')}
-              className={`py-1 px-2.5 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                flashcardSubMode === 'learn'
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                  : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              {appLanguage === 'en' ? 'Learn' : 'Lernen'}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSubModeChange('practice')}
-              className={`py-1 px-2.5 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                flashcardSubMode === 'practice'
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                  : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
-              }`}
-            >
-              {appLanguage === 'en' ? 'Practice' : 'Üben'}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
+
+  {/* Banner 2: Flashcard Sub-Mode Selector (Learn, Practice, Review) */}
+  const renderModeBanner = () => (
+    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
+      <div className="grid grid-cols-3 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
+        {/* Learn Button */}
+        <button
+          type="button"
+          onClick={() => handleSubModeChange('learn')}
+          className={`py-1.5 px-2 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+            flashcardSubMode === 'learn'
+              ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+          }`}
+        >
+          <span>{appLanguage === 'en' ? 'Learn' : 'Lernen'}</span>
+        </button>
+
+        {/* Practice Button */}
+        <button
+          type="button"
+          onClick={() => handleSubModeChange('practice')}
+          className={`py-1.5 px-2 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+            flashcardSubMode === 'practice'
+              ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+          }`}
+        >
+          <span>{appLanguage === 'en' ? 'Practice' : 'Üben'}</span>
+        </button>
+
+        {/* Review Button with Red Notification Badge & matching UX styling */}
+        <button
+          type="button"
+          onClick={() => handleSubModeChange('review')}
+          className={`py-1.5 px-2 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 relative ${
+            flashcardSubMode === 'review'
+              ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+          }`}
+        >
+          <span>{appLanguage === 'en' ? 'Review' : 'Wiederholen'}</span>
+          {globalDueCount > 0 ? (
+            <span
+              className="px-1.5 py-0.2 rounded-full text-[10px] font-black leading-tight bg-rose-500 text-white shadow-2xs animate-pulse"
+            >
+              {globalDueCount}
+            </span>
+          ) : (
+            <span
+              className="px-1.5 py-0.2 rounded-full text-[10px] font-black leading-tight bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300 opacity-60"
+            >
+              0
+            </span>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  // Filter Bar Component inside other Vocab Exercises
+  const renderVocabFilterBar = () => renderFilterBanner();
 
   // VIEW 2: ACTIVE EXERCISE SCREEN (With Filter Bar inside each exercise)
   return (
@@ -1047,7 +1263,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {/* SUB-MODE 1: FLASHCARD DRILL */}
       {activeExerciseMode === 'explorer' && (
         <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
-          {renderVocabFilterBar(true)}
+          {/* Banner 1: Level & Lesson Filters */}
+          {renderFilterBanner()}
+          {/* Banner 2: Learn, Practice, Review Modes */}
+          {renderModeBanner()}
 
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
             {filteredWords.length === 0 ? (
@@ -1214,11 +1433,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
               </>
             ) : (
-              /* PRACTICE SUB-MODE: Unified Type & Speak input with Contextual Feedback */
+              /* PRACTICE & REVIEW SUB-MODE: Unified Type & Speak input with Contextual Feedback */
               isPracticeComplete ? (
-                /* Practice Session Complete View */
+                /* Practice / Review Session Complete View */
                 <div className="flex-1 flex flex-col justify-between items-center text-center p-2.5 sm:p-3.5 animate-fadeIn w-full space-y-2.5 sm:space-y-3">
-                  {/* Top Level, Lesson, and Total Words Heading (No Sparkles Icon, No Practice Complete text) */}
+                  {/* Top Level, Lesson, and Total Words Heading */}
                   <div className="text-center space-y-0.5 pt-1">
                     <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
                       {selectedLevel} • {selectedLektion === 'ALL'
@@ -1230,109 +1449,123 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}
                     </h3>
                     <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                      {filteredWords.length} {appLanguage === 'en' ? (filteredWords.length === 1 ? 'total word' : 'total words') : 'Wörter insgesamt'}
+                      {flashcardSubMode === 'review'
+                        ? `${practiceQueue.length || filteredWords.length} ${appLanguage === 'en' ? 'reviewed words' : 'wiederholte Wörter'}`
+                        : `${filteredWords.length} ${appLanguage === 'en' ? (filteredWords.length === 1 ? 'total word' : 'total words') : 'Wörter insgesamt'}`}
                     </p>
                   </div>
 
                   {/* Accuracy, Correct Words, Incorrect Words Stats Grid */}
-                  <div className="grid grid-cols-3 gap-2 w-full">
-                    <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                        {appLanguage === 'en' ? 'Accuracy' : 'Genauigkeit'}
-                      </span>
-                      <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
-                        {Math.max(0, Math.round(((filteredWords.length - mistakeWords.length) / (filteredWords.length || 1)) * 100))}%
-                      </p>
-                    </div>
+                  {(() => {
+                    const totalWords = sessionInitialCount || (flashcardSubMode === 'review' ? (practiceQueue.length || 10) : filteredWords.length) || 1;
+                    const initialMistakesCount = initialMistakeWordIds.length;
+                    const initialCorrectCount = Math.max(0, totalWords - initialMistakesCount);
+                    const accuracy = Math.round((initialCorrectCount / (totalWords || 1)) * 100);
+                    const sortedMistakes = [...mistakeWords].sort((a, b) => (mistakeCounts[b.id] || 1) - (mistakeCounts[a.id] || 1));
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                        {appLanguage === 'en' ? 'Correct' : 'Richtig'}
-                      </span>
-                      <p className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100">
-                        {Math.max(0, filteredWords.length - mistakeWords.length)}
-                      </p>
-                    </div>
+                    return (
+                      <>
+                        <div className="grid grid-cols-3 gap-2 w-full">
+                          <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                              {appLanguage === 'en' ? 'Accuracy' : 'Genauigkeit'}
+                            </span>
+                            <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
+                              {accuracy}%
+                            </p>
+                          </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                        {appLanguage === 'en' ? 'Incorrect' : 'Falsch'}
-                      </span>
-                      <p className="text-lg sm:text-xl font-black text-red-600 dark:text-red-400">
-                        {mistakeWords.length}
-                      </p>
-                    </div>
-                  </div>
+                          <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                              {appLanguage === 'en' ? 'Correct' : 'Richtig'}
+                            </span>
+                            <p className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100">
+                              {initialCorrectCount}
+                            </p>
+                          </div>
 
-                  {/* Box Container with Mistakes List Line-by-Line & Mistake Count on the Right */}
-                  <div className="w-full flex-1 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-2.5 sm:p-3 space-y-2">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-zinc-700 dark:text-zinc-300">
-                        {appLanguage === 'en' ? 'Mistakes' : 'Fehler'}
-                      </span>
-                      <span className="text-[11px] font-bold text-zinc-400">
-                        {mistakeWords.length > 0
-                          ? `${mistakeWords.length} ${appLanguage === 'en' ? (mistakeWords.length === 1 ? 'word' : 'words') : 'Wörter'}`
-                          : (appLanguage === 'en' ? '0 mistakes' : '0 Fehler')}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto max-h-44 sm:max-h-52 space-y-1.5 pr-0.5 custom-scrollbar">
-                      {mistakeWords.length > 0 ? (
-                        mistakeWords.map((word) => {
-                          const count = mistakeCounts[word.id] || 1;
-                          const displayGerman = word.nounDetails?.gender
-                            ? `${word.nounDetails.gender} ${word.lemma}`
-                            : word.lemma;
-
-                          return (
-                            <div
-                              key={word.id}
-                              className="flex items-center justify-between p-2 sm:p-2.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 shadow-2xs gap-2"
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    playSound('tap');
-                                    speakGerman(displayGerman);
-                                  }}
-                                  className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer shrink-0 active:scale-95"
-                                  title={appLanguage === 'en' ? 'Listen' : 'Anhören'}
-                                >
-                                  <Volume2 className="w-3.5 h-3.5" />
-                                </button>
-                                <div className="min-w-0 flex-1 text-left">
-                                  <p className="font-black text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                                    {displayGerman}
-                                  </p>
-                                  <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate">
-                                    {word.translation}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Right: Mistake count badge */}
-                              <div className="shrink-0 px-2 py-0.5 bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg text-xs font-black">
-                                <span>{count}× {appLanguage === 'en' ? (count === 1 ? 'mistake' : 'mistakes') : 'Fehler'}</span>
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="py-5 text-center space-y-1">
-                          <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                            {appLanguage === 'en' ? 'Perfect! No mistakes.' : 'Perfekt! Keine Fehler.'}
-                          </p>
-                          <p className="text-xs font-medium text-zinc-400">
-                            {appLanguage === 'en' ? 'All words were answered correctly on the 1st try!' : 'Alle Wörter im ersten Versuch richtig beantwortet!'}
-                          </p>
+                          <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                              {appLanguage === 'en' ? 'Incorrect' : 'Falsch'}
+                            </span>
+                            <p className="text-lg sm:text-xl font-black text-red-600 dark:text-red-400">
+                              {initialMistakesCount}
+                            </p>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Actions: Back to Learn & Practice Again */}
+                        {/* Box Container with Mistakes List Line-by-Line & Mistake Count on the Right */}
+                        <div className="w-full flex-1 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-2.5 sm:p-3 space-y-2">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-black text-zinc-700 dark:text-zinc-300">
+                              {appLanguage === 'en' ? 'Mistakes' : 'Fehler'}
+                            </span>
+                            <span className="text-[11px] font-bold text-zinc-400">
+                              {sortedMistakes.length > 0
+                                ? `${sortedMistakes.length} ${appLanguage === 'en' ? (sortedMistakes.length === 1 ? 'word' : 'words') : 'Wörter'}`
+                                : (appLanguage === 'en' ? '0' : '0')}
+                            </span>
+                          </div>
+
+                          <div className="flex-1 overflow-y-auto max-h-44 sm:max-h-52 space-y-1.5 pr-0.5 custom-scrollbar">
+                            {sortedMistakes.length > 0 ? (
+                              sortedMistakes.map((word) => {
+                                const count = mistakeCounts[word.id] || 1;
+                                const displayGerman = word.nounDetails?.gender
+                                  ? `${word.nounDetails.gender} ${word.lemma}`
+                                  : word.lemma;
+
+                                return (
+                                  <div
+                                    key={word.id}
+                                    className="flex items-center justify-between p-2 sm:p-2.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 shadow-2xs gap-2"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          playSound('tap');
+                                          speakGerman(displayGerman);
+                                        }}
+                                        className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer shrink-0 active:scale-95"
+                                        title={appLanguage === 'en' ? 'Listen' : 'Anhören'}
+                                      >
+                                        <Volume2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <div className="min-w-0 flex-1 text-left">
+                                        <p className="font-black text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                                          {displayGerman}
+                                        </p>
+                                        <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate">
+                                          {word.translation}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Right: Mistake count badge (e.g. 2×, 1× without extra text) */}
+                                    <div className="shrink-0 px-2 py-0.5 bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg text-xs font-black">
+                                      <span>{count}×</span>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="py-5 text-center space-y-1">
+                                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                                  {appLanguage === 'en' ? 'Perfect! No mistakes.' : 'Perfekt! Keine Fehler.'}
+                                </p>
+                                <p className="text-xs font-medium text-zinc-400">
+                                  {appLanguage === 'en' ? 'All words were answered correctly on the 1st try!' : 'Alle Wörter im ersten Versuch richtig beantwortet!'}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {/* Actions: Back to Learn & Practice/Review Again */}
                   <div className="w-full flex items-center gap-2.5 pt-1">
                     <button
                       type="button"
@@ -1346,7 +1579,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       onClick={restartPracticeSession}
                       className="flex-1 py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
                     >
-                      {appLanguage === 'en' ? 'Practice Again' : 'Erneut üben'}
+                      {flashcardSubMode === 'review'
+                        ? (appLanguage === 'en' ? 'Review Again' : 'Erneut wiederholen')
+                        : (appLanguage === 'en' ? 'Practice Again' : 'Erneut üben')}
                     </button>
                   </div>
                 </div>
@@ -1358,11 +1593,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       <span>{practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}</span>
                     </div>
 
-                    {/* Right: Card Counter & Redo Round Indicator */}
+                    {/* Right: Card Counter & Redo Round Indicator with pleasant spacing */}
                     {roundNumber > 1 ? (
-                      <div className="px-2.5 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs flex items-center gap-1.5">
+                      <div className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs flex items-center space-x-2.5">
+                        <span>{appLanguage === 'en' ? `Redo ${roundNumber - 1}` : `Wiederholung ${roundNumber - 1}`}</span>
+                        <span className="text-amber-500/70 text-[10px] font-bold">•</span>
                         <span>
-                          {appLanguage === 'en' ? `Redo ${roundNumber - 1}` : `Wiederholung ${roundNumber - 1}`} • {(practiceQueueIndex % ((practiceQueue.length > 0 ? practiceQueue : filteredWords).length || 1)) + 1} / {(practiceQueue.length > 0 ? practiceQueue : filteredWords).length}
+                          {(practiceQueueIndex % ((practiceQueue.length > 0 ? practiceQueue : filteredWords).length || 1)) + 1} / {(practiceQueue.length > 0 ? practiceQueue : filteredWords).length}
                         </span>
                       </div>
                     ) : (

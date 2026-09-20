@@ -25,6 +25,7 @@ interface SchritteGrammarViewProps {
   activeExerciseMode: string | null;
   onSelectExerciseMode: (mode: string | null) => void;
   onRequestAbandon: (onConfirmLeave: () => void) => void;
+  onQuizActiveChange?: (isActive: boolean) => void;
   appLanguage?: AppLanguage;
 }
 
@@ -53,6 +54,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   activeExerciseMode,
   onSelectExerciseMode,
   onRequestAbandon,
+  onQuizActiveChange,
   appLanguage = 'en',
 }) => {
   const t = getTranslation(appLanguage);

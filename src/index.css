@@ -11,6 +11,54 @@ html, body, #root {
   touch-action: manipulation;
 }
 
+/* Refined Light-Grey Slate Dark Theme (soothing light graphite / slate grey, never pitch black) */
+html.dark {
+  color-scheme: dark;
+  background-color: #2b303a;
+}
+
+html.dark body {
+  background-color: #2b303a;
+  color: #f8fafc;
+}
+
+/* Light-Grey Dark Theme Palette Overrides */
+.dark .dark\:bg-zinc-950 {
+  background-color: #2b303a !important;
+}
+
+.dark .dark\:bg-zinc-900 {
+  background-color: #383e4c !important;
+}
+
+.dark .dark\:bg-zinc-800 {
+  background-color: #454d5d !important;
+}
+
+.dark .dark\:bg-zinc-700 {
+  background-color: #545e71 !important;
+}
+
+.dark .dark\:bg-zinc-800\/80 {
+  background-color: rgba(69, 77, 93, 0.85) !important;
+}
+
+.dark .dark\:bg-zinc-800\/60 {
+  background-color: rgba(69, 77, 93, 0.65) !important;
+}
+
+.dark .dark\:bg-zinc-800\/40 {
+  background-color: rgba(69, 77, 93, 0.45) !important;
+}
+
+.dark .dark\:border-zinc-800 {
+  border-color: #4d5668 !important;
+}
+
+.dark .dark\:border-zinc-700 {
+  border-color: #5d677c !important;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

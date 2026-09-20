@@ -1,11 +1,96 @@
 /**
- * Duolingo-style sound effects synthesis using Web Audio API
+ * Duolingo-style sound effects synthesis and ambient study audio using Web Audio API
  * Runs natively in all modern browsers without external audio files.
  */
 let isGlobalSoundEnabled = true;
+let isGlobalMusicEnabled = false;
+let ambientMusicNode: { stop: () => void } | null = null;
 
 export function setGlobalSoundEnabled(enabled: boolean): void {
   isGlobalSoundEnabled = enabled;
+}
+
+export function setGlobalMusicEnabled(enabled: boolean): void {
+  isGlobalMusicEnabled = enabled;
+  if (enabled) {
+    startAmbientStudyMusic();
+  } else {
+    stopAmbientStudyMusic();
+  }
+}
+
+export function getGlobalMusicEnabled(): boolean {
+  return isGlobalMusicEnabled;
+}
+
+function startAmbientStudyMusic(): void {
+  if (typeof window === 'undefined') return;
+  if (ambientMusicNode) return;
+
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    // Gentle, soothing warm study chord (F major 9th / C chord soothing drone)
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.001, ctx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.045, ctx.currentTime + 2.5); // Soft study volume
+
+    const freqs = [174.61, 220.0, 261.63, 329.63, 392.0]; // F3, A3, C4, E4, G4
+    const oscillators: OscillatorNode[] = [];
+
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      
+      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+      // Gentle LFO modulation for warm analog drift
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.setValueAtTime(0.12 + idx * 0.04, ctx.currentTime);
+      lfoGain.gain.setValueAtTime(0.8, ctx.currentTime);
+      lfo.connect(osc.frequency);
+      lfo.start();
+
+      oscGain.gain.setValueAtTime(0.2, ctx.currentTime);
+      osc.connect(oscGain);
+      oscGain.connect(masterGain);
+      osc.start();
+      oscillators.push(osc);
+    });
+
+    masterGain.connect(ctx.destination);
+
+    ambientMusicNode = {
+      stop: () => {
+        try {
+          masterGain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 1.2);
+          setTimeout(() => {
+            oscillators.forEach((o) => {
+              try { o.stop(); } catch {}
+            });
+            try { ctx.close(); } catch {}
+            ambientMusicNode = null;
+          }, 1300);
+        } catch {
+          ambientMusicNode = null;
+        }
+      },
+    };
+  } catch (e) {
+    console.warn('Unable to start ambient study music', e);
+  }
+}
+
+function stopAmbientStudyMusic(): void {
+  if (ambientMusicNode) {
+    ambientMusicNode.stop();
+  }
 }
 
 class SoundEffects {
