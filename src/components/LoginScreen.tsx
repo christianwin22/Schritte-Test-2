@@ -75,15 +75,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null })
     <div className="min-h-[100dvh] w-full bg-[#fafafa] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex items-center justify-center px-4 font-sans overflow-y-auto">
       <div className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 shadow-xs p-6 sm:p-8 space-y-6">
         <div className="text-center space-y-1.5">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-white border border-zinc-300 flex items-center justify-center shadow-xs">
-            <svg viewBox="0 0 32 32" fill="none" className="w-8 h-8 text-[#222834]" aria-hidden="true">
-              <rect x="5" y="19" width="6" height="7" rx="1.5" fill="currentColor" opacity="0.35" />
-              <rect x="13" y="12" width="6" height="14" rx="1.5" fill="currentColor" opacity="0.7" />
-              <rect x="21" y="6" width="6" height="20" rx="1.5" fill="currentColor" />
-            </svg>
-          </div>
-          <h1 className="text-xl font-black tracking-tight">Chris Personal App</h1>
-          <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">Schritte International Neu</p>
+          <img src="/icon.svg" alt="" className="mx-auto w-16 h-16 rounded-2xl shadow-xs" />
+          <h1 className="text-xl font-black tracking-tight">DeutschMeister</h1>
+          <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">Chris Personal App</p>
         </div>
 
         {!supabase ? (
@@ -158,9 +152,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null })
           </div>
         )}
 
-        <p className="text-[11px] text-center font-medium text-zinc-400">
-          Private app — only invited accounts can sign in.
-        </p>
       </div>
     </div>
   );
