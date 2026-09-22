@@ -1541,6 +1541,44 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     );
   };
 
+  /** After answering Der/Die/Das or Plural: the same boxes and buttons Flashcard uses. */
+  const renderDrillFeedback = (correct: boolean, userText: string, expected: string, onNext: () => void) => (
+    <div className="w-full space-y-3 animate-fadeIn">
+      {!correct && (
+        <div className="w-full px-4 py-3.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-500 dark:border-red-600 rounded-2xl flex items-center gap-2.5 shadow-xs">
+          <X className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 stroke-[3]" />
+          <span className="font-bold text-base sm:text-lg text-red-900 dark:text-red-100 truncate">{userText}</span>
+        </div>
+      )}
+      <div className="w-full px-4 py-3.5 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500 dark:border-emerald-600 rounded-2xl flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+          <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 stroke-[3]" />
+          <span className="font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 truncate">{expected}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            playSound('tap');
+            speakGerman(expected);
+          }}
+          title={appLanguage === 'en' ? 'Listen' : 'Anhören'}
+          className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 dark:hover:bg-emerald-800 text-emerald-800 dark:text-emerald-200 transition-all cursor-pointer shrink-0 ml-1 active:scale-95"
+        >
+          <Volume2 className="w-4 h-4" />
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onNext}
+        className={`w-full py-3.5 ${
+          correct ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
+        } active:scale-95 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer transition-all flex items-center justify-center`}
+      >
+        <span>{correct ? (appLanguage === 'en' ? 'Continue' : 'Weiter') : appLanguage === 'en' ? 'Got It' : 'Verstanden'}</span>
+      </button>
+    </div>
+  );
+
   /** Review with nothing unlocked yet, or a finished session. Null while a session is running. */
   const renderDrillReviewStatus = () => {
     if (!isDrillReview) return null;
@@ -2320,11 +2358,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                               </span>
                             </div>
 
-                            {/* Box 2: Correct answer in clean natural grey/zinc box with audio button */}
-                            <div className="w-full px-4 py-3 bg-zinc-100/90 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 rounded-2xl flex items-center justify-between shadow-xs">
-                              <span className="font-black text-base sm:text-lg text-zinc-900 dark:text-zinc-100 truncate pr-2">
-                                {practiceFeedback.expected}
-                              </span>
+                            {/* Box 2: the correct answer, in green, with audio */}
+                            <div className="w-full px-4 py-3.5 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500 dark:border-emerald-600 rounded-2xl flex items-center justify-between shadow-xs">
+                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 stroke-[3]" />
+                                <span className="font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 truncate">
+                                  {practiceFeedback.expected}
+                                </span>
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -2332,7 +2373,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                   speakGerman(practiceFeedback.expected);
                                 }}
                                 title={appLanguage === 'en' ? 'Listen (Space)' : 'Anhören (Leertaste)'}
-                                className="p-2 rounded-xl bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200 transition-all cursor-pointer shrink-0 ml-1 active:scale-95"
+                                className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 dark:hover:bg-emerald-800 text-emerald-800 dark:text-emerald-200 transition-all cursor-pointer shrink-0 ml-1 active:scale-95"
                               >
                                 <Volume2 className="w-4 h-4" />
                               </button>
@@ -2505,8 +2546,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col">
-            {renderDrillModeSwitch()}
             {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
+            {renderDrillModeSwitch()}
             <form
               onSubmit={(e) => {
                 if (isArticle) e.preventDefault();
@@ -2540,10 +2581,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   </div>
 
                   {/* The sentence, with the blank to fill. Plural shows which noun, as "der Name". */}
-                  <div
-                    className="flex-1 flex flex-col items-center justify-center gap-4 px-1"
-                    onClick={() => !isArticle && !answered && pluralInputRef.current?.focus()}
-                  >
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 px-1">
                     {!isArticle && noun && (
                       <span className="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-black text-zinc-600 dark:text-zinc-300">
                         {noun.nounDetails?.gender} {noun.lemma}
@@ -2551,68 +2589,38 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     )}
                     <p className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 leading-relaxed text-center">
                       {before}
-                      {isArticle || answered ? (
-                        <span
-                          className={`inline-block min-w-[2.6em] mx-1 px-1 border-b-4 align-baseline ${
-                            !answered
-                              ? 'border-zinc-300 dark:border-zinc-600 text-transparent'
-                              : correct
-                              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                              : 'border-rose-500 text-rose-600 dark:text-rose-400'
-                          }`}
-                        >
-                          {answered ? shown(rightAnswer) : ' '}
-                        </span>
-                      ) : (
-                        <input
-                          ref={pluralInputRef}
-                          type="text"
-                          autoFocus
-                          autoComplete="off"
-                          autoCorrect="off"
-                          autoCapitalize="off"
-                          spellCheck={false}
-                          aria-label={appLanguage === 'en' ? 'Plural' : 'Plural'}
-                          value={pluralInput}
-                          onChange={(e) => setPluralInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            // Enter (or the phone keyboard's Go/Return) checks the answer
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              e.currentTarget.form?.requestSubmit();
-                            }
-                          }}
-                          enterKeyHint="done"
-                          style={{ width: `${Math.max(4, pluralInput.length + 1.5)}ch` }}
-                          className="inline-block mx-1 px-2 py-0.5 align-middle rounded-xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-300 dark:border-zinc-600 focus:border-zinc-950 dark:focus:border-white outline-none text-center font-black text-zinc-900 dark:text-zinc-100"
-                        />
-                      )}
+                      <span
+                        className={`inline-block min-w-[2.6em] mx-1 px-1 border-b-4 align-baseline ${
+                          // Once answered, the blank always holds the right word in green, so the sentence
+                          // you read is correct; the boxes below show what you picked.
+                          !answered
+                            ? 'border-zinc-300 dark:border-zinc-600 text-transparent'
+                            : 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        {answered ? shown(rightAnswer) : '\u00a0'}
+                      </span>
                       {after}
                     </p>
                   </div>
 
                   {/* Bottom of the screen: the answers, then the result */}
                   <div className="pt-4 space-y-2.5">
-                    {answered ? (
+                    {answered && noun ? (
                       <>
-                        <p className={`text-center font-black text-sm ${correct ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                          {correct
-                            ? appLanguage === 'en' ? 'Correct!' : 'Richtig!'
-                            : `${appLanguage === 'en' ? 'Correct answer:' : 'Richtig:'} ${shown(rightAnswer)}`}
-                        </p>
+                        {isArticle
+                          ? renderDrillFeedback(
+                              correct,
+                              `${blitzFeedback?.selected} ${noun.lemma}`,
+                              `${noun.nounDetails?.gender} ${noun.lemma}`,
+                              handleNextBlitz
+                            )
+                          : renderDrillFeedback(correct, pluralInput.trim(), noun.nounDetails?.plural ?? '', handleNextPlural)}
                         {isArticle && !correct && blitzFeedback?.word.nounDetails?.genderRuleHint && (
                           <p className="text-center text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold">
                             💡 {blitzFeedback.word.nounDetails.genderRuleHint}
                           </p>
                         )}
-                        <button
-                          type="button"
-                          onClick={isArticle ? handleNextBlitz : handleNextPlural}
-                          className="w-full py-3.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-sm rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-98 transition-all"
-                        >
-                          <span>{appLanguage === 'en' ? 'Next Word' : 'Nächstes Wort'}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
                       </>
                     ) : isArticle ? (
                       <div className="grid grid-cols-3 gap-2.5">
@@ -2628,13 +2636,39 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         ))}
                       </div>
                     ) : (
-                      <button
-                        type="submit"
-                        disabled={!pluralInput.trim()}
-                        className="w-full py-3.5 bg-zinc-950 hover:bg-zinc-800 active:scale-98 text-white dark:bg-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs disabled:opacity-40 transition-all cursor-pointer"
-                      >
-                        {appLanguage === 'en' ? 'Check' : 'Prüfen'}
-                      </button>
+                      <>
+                        {/* Answer box above Check — the same box Flashcard uses */}
+                        <div className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs">
+                          <input
+                            ref={pluralInputRef}
+                            type="text"
+                            autoFocus
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            enterKeyHint="done"
+                            aria-label="Plural"
+                            value={pluralInput}
+                            onChange={(e) => setPluralInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              // Enter (or the phone keyboard's done key) checks the answer
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                e.currentTarget.form?.requestSubmit();
+                              }
+                            }}
+                            className="w-full bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={!pluralInput.trim()}
+                          className="w-full py-3.5 bg-zinc-950 hover:bg-zinc-800 active:scale-98 text-white dark:bg-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs disabled:opacity-40 transition-all cursor-pointer"
+                        >
+                          {appLanguage === 'en' ? 'Check' : 'Prüfen'}
+                        </button>
+                      </>
                     )}
                   </div>
                 </>
