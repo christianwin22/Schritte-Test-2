@@ -14,7 +14,7 @@ import { OrientationGuard } from './components/OrientationGuard';
 import { playSound, setGlobalSoundEnabled, setGlobalMusicEnabled } from './utils/audioEffects';
 import { AppLanguage, getTranslation } from './utils/translations';
 import { clearAppData } from './lib/progressSync';
-import { loadAllFSRSRecords, isCardDueForReview } from './utils/srsEngine';
+import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLessons } from './utils/srsEngine';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
 const STREAK_STORAGE_KEY = 'deutschmeister_streak_v2';
@@ -143,11 +143,14 @@ export default function App() {
 
   // FSRS Records for global due badge on Vocabulary button
   const [fsrsRecords, setFsrsRecords] = useState(() => loadAllFSRSRecords());
+  // Lessons waiting in Der/Die/Das and Plural Practice, for the amber badge
+  const [drillPractice, setDrillPractice] = useState(() => loadDrillPracticeState());
 
   // Listen to FSRS storage changes to keep global due count synchronized
   useEffect(() => {
     const syncFsrs = () => {
       setFsrsRecords(loadAllFSRSRecords());
+      setDrillPractice(loadDrillPracticeState());
     };
     window.addEventListener('storage', syncFsrs);
     const interval = setInterval(syncFsrs, 3000);
@@ -486,6 +489,7 @@ export default function App() {
               gems={gems}
               vocabCount={vocabulary.length}
               dueReviewCount={globalDueCount}
+              lessonsToPractiseCount={readyLessons(drillPractice, 'article').length + readyLessons(drillPractice, 'plural').length}
               appLanguage={appLanguage}
             />
           )}

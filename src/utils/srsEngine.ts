@@ -355,14 +355,15 @@ export function isDrillable(skill: DrillSkill, word: WordEntry): boolean {
 }
 
 /**
- * When a lesson's Flashcard Practice is finished, its nouns join Der/Die/Das and
- * Plural review too — first due tomorrow, the same rule as Flashcard Review.
+ * Puts nouns into Der/Die/Das and/or Plural review — first due tomorrow, the same rule
+ * as Flashcard Review. Called when that drill's own Practice is finished.
  */
 export function unlockDrillsAfterPractice(
   words: WordEntry[],
-  existingRecords: Record<string, FSRSCardRecord>
+  existingRecords: Record<string, FSRSCardRecord>,
+  skills: DrillSkill[] = ['article', 'plural']
 ): Record<string, FSRSCardRecord> {
-  const ids = (['article', 'plural'] as DrillSkill[]).flatMap((skill) =>
+  const ids = skills.flatMap((skill) =>
     words.filter((w) => isDrillable(skill, w)).map((w) => drillCardId(skill, w.id))
   );
   return unlockWordsAfterPractice(ids, existingRecords);
@@ -408,4 +409,84 @@ export function drillReviewPool(
   });
   const due = unlocked.filter((w) => isCardDueForReview(records[drillCardId(skill, w.id)]));
   return { due, unlocked };
+}
+
+// ---------------------------------------------------------------------------
+// Which lessons are waiting to be practised in Der/Die/Das and Plural
+// ---------------------------------------------------------------------------
+//
+// Finishing a lesson's Flashcard Practice marks it "ready" in both drills (one notice per
+// lesson). Finishing that lesson's Practice in a drill marks it "done" there and puts its
+// nouns into that drill's Review. Stored under a synced "schritte_" key.
+
+const DRILL_PRACTICE_KEY = 'schritte_drill_practice_v1';
+
+export type DrillLessonStatus = 'ready' | 'done';
+export type DrillPracticeState = Record<DrillSkill, Record<string, DrillLessonStatus>>;
+
+export function lessonKey(level: string, lektion: number): string {
+  return `${level}-${lektion}`;
+}
+
+export function loadDrillPracticeState(): DrillPracticeState {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DRILL_PRACTICE_KEY) || '{}');
+    return { article: parsed.article ?? {}, plural: parsed.plural ?? {} };
+  } catch {
+    return { article: {}, plural: {} };
+  }
+}
+
+export function saveDrillPracticeState(state: DrillPracticeState): void {
+  try {
+    localStorage.setItem(DRILL_PRACTICE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
+/** After Flashcard Practice: the lesson becomes ready in each drill that has nouns for it — unless already done. */
+export function markLessonReadyForDrills(
+  state: DrillPracticeState,
+  level: string,
+  lektion: number,
+  lessonWords: WordEntry[]
+): DrillPracticeState {
+  const key = lessonKey(level, lektion);
+  const next: DrillPracticeState = { article: { ...state.article }, plural: { ...state.plural } };
+  for (const skill of ['article', 'plural'] as DrillSkill[]) {
+    if (next[skill][key] === 'done') continue;
+    if (lessonWords.some((w) => isDrillable(skill, w))) next[skill][key] = 'ready';
+  }
+  return next;
+}
+
+/** After a drill's Practice: every lesson whose nouns were all practised is done in that drill. */
+export function markLessonsDoneForDrill(
+  state: DrillPracticeState,
+  skill: DrillSkill,
+  practised: WordEntry[],
+  allWords: WordEntry[]
+): DrillPracticeState {
+  const next: DrillPracticeState = { article: { ...state.article }, plural: { ...state.plural } };
+  const practisedIds = new Set(practised.map((w) => w.id));
+  const lessons = new Set(practised.filter((w) => typeof w.lektion === 'number').map((w) => lessonKey(w.level, w.lektion!)));
+  for (const key of lessons) {
+    const lessonNouns = allWords.filter(
+      (w) => typeof w.lektion === 'number' && lessonKey(w.level, w.lektion) === key && isDrillable(skill, w)
+    );
+    if (lessonNouns.every((w) => practisedIds.has(w.id))) next[skill][key] = 'done';
+  }
+  return next;
+}
+
+/** Lessons waiting in a drill, in course order. */
+export function readyLessons(state: DrillPracticeState, skill: DrillSkill): { level: string; lektion: number }[] {
+  return Object.entries(state[skill])
+    .filter(([, status]) => status === 'ready')
+    .map(([key]) => {
+      const [level, n] = key.split('-');
+      return { level, lektion: Number(n) };
+    })
+    .sort((a, b) => a.level.localeCompare(b.level) || a.lektion - b.lektion);
 }

@@ -18,12 +18,15 @@ interface HomeGuideViewProps {
   gems?: number;
   vocabCount?: number;
   dueReviewCount?: number;
+  /** Lessons waiting in Der/Die/Das + Plural Practice (amber) */
+  lessonsToPractiseCount?: number;
   appLanguage?: AppLanguage;
 }
 
 export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
   onSelectArea,
   dueReviewCount = 0,
+  lessonsToPractiseCount = 0,
   appLanguage = 'en',
 }) => {
   const t = getTranslation(appLanguage);
@@ -75,12 +78,27 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
             className="w-full relative bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-zinc-100 shadow-xs hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 active:scale-[0.98] flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5 group min-h-[105px] sm:min-h-[130px]"
           >
             {/* Notification Badge on Vocab Card for Pending Due Spaced Repetition Words */}
-            {area.id === 'vocab' && dueReviewCount > 0 && (
-              <span
-                id="vocab-due-badge"
-                className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-md animate-pulse z-10"
-              >
-                {dueReviewCount}
+            {/* Amber = lessons waiting to practise, red = words due for review */}
+            {area.id === 'vocab' && (dueReviewCount > 0 || lessonsToPractiseCount > 0) && (
+              <span className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 flex items-center gap-1 z-10">
+                {lessonsToPractiseCount > 0 && (
+                  <span
+                    id="vocab-practice-badge"
+                    title="Lessons ready to practise"
+                    className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black flex items-center justify-center shadow-md"
+                  >
+                    {lessonsToPractiseCount}
+                  </span>
+                )}
+                {dueReviewCount > 0 && (
+                  <span
+                    id="vocab-due-badge"
+                    title="Words due for review"
+                    className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-md animate-pulse"
+                  >
+                    {dueReviewCount}
+                  </span>
+                )}
               </span>
             )}
 

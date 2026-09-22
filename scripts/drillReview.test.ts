@@ -73,5 +73,27 @@ const missed = reviewCard(id, false, { ...records[id], lastReviewedAt: yesterday
 check(`right, right, right, right → back in ${gaps.join(', ')} days`, gaps.every((g, i) => i === 0 || g > gaps[i - 1]));
 check(`a wrong answer comes back soonest (${Math.round(days(missed))} day)`, days(missed) <= gaps[0]);
 
+console.log('6. Flashcard Practice → "ready" in both drills → drill Practice → its own Review');
+const { markLessonReadyForDrills, markLessonsDoneForDrill, readyLessons, lessonKey } = engine;
+let st = { article: {}, plural: {} } as ReturnType<typeof engine.loadDrillPracticeState>;
+st = markLessonReadyForDrills(st, 'A1', 1, lesson1);
+check('Flashcard Practice of Lesson 1 → ready in Der/Die/Das', st.article[lessonKey('A1', 1)] === 'ready');
+check('...and ready in Plural', st.plural[lessonKey('A1', 1)] === 'ready');
+check('one notice per lesson (not per word)', readyLessons(st, 'article').length === 1);
+const verbsOnly = INITIAL_VOCABULARY.filter((w) => !w.nounDetails);
+check('a lesson with no nouns is never "ready"', markLessonReadyForDrills({ article: {}, plural: {} }, 'A1', 99, verbsOnly).article['A1-99'] === undefined);
+const half = lesson1Nouns.slice(0, 2);
+check('practising only part of a lesson does not finish it', markLessonsDoneForDrill(st, 'article', half, INITIAL_VOCABULARY).article['A1-1'] === 'ready');
+st = markLessonsDoneForDrill(st, 'article', lesson1Nouns, INITIAL_VOCABULARY);
+check('finishing Der/Die/Das Practice → done there', st.article['A1-1'] === 'done');
+check('...but Plural is still waiting', st.plural['A1-1'] === 'ready');
+check('Der/Die/Das notice gone, Plural notice stays', readyLessons(st, 'article').length === 0 && readyLessons(st, 'plural').length === 1);
+check('doing Flashcard Practice again does not bring a done notice back', markLessonReadyForDrills(st, 'A1', 1, lesson1).article['A1-1'] === 'done');
+const onlyArticle = unlockDrillsAfterPractice(lesson1, {}, ['article']);
+check('drill Practice fills only its own Review', lesson1Nouns.every((w) => onlyArticle[drillCardId('article', w.id)]) && !lesson1Nouns.some((w) => onlyArticle[drillCardId('plural', w.id)]));
+st = markLessonReadyForDrills(st, 'A1', 3, INITIAL_VOCABULARY.filter((w) => w.lektion === 3));
+st = markLessonReadyForDrills(st, 'A1', 2, INITIAL_VOCABULARY.filter((w) => w.lektion === 2));
+check('waiting lessons listed in course order', readyLessons(st, 'plural').map((l) => l.lektion).join(',') === '1,2,3');
+
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
