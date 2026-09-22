@@ -1,31 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle, MailCheck } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, MailCheck, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AppLogo } from './AppLogo';
-
-/** Minimum length checked here, before Supabase applies its own rule. */
-export const MIN_PASSWORD_LENGTH = 8;
-
-/** Where the password-reset email sends people back to; AuthGate looks for this flag. */
-export const RESET_FLAG = 'reset';
 
 /** Turns Supabase's error text into something a learner can act on. */
 export function friendlyAuthError(message: string): string {
   if (/database error saving new user|not allowed/i.test(message)) {
     return "This email isn't on the list for this app. Ask Chris to add it.";
   }
-  if (/invalid login credentials/i.test(message)) return 'Wrong email or password.';
-  if (/email not confirmed/i.test(message)) {
-    return 'Confirm your email first — open the link we sent you when you signed up.';
-  }
-  if (/already registered|already been registered|already exists/i.test(message)) {
-    return 'There is already an account with this email. Log in instead.';
+  if (/expired|invalid.*(link|token)|otp/i.test(message)) {
+    return 'That sign-in link has expired or was already used. Ask for a new one.';
   }
   if (/failed to fetch|network|load failed/i.test(message)) {
     return "Couldn't reach the sign-in service. Check your internet connection and try again.";
   }
   if (/rate limit|too many/i.test(message)) {
-    return 'Too many attempts in a short time. Wait a minute and try again.';
+    return 'Too many sign-in emails in a short time. Wait a minute and try again.';
   }
   return message;
 }
@@ -43,15 +33,16 @@ const GoogleMark = () => (
   </svg>
 );
 
-const primaryBtn =
-  'w-full py-3.5 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer';
-const secondaryBtn =
-  'w-full py-3.5 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-zinc-300 dark:border-zinc-700 hover:border-zinc-950 dark:hover:border-zinc-300 text-zinc-900 dark:text-zinc-100 font-black text-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer';
+// Soft grey buttons, the same style the app uses for "Settings & Preferences",
+// rather than solid black on white.
+const mainBtn =
+  'w-full py-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:hover:bg-zinc-100 cursor-pointer';
+const googleBtn =
+  'w-full py-3.5 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer';
 const inputClass =
-  'w-full px-4 py-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-950 dark:focus:border-zinc-300 outline-none font-bold text-sm';
-const linkBtn = 'text-xs font-black text-zinc-600 dark:text-zinc-300 underline underline-offset-2 cursor-pointer';
+  'w-full px-4 py-3.5 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-400 dark:focus:border-zinc-500 outline-none font-bold text-sm';
 
-/** The white card every sign-in page sits in, with the logo on top. */
+/** The white card every sign-in page sits in. */
 const AuthCard: React.FC<{ children: React.ReactNode; onBack?: () => void }> = ({ children, onBack }) => {
   // The app sets light/dark itself once it loads; before that, follow the device.
   useEffect(() => {
@@ -67,109 +58,45 @@ const AuthCard: React.FC<{ children: React.ReactNode; onBack?: () => void }> = (
             type="button"
             onClick={onBack}
             aria-label="Back"
-            className="absolute top-4 left-4 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 cursor-pointer"
+            className="absolute top-5 left-4 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
         )}
-        <div className="flex flex-col items-center text-center gap-2">
-          <AppLogo size="xl" />
-          <h1 className="text-xl font-black tracking-tight">DeutschMeister</h1>
-          <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 -mt-1.5">Chris Personal App</p>
-        </div>
         {children}
       </div>
     </div>
   );
 };
 
-const PasswordInput: React.FC<{
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  autoComplete: 'current-password' | 'new-password';
-}> = ({ value, onChange, placeholder, autoComplete }) => {
-  const [visible, setVisible] = useState(false);
-  return (
-    <div className="relative">
-      <input
-        type={visible ? 'text' : 'password'}
-        required
-        autoComplete={autoComplete}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${inputClass} pr-12`}
-      />
-      <button
-        type="button"
-        onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'Hide password' : 'Show password'}
-        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-      >
-        {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-      </button>
-    </div>
-  );
-};
-
-const ErrorBox: React.FC<{ message: string | null }> = ({ message }) =>
-  message ? (
-    <div className="flex items-start gap-2 p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800 text-xs font-bold text-red-800 dark:text-red-200">
-      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-      <span>{message}</span>
-    </div>
-  ) : null;
-
-const SuccessBox: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-400 dark:border-emerald-700 text-center space-y-2">
-    <MailCheck className="w-6 h-6 mx-auto text-emerald-600 dark:text-emerald-400" />
-    <p className="font-black text-sm text-emerald-900 dark:text-emerald-100">{title}</p>
-    <p className="text-xs font-medium text-emerald-800/90 dark:text-emerald-300/90">{children}</p>
-  </div>
-);
-
-const OrDivider = () => (
-  <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-zinc-400">
-    <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-    or
-    <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+const Brand = () => (
+  <div className="flex flex-col items-center text-center gap-2">
+    <AppLogo size="xl" />
+    <h1 className="text-xl font-black tracking-tight">DeutschMeister</h1>
+    <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 -mt-1.5">Chris Personal App</p>
   </div>
 );
 
 // ---------------------------------------------------------------------------
-// Sign-in flow: choose → log in / sign up / forgot password
+// Sign-in flow: first page → log in
 // ---------------------------------------------------------------------------
-
-type View = 'choose' | 'login' | 'signup' | 'forgot';
 
 interface LoginScreenProps {
-  /** An error to show on arrival, e.g. a refused Google sign-in coming back from the redirect. */
+  /** An error to show on arrival, e.g. a refused Google sign-in or an expired link. */
   initialError?: string | null;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null }) => {
-  const [view, setView] = useState<View>(initialError ? 'login' : 'choose');
+  const [step, setStep] = useState<'welcome' | 'login'>(initialError ? 'login' : 'welcome');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  const go = (next: View) => {
-    setView(next);
-    setError(null);
-    setSentTo(null);
-    setPassword('');
-    setConfirm('');
-  };
-
-  const origin = window.location.origin;
-
   if (!supabase) {
     return (
       <AuthCard>
+        <Brand />
         <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700 text-sm space-y-1.5">
           <p className="font-black text-amber-900 dark:text-amber-200">Login isn't connected yet</p>
           <p className="text-amber-800/90 dark:text-amber-300/90 text-xs font-medium">
@@ -182,278 +109,109 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null })
     );
   }
   const auth = supabase.auth;
+  const redirectTo = window.location.origin;
 
-  const run = async (task: () => Promise<void>) => {
-    setError(null);
-    setBusy(true);
-    try {
-      await task();
-    } catch (err) {
-      setError(friendlyAuthError(err instanceof Error ? err.message : String(err)));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const continueWithGoogle = () =>
-    run(async () => {
-      const { error } = await auth.signInWithOAuth({ provider: 'google', options: { redirectTo: origin } });
-      // On success the browser is already leaving for Google; only failures come back here.
-      if (error) throw error;
-    });
-
-  const logIn = (e: React.FormEvent) => {
-    e.preventDefault();
-    return run(async () => {
-      const { error } = await auth.signInWithPassword({ email: email.trim(), password });
-      if (error) throw error;
-      // Success: AuthGate sees the new session and opens the app.
-    });
-  };
-
-  const signUp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`);
-      return;
-    }
-    if (password !== confirm) {
-      setError("The two passwords don't match.");
-      return;
-    }
-    return run(async () => {
-      const address = email.trim();
-      const { data, error } = await auth.signUp({
-        email: address,
-        password,
-        options: { emailRedirectTo: origin },
-      });
-      if (error) throw error;
-      // With email confirmation on, Supabase answers an existing address with an
-      // empty identity list instead of an error, so nobody can probe who has an account.
-      if (data.user && data.user.identities?.length === 0) {
-        throw new Error('already registered');
-      }
-      // No session yet means the confirmation email is on its way.
-      if (!data.session) setSentTo(address);
-    });
-  };
-
-  const sendReset = (e: React.FormEvent) => {
-    e.preventDefault();
-    return run(async () => {
-      const address = email.trim();
-      const { error } = await auth.resetPasswordForEmail(address, { redirectTo: `${origin}/?${RESET_FLAG}=1` });
-      if (error) throw error;
-      setSentTo(address);
-    });
-  };
-
-  const emailField = (
-    <input
-      type="email"
-      required
-      autoComplete="email"
-      inputMode="email"
-      placeholder="Email"
-      value={email}
-      onChange={(e) => setEmail(e.target.value)}
-      className={inputClass}
-    />
-  );
-
-  const googleButton = (
-    <button type="button" onClick={continueWithGoogle} disabled={busy} className={secondaryBtn}>
-      <GoogleMark />
-      <span>Continue with Google</span>
-    </button>
-  );
-
-  // --- Step 1: choose -------------------------------------------------------
-  if (view === 'choose') {
+  // --- First page -----------------------------------------------------------
+  if (step === 'welcome') {
     return (
       <AuthCard>
-        <div className="space-y-3">
-          <button type="button" onClick={() => go('login')} className={primaryBtn}>
-            Log in
-          </button>
-          <button type="button" onClick={() => go('signup')} className={secondaryBtn}>
-            Sign up
-          </button>
-        </div>
+        <Brand />
+        <button type="button" onClick={() => setStep('login')} className={mainBtn}>
+          Log in
+        </button>
       </AuthCard>
     );
   }
 
   // --- Log in ---------------------------------------------------------------
-  if (view === 'login') {
-    return (
-      <AuthCard onBack={() => go('choose')}>
-        <div className="space-y-4">
-          <h2 className="text-center font-black text-lg">Log in</h2>
-          {googleButton}
-          <OrDivider />
-          <form onSubmit={logIn} className="space-y-2.5">
-            {emailField}
-            <PasswordInput value={password} onChange={setPassword} placeholder="Password" autoComplete="current-password" />
-            <button type="submit" disabled={busy || !email.trim() || !password} className={primaryBtn}>
-              {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Log in</span>
-            </button>
-          </form>
-          <ErrorBox message={error} />
-          <div className="flex items-center justify-between">
-            <button type="button" onClick={() => go('forgot')} className={linkBtn}>
-              Forgot password?
-            </button>
-            <button type="button" onClick={() => go('signup')} className={linkBtn}>
-              Create an account
-            </button>
-          </div>
-        </div>
-      </AuthCard>
-    );
-  }
-
-  // --- Sign up --------------------------------------------------------------
-  if (view === 'signup') {
-    return (
-      <AuthCard onBack={() => go('choose')}>
-        <div className="space-y-4">
-          <h2 className="text-center font-black text-lg">Create your account</h2>
-          {sentTo ? (
-            <>
-              <SuccessBox title="Confirm your email">
-                We sent a link to <span className="font-bold">{sentTo}</span>. Open it and you're signed in.
-              </SuccessBox>
-              <button type="button" onClick={() => go('login')} className={secondaryBtn}>
-                Go to log in
-              </button>
-            </>
-          ) : (
-            <>
-              {googleButton}
-              <OrDivider />
-              <form onSubmit={signUp} className="space-y-2.5">
-                {emailField}
-                <PasswordInput
-                  value={password}
-                  onChange={setPassword}
-                  placeholder={`Password (at least ${MIN_PASSWORD_LENGTH} characters)`}
-                  autoComplete="new-password"
-                />
-                <PasswordInput value={confirm} onChange={setConfirm} placeholder="Repeat password" autoComplete="new-password" />
-                <button type="submit" disabled={busy || !email.trim() || !password || !confirm} className={primaryBtn}>
-                  {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Sign up</span>
-                </button>
-              </form>
-              <ErrorBox message={error} />
-              <p className="text-center">
-                <button type="button" onClick={() => go('login')} className={linkBtn}>
-                  Already have an account? Log in
-                </button>
-              </p>
-            </>
-          )}
-        </div>
-      </AuthCard>
-    );
-  }
-
-  // --- Forgot password ------------------------------------------------------
-  return (
-    <AuthCard onBack={() => go('login')}>
-      <div className="space-y-4">
-        <h2 className="text-center font-black text-lg">Reset your password</h2>
-        {sentTo ? (
-          <SuccessBox title="Check your inbox">
-            If <span className="font-bold">{sentTo}</span> has an account, a reset link is on its way. Open it on this
-            device to choose a new password.
-          </SuccessBox>
-        ) : (
-          <>
-            <p className="text-xs font-medium text-zinc-500 text-center">
-              Enter your email and we'll send you a link to choose a new password.
-            </p>
-            <form onSubmit={sendReset} className="space-y-2.5">
-              {emailField}
-              <button type="submit" disabled={busy || !email.trim()} className={primaryBtn}>
-                {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>Send reset link</span>
-              </button>
-            </form>
-            <ErrorBox message={error} />
-          </>
-        )}
-      </div>
-    </AuthCard>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Shown after opening a password-reset link
-// ---------------------------------------------------------------------------
-
-export const SetPasswordScreen: React.FC<{ onDone: () => void }> = ({ onDone }) => {
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`);
-      return;
-    }
-    if (password !== confirm) {
-      setError("The two passwords don't match.");
-      return;
-    }
-    if (!supabase) return;
-    setBusy(true);
+  const continueWithGoogle = async () => {
     setError(null);
-    const { error } = await supabase.auth.updateUser({ password });
+    setBusy(true);
+    const { error } = await auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+    // On success the browser is already leaving for Google; only failures come back here.
+    if (error) {
+      setError(friendlyAuthError(error.message));
+      setBusy(false);
+    }
+  };
+
+  const sendLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const address = email.trim();
+    if (!address) return;
+    setError(null);
+    setBusy(true);
+    // The first link creates the account; every later one just signs in.
+    const { error } = await auth.signInWithOtp({ email: address, options: { emailRedirectTo: redirectTo } });
     setBusy(false);
     if (error) setError(friendlyAuthError(error.message));
-    else setSaved(true);
+    else setSentTo(address);
   };
 
   return (
-    <AuthCard>
-      <div className="space-y-4">
-        <h2 className="text-center font-black text-lg">Choose a new password</h2>
-        {saved ? (
-          <>
-            <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-400 dark:border-emerald-700 text-center space-y-2">
-              <CheckCircle2 className="w-6 h-6 mx-auto text-emerald-600 dark:text-emerald-400" />
-              <p className="font-black text-sm text-emerald-900 dark:text-emerald-100">Password changed</p>
-            </div>
-            <button type="button" onClick={onDone} className={primaryBtn}>
-              Continue
+    <AuthCard
+      onBack={() => {
+        setStep('welcome');
+        setError(null);
+        setSentTo(null);
+      }}
+    >
+      <h2 className="text-center font-black text-xl pt-1.5">Log in</h2>
+
+      {sentTo ? (
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-300 dark:border-emerald-700 text-center space-y-2">
+            <MailCheck className="w-6 h-6 mx-auto text-emerald-600 dark:text-emerald-400" />
+            <p className="font-black text-sm text-emerald-900 dark:text-emerald-100">Check your inbox</p>
+            <p className="text-xs font-medium text-emerald-800/90 dark:text-emerald-300/90">
+              We sent a sign-in link to <span className="font-bold">{sentTo}</span>. Open it on this device and you're in.
+            </p>
+          </div>
+          <button type="button" onClick={() => setSentTo(null)} className={mainBtn}>
+            Use a different email
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <button type="button" onClick={continueWithGoogle} disabled={busy} className={googleBtn}>
+            <GoogleMark />
+            <span>Continue with Google</span>
+          </button>
+
+          <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-zinc-400">
+            <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+            or
+            <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+          </div>
+
+          <form onSubmit={sendLink} className="space-y-2.5">
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              inputMode="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+            <button type="submit" disabled={busy || !email.trim()} className={mainBtn}>
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              <span>Email me a sign-in link</span>
             </button>
-          </>
-        ) : (
-          <>
-            <form onSubmit={save} className="space-y-2.5">
-              <PasswordInput
-                value={password}
-                onChange={setPassword}
-                placeholder={`New password (at least ${MIN_PASSWORD_LENGTH} characters)`}
-                autoComplete="new-password"
-              />
-              <PasswordInput value={confirm} onChange={setConfirm} placeholder="Repeat new password" autoComplete="new-password" />
-              <button type="submit" disabled={busy || !password || !confirm} className={primaryBtn}>
-                {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>Save new password</span>
-              </button>
-            </form>
-            <ErrorBox message={error} />
-          </>
-        )}
-      </div>
+          </form>
+          <p className="text-[11px] text-center font-medium text-zinc-400">
+            No password — we email you a link, you tap it.
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800 text-xs font-bold text-red-800 dark:text-red-200">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
     </AuthCard>
   );
 };

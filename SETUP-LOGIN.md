@@ -6,8 +6,8 @@ about 20–30 minutes the first time.
 
 You will end up with:
 
-- a first page with **Log in** and **Sign up**, each leading to its own page with
-  email + password or **Continue with Google**, plus **Forgot password?**
+- a first page with **Log in**, leading to a page with **Continue with Google**
+  or **Email me a sign-in link** — no passwords
 - only the **2 emails you list** able to get in — anyone else is refused
 - progress saved to your account, so it follows you between Mac and phone
 
@@ -49,26 +49,21 @@ Supabase: **Authentication → URL Configuration**
 
 - **Site URL**: your Vercel address once you have it (step 6). Until then,
   `http://localhost:3000`.
-- **Redirect URLs** — add both (the `/**` matters: reset links add `?reset=1`):
+- **Redirect URLs** — add both:
   - `http://localhost:3000/**`
   - `https://your-app.vercel.app/**` (after step 6)
 
-Confirmation emails, reset links and Google all return to one of these;
-anything else is refused.
+Sign-in links and Google both return to one of these; anything else is refused.
 
-Then **Authentication → Sign In / Providers → Email**: leave **Enable Email
-provider** and **Confirm email** switched on.
+**Email sign-in now works.** There are no passwords: you type your email, tap
+the link Supabase sends, and you're in. The first link creates your account;
+later ones just sign you in. On a new device, do the same again.
 
-Keep "Confirm email" on. Without it, anyone who knows one of your two allowed
-addresses could sign up with it first and pick their own password. With it,
-the account only works once the real inbox owner clicks the link.
-
-**Email + password now works.** Supabase sends the confirmation and reset
-emails itself. Its built-in mailer allows only a few per hour — fine for two people.
+Supabase's built-in mailer allows only a few emails per hour — fine for two people.
 
 ## 5. Turn on Google (optional)
 
-Skip this if email + password is enough.
+Skip this if email links are enough.
 
 1. <https://console.cloud.google.com> → create a project → **APIs & Services →
    OAuth consent screen**. Choose **External**, fill in the app name and your
