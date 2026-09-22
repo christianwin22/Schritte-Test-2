@@ -1091,38 +1091,75 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   };
 
   // Handlers for Plural Drill
+  /** Either the full 'die Häuser' or just 'Häuser' counts. Trailing punctuation (from speech) is ignored. */
+  const isPluralCorrect = (answer: string, word: WordEntry) => {
+    const cleanUser = answer.trim().replace(/[.!?,]+$/, '').toLowerCase();
+    const cleanExpected = (word.nounDetails?.plural || '').toLowerCase();
+    return cleanUser === cleanExpected || cleanUser === cleanExpected.replace(/^die\s+/, '');
+  };
+
   const handlePluralSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activePluralNoun || pluralFeedback || !pluralInput.trim()) return;
-    const expected = activePluralNoun.nounDetails?.plural || '';
-    const cleanUser = pluralInput.trim().toLowerCase();
-    const cleanExpected = expected.toLowerCase();
+    submitPluralAnswer(pluralInput, activePluralNoun);
+  };
 
-    // Check either full 'die Häuser' or just 'Häuser'
-    const isCorrect =
-      cleanUser === cleanExpected ||
-      cleanUser === cleanExpected.replace(/^die\s+/, '');
+  const submitPluralAnswer = (answer: string, noun: WordEntry) => {
+    const expected = noun.nounDetails?.plural || '';
+    const isCorrect = isPluralCorrect(answer, noun);
 
     if (isCorrect) {
       playSound('correct');
       onCorrectAnswer(15);
-      speakGerman(fillBlank(pluralSentence(activePluralNoun), barePlural(activePluralNoun)));
+      speakGerman(fillBlank(pluralSentence(noun), barePlural(noun)));
     } else {
       playSound('wrong');
       onWrongAnswer();
-      speakGerman(fillBlank(pluralSentence(activePluralNoun), barePlural(activePluralNoun)));
+      speakGerman(fillBlank(pluralSentence(noun), barePlural(noun)));
     }
-    if (isDrillReview) recordDrillAnswer('plural', activePluralNoun, isCorrect);
+    if (isDrillReview) recordDrillAnswer('plural', noun, isCorrect);
     setPluralFeedback({
       correct: isCorrect,
       expected,
     });
   };
 
+  const [isPluralListening, setIsPluralListening] = useState(false);
+  const pluralRecognitionRef = useRef<{ stop: () => void } | null>(null);
+
+  const handlePluralSpeak = () => {
+    if (isPluralListening) {
+      pluralRecognitionRef.current?.stop();
+      setIsPluralListening(false);
+      return;
+    }
+    const noun = activePluralNoun;
+    if (!noun || pluralFeedback) return;
+    playSound('tap');
+    setIsPluralListening(true);
+    pluralRecognitionRef.current = listenToGermanSpeech(
+      (transcript) => {
+        setIsPluralListening(false);
+        const said = transcript.trim().replace(/[.!?,]+$/, '');
+        setPluralInput(said);
+        if (isPluralCorrect(said, noun)) submitPluralAnswer(said, noun);
+        else pluralInputRef.current?.focus();
+      },
+      (err) => {
+        setIsPluralListening(false);
+        console.warn('Voice recognition error:', err);
+      },
+      () => setIsPluralListening(false),
+      'de-DE'
+    );
+  };
+
   const handleNextPlural = () => {
     playSound('tap');
     setPluralFeedback(null);
     setPluralInput('');
+    pluralRecognitionRef.current?.stop();
+    setIsPluralListening(false);
     if (isDrillReview) advanceDrillReview();
     else setPluralIndex((prev) => (prev + 1) % (pluralNouns.length || 1));
   };
@@ -1628,10 +1665,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {/* SUB-MODE 1: FLASHCARD DRILL */}
       {activeExerciseMode === 'explorer' && (
         <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
-          {/* Banner 1: Level & Lesson Filters (in Review: the current word's, read-only) */}
-          {flashcardSubMode === 'review' ? renderReviewWordBanner(currentPracticeWord) : renderFilterBanner()}
-          {/* Banner 2: Learn, Practice, Review Modes */}
+          {/* Banner 1: Learn, Practice, Review Modes */}
           {renderModeBanner()}
+          {/* Banner 2: Level & Lesson Filters (in Review: the current word's, read-only) */}
+          {flashcardSubMode === 'review' ? renderReviewWordBanner(currentPracticeWord) : renderFilterBanner()}
 
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
             {filteredWords.length === 0 ? (
@@ -2546,8 +2583,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col">
-            {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
             {renderDrillModeSwitch()}
+            {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
             <form
               onSubmit={(e) => {
                 if (isArticle) e.preventDefault();
@@ -2616,11 +2653,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                               handleNextBlitz
                             )
                           : renderDrillFeedback(correct, pluralInput.trim(), noun.nounDetails?.plural ?? '', handleNextPlural)}
-                        {isArticle && !correct && blitzFeedback?.word.nounDetails?.genderRuleHint && (
-                          <p className="text-center text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold">
-                            💡 {blitzFeedback.word.nounDetails.genderRuleHint}
-                          </p>
-                        )}
                       </>
                     ) : isArticle ? (
                       <div className="grid grid-cols-3 gap-2.5">
@@ -2661,13 +2693,29 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             className="w-full bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
                           />
                         </div>
-                        <button
-                          type="submit"
-                          disabled={!pluralInput.trim()}
-                          className="w-full py-3.5 bg-zinc-950 hover:bg-zinc-800 active:scale-98 text-white dark:bg-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs disabled:opacity-40 transition-all cursor-pointer"
-                        >
-                          {appLanguage === 'en' ? 'Check' : 'Prüfen'}
-                        </button>
+                        {/* 2 Buttons: Speak and Check — the same pair Flashcard uses */}
+                        <div className="flex items-center gap-2.5 w-full">
+                          <button
+                            type="button"
+                            onClick={handlePluralSpeak}
+                            className={`flex-1 py-3 rounded-xl font-black text-xs cursor-pointer transition-all border border-zinc-200 dark:border-zinc-700 active:scale-95 shadow-2xs ${
+                              isPluralListening
+                                ? 'bg-red-500 hover:bg-red-600 text-white dark:bg-red-500 dark:text-white animate-pulse border-red-600'
+                                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
+                            }`}
+                          >
+                            {isPluralListening
+                              ? appLanguage === 'en' ? 'Listening...' : 'Zuhören...'
+                              : appLanguage === 'en' ? 'Speak' : 'Sprechen'}
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={!pluralInput.trim()}
+                            className="flex-1 py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs shadow-xs cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {appLanguage === 'en' ? 'Check' : 'Prüfen'}
+                          </button>
+                        </div>
                       </>
                     )}
                   </div>
