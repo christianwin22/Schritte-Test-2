@@ -73,6 +73,18 @@ const AuthCard: React.FC<{ children: React.ReactNode; onBack?: () => void }> = (
   );
 };
 
+/** The yellow "Sandbox · test" tag — same place on every page, the app's and the login's. */
+export const SandboxTag = () => (
+  <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-3 py-1 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black uppercase tracking-wider shadow-sm">
+    Sandbox · test
+  </div>
+);
+
+/** Small heading that splits the Log in page into its two parts. */
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400 px-1">{children}</p>
+);
+
 const Brand = () => (
   <div className="flex flex-col items-center text-center gap-2">
     <AppLogo size="xl" />
@@ -219,14 +231,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
         setSentTo(null);
       }}
     >
-      <div className="flex flex-col items-center gap-1.5 pt-1.5">
-        <h2 className="text-center font-black text-xl">Log in</h2>
-        {isSandbox && (
-          <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-black uppercase tracking-wider">
-            Sandbox · test
-          </span>
-        )}
-      </div>
+      <h2 className="text-center font-black text-xl pt-1.5">Log in</h2>
 
       {sentTo ? (
         <div className="space-y-4">
@@ -254,85 +259,82 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Part 1: accounts that have logged in on this device */}
           {accounts.length > 0 && (
-            <>
-              <div className="space-y-2">
-                {accounts.map((account) => {
-                  const label = account.name || account.email.split('@')[0];
-                  return (
-                    <div key={account.email} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => continueAs(account)}
-                        disabled={busy}
-                        className={`w-full p-3 ${isSandbox ? '' : 'pr-11'} rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-3 text-left transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer`}
-                      >
-                        <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
-                          {label.charAt(0).toUpperCase()}
+            <div className="space-y-2">
+              <SectionTitle>Accounts on this device</SectionTitle>
+              {accounts.map((account) => (
+                <div key={account.email} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => continueAs(account)}
+                    disabled={busy}
+                    className={`w-full p-3 ${isSandbox ? '' : 'pr-11'} rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-3 text-left transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer`}
+                  >
+                    <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
+                      {(account.name || account.email).charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0">
+                      {account.name && (
+                        <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">
+                          {account.name}
                         </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">
-                            Continue as {label}
-                          </span>
-                          <span className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate">
-                            {account.email}
-                          </span>
-                        </span>
-                      </button>
-                      {!isSandbox && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            forgetAccount(account.email);
-                            setKnownAccounts(getKnownAccounts());
-                          }}
-                          aria-label={`Remove ${account.email} from this device`}
-                          title="Remove from this device"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-600/60 cursor-pointer"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
                       )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-zinc-400">
-                <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-                or use another account
-                <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-              </div>
-            </>
+                      <span
+                        className={
+                          account.name
+                            ? 'block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate'
+                            : 'block text-[13px] font-black text-zinc-900 dark:text-zinc-100 truncate'
+                        }
+                      >
+                        {account.email}
+                      </span>
+                    </span>
+                  </button>
+                  {!isSandbox && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        forgetAccount(account.email);
+                        setKnownAccounts(getKnownAccounts());
+                      }}
+                      aria-label={`Remove ${account.email} from this device`}
+                      title="Remove from this device"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-600/60 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
 
-          <button type="button" onClick={continueWithGoogle} disabled={busy} className={googleBtn}>
-            <GoogleMark />
-            <span>Continue with Google</span>
-          </button>
-
-          <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-zinc-400">
-            <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-            or
-            <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-          </div>
-
-          <form onSubmit={sendLink} className="space-y-2.5">
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              inputMode="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-            />
-            <button type="submit" disabled={busy || !email.trim()} className={mainBtn}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-              <span>Email me a sign-in link</span>
+          {/* Part 2: Google or email */}
+          <div className="space-y-2.5">
+            {accounts.length > 0 && <SectionTitle>Another account</SectionTitle>}
+            <button type="button" onClick={continueWithGoogle} disabled={busy} className={googleBtn}>
+              <GoogleMark />
+              <span>Continue with Google</span>
             </button>
-          </form>
+            <form onSubmit={sendLink} className="space-y-2.5">
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                inputMode="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+              />
+              <button type="submit" disabled={busy || !email.trim()} className={mainBtn}>
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                <span>Email me a sign-in link</span>
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
@@ -342,6 +344,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
           <span>{error}</span>
         </div>
       )}
+      {isSandbox && <SandboxTag />}
     </AuthCard>
   );
 };
