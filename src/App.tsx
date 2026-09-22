@@ -13,6 +13,7 @@ import { AbandonExerciseModal } from './components/AbandonExerciseModal';
 import { OrientationGuard } from './components/OrientationGuard';
 import { playSound, setGlobalSoundEnabled, setGlobalMusicEnabled } from './utils/audioEffects';
 import { AppLanguage, getTranslation } from './utils/translations';
+import { clearAppData } from './lib/progressSync';
 import { loadAllFSRSRecords, isCardDueForReview } from './utils/srsEngine';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
@@ -309,7 +310,8 @@ export default function App() {
       setGems(100);
       setHearts(5);
       setVocabulary(INITIAL_VOCABULARY);
-      localStorage.clear();
+      // Only the app's progress keys; localStorage.clear() would also sign you out.
+      clearAppData();
     }
   };
 

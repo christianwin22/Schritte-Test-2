@@ -16,11 +16,14 @@ import {
   ShieldCheck,
   ArrowLeft,
   BookOpen,
+  LogOut,
+  UserCircle2,
 } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
 import { speakGerman } from '../utils/speech';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
+import { useAuth } from './AuthGate';
 
 interface SettingsViewProps {
   isDark: boolean;
@@ -61,6 +64,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const t = getTranslation(appLanguage);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const auth = useAuth();
+  const [signOutState, setSignOutState] = useState<'idle' | 'working' | 'failed'>('idle');
   const [ttsFeedback, setTtsFeedback] = useState(false);
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -452,6 +457,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Account */}
+      {auth && (
+        <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <UserCircle2 className="w-6 h-6 text-zinc-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {appLanguage === 'en' ? 'Signed in as' : 'Angemeldet als'}
+                </p>
+                <p className="text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">{auth.email}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={signOutState === 'working'}
+              onClick={async () => {
+                setSignOutState('working');
+                const ok = await auth.signOut();
+                if (!ok) setSignOutState('failed');
+              }}
+              className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-60 active:scale-95 transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>{appLanguage === 'en' ? 'Sign out' : 'Abmelden'}</span>
+            </button>
+          </div>
+          {signOutState === 'failed' && (
+            <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
+              {appLanguage === 'en'
+                ? "Couldn't save your latest progress — you're probably offline. You're still signed in; try again once you're connected."
+                : 'Dein Fortschritt konnte nicht gespeichert werden – vermutlich bist du offline. Du bist weiterhin angemeldet.'}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* App Architecture & Schritte Course Info Banner */}
       <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-zinc-500 dark:text-zinc-400">
