@@ -200,9 +200,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null })
               <span>Email me a sign-in link</span>
             </button>
           </form>
-          <p className="text-[11px] text-center font-medium text-zinc-400">
-            No password — we email you a link, you tap it.
-          </p>
         </div>
       )}
 
