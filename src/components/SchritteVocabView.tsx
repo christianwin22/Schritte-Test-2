@@ -2343,7 +2343,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         random per card, and it ignores taps entirely. */}
                     <div
                       aria-label={practiceDirection === 'EN_TO_DE' ? 'English to German' : 'German to English'}
-                      className="pointer-events-none select-none px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1"
+                      className="pointer-events-none select-none px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1"
                     >
                       <span>{practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}</span>
                     </div>
