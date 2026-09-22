@@ -98,9 +98,6 @@ From then on:
   kept apart from real progress: entering sets this browser's progress
   aside, leaving puts it back exactly as it was. A yellow "Sandbox · test
   data" tag shows while you're in it.
-- **Continue as …** on the Log in page lists accounts that logged in on this
-  device. It still confirms who you are — one tap on Google, or a new email
-  link — so the other person can't open your account just by tapping your name.
 - **Log out** (bottom of Settings) saves one last time, then clears this browser so the
   other person can sign in without seeing your data. If you are offline, it
   refuses to sign out rather than lose anything.

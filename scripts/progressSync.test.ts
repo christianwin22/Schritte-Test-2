@@ -139,17 +139,5 @@ await sync.restoreForUser('chris');
 check('logging in afterwards adopts the real progress, not the test data', table.get('chris')?.[STREAK] === '12');
 check('sandbox data never uploaded', !JSON.stringify([...table.values()]).includes('999'));
 
-console.log('9. Remembered accounts for "Continue as …"');
-reset();
-sync.rememberAccount({ email: 'chris@example.com', name: 'Chris', provider: 'google' });
-sync.rememberAccount({ email: 'may@example.com', name: null, provider: 'email' });
-sync.rememberAccount({ email: 'CHRIS@example.com', name: 'Chris', provider: 'google' });
-const known = sync.getKnownAccounts();
-check('most recent first, no duplicates', known.length === 2 && known[0].email === 'CHRIS@example.com');
-sync.forgetAccount('may@example.com');
-check('forget removes it', sync.getKnownAccounts().length === 1);
-sync.clearAppData();
-check('survives clearing app progress (e.g. log out)', sync.getKnownAccounts().length === 1);
-
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

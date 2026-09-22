@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, MailCheck, Mail, FlaskConical, X } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, MailCheck, Mail, FlaskConical } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AppLogo } from './AppLogo';
-import { forgetAccount, getKnownAccounts, KnownAccount } from '../lib/progressSync';
 
 /** Turns Supabase's error text into something a learner can act on. */
 export function friendlyAuthError(message: string): string {
@@ -105,7 +104,7 @@ interface LoginScreenProps {
 }
 
 /** The pretend account shown on the sandbox's practice Log in page. */
-const SANDBOX_ACCOUNT: KnownAccount = { email: 'test.user@sandbox.test', name: 'Test User', provider: 'google' };
+const SANDBOX_ACCOUNT = { email: 'test.user@sandbox.test', name: 'Test User' };
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, onOpenSandbox }) => {
   // 'sandbox-login' is a practice copy of the Log in page: same screens, but every
@@ -115,7 +114,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const [knownAccounts, setKnownAccounts] = useState<KnownAccount[]>(getKnownAccounts);
 
   const isSandbox = step === 'sandbox-login';
   const auth = supabase?.auth ?? null;
@@ -180,29 +178,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     }
   };
 
-  /** One tap back into an account used on this device. It still confirms: Google asks once, email sends a link. */
-  const continueAs = async (account: KnownAccount) => {
-    if (isSandbox) return onOpenSandbox();
-    if (!auth) return;
-    setError(null);
-    setBusy(true);
-    if (account.provider === 'google') {
-      const { error } = await auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo, queryParams: { login_hint: account.email } },
-      });
-      if (error) {
-        setError(friendlyAuthError(error.message));
-        setBusy(false);
-      }
-      return;
-    }
-    const { error } = await auth.signInWithOtp({ email: account.email, options: { emailRedirectTo: redirectTo } });
-    setBusy(false);
-    if (error) setError(friendlyAuthError(error.message));
-    else setSentTo(account.email);
-  };
-
   const sendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     const address = email.trim();
@@ -220,8 +195,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     if (error) setError(friendlyAuthError(error.message));
     else setSentTo(address);
   };
-
-  const accounts = isSandbox ? [SANDBOX_ACCOUNT] : knownAccounts;
 
   return (
     <AuthCard
@@ -259,65 +232,45 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
           </button>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Part 1: accounts that have logged in on this device */}
-          {accounts.length > 0 && (
+        <div className={isSandbox ? 'space-y-6' : 'space-y-4'}>
+          {/* Sandbox only: a pretend account, so the page can be practised in two parts */}
+          {isSandbox && (
             <div className="space-y-2">
               <SectionTitle>Accounts on this device</SectionTitle>
-              {accounts.map((account) => (
-                <div key={account.email} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => continueAs(account)}
-                    disabled={busy}
-                    className={`w-full p-3 ${isSandbox ? '' : 'pr-11'} rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-3 text-left transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer`}
-                  >
-                    <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
-                      {(account.name || account.email).charAt(0).toUpperCase()}
-                    </span>
-                    <span className="min-w-0">
-                      {account.name && (
-                        <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">
-                          {account.name}
-                        </span>
-                      )}
-                      <span
-                        className={
-                          account.name
-                            ? 'block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate'
-                            : 'block text-[13px] font-black text-zinc-900 dark:text-zinc-100 truncate'
-                        }
-                      >
-                        {account.email}
-                      </span>
-                    </span>
-                  </button>
-                  {!isSandbox && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        forgetAccount(account.email);
-                        setKnownAccounts(getKnownAccounts());
-                      }}
-                      aria-label={`Remove ${account.email} from this device`}
-                      title="Remove from this device"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-600/60 cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
+              <button
+                type="button"
+                onClick={onOpenSandbox}
+                className="w-full p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-3 text-left transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
+                  {SANDBOX_ACCOUNT.name.charAt(0)}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">
+                    {SANDBOX_ACCOUNT.name}
+                  </span>
+                  <span className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate">
+                    {SANDBOX_ACCOUNT.email}
+                  </span>
+                </span>
+              </button>
             </div>
           )}
 
           {/* Part 2: Google or email */}
           <div className="space-y-2.5">
-            {accounts.length > 0 && <SectionTitle>Another account</SectionTitle>}
+            {isSandbox && <SectionTitle>Another account</SectionTitle>}
             <button type="button" onClick={continueWithGoogle} disabled={busy} className={googleBtn}>
               <GoogleMark />
               <span>Continue with Google</span>
             </button>
+            {!isSandbox && (
+              <div className="flex items-center gap-3 py-1 text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+                or
+                <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+              </div>
+            )}
             <form onSubmit={sendLink} className="space-y-2.5">
               <input
                 type="email"

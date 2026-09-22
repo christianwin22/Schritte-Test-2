@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import {
   enterSandbox,
   exitSandbox,
-  rememberAccount,
   restoreForUser,
   signOutAndClear,
   startAutoSync,
@@ -84,14 +83,6 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           return;
         }
         if (restoredFor.current === next.user.id) return; // token refresh, same person
-        const meta = next.user.user_metadata ?? {};
-        if (next.user.email) {
-          rememberAccount({
-            email: next.user.email,
-            name: (meta.full_name as string) || (meta.name as string) || null,
-            provider: next.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-          });
-        }
         restoredFor.current = next.user.id;
         setPhase('restoring');
         restoreForUser(next.user.id)

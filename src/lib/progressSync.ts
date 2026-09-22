@@ -204,35 +204,3 @@ export function exitSandbox(): void {
   applySnapshot(readStash(PRE_SANDBOX_KEY));
   localStorage.removeItem(PRE_SANDBOX_KEY);
 }
-
-// ---------------------------------------------------------------------------
-// Accounts that have logged in on this device, for one-tap "Continue as …"
-// ---------------------------------------------------------------------------
-
-const KNOWN_ACCOUNTS_KEY = 'cpa_known_accounts';
-
-export interface KnownAccount {
-  email: string;
-  name: string | null;
-  provider: 'google' | 'email';
-}
-
-export function getKnownAccounts(): KnownAccount[] {
-  try {
-    const list = JSON.parse(localStorage.getItem(KNOWN_ACCOUNTS_KEY) || '[]');
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Remembers an account, most recent first. Only the email, a display name and how it signs in. */
-export function rememberAccount(account: KnownAccount): void {
-  const rest = getKnownAccounts().filter((a) => a.email.toLowerCase() !== account.email.toLowerCase());
-  localStorage.setItem(KNOWN_ACCOUNTS_KEY, JSON.stringify([account, ...rest].slice(0, 5)));
-}
-
-export function forgetAccount(email: string): void {
-  const rest = getKnownAccounts().filter((a) => a.email.toLowerCase() !== email.toLowerCase());
-  localStorage.setItem(KNOWN_ACCOUNTS_KEY, JSON.stringify(rest));
-}
