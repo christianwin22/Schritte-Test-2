@@ -1424,7 +1424,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   };
 
   // Banner 1: Filter Selector (Level & Lesson)
-  const renderFilterBanner = () => (
+  // `waiting`: lessons ready to practise in Der/Die/Das or Plural, highlighted in amber.
+  // Flashcard passes nothing, so its filter looks as before.
+  const renderFilterBanner = (waiting: { level: string; lektion: number }[] = []) => (
     <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2">
       <div className="flex flex-row items-center justify-between gap-1 sm:gap-2">
         {/* Filter 1: A1 / A2 / B1 Level Selector */}
@@ -1436,13 +1438,19 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 playSound('tap');
                 handleFilterChange(lvl);
               }}
-              className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              className={`relative px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 selectedLevel === lvl
                   ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
                   : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
               {lvl}
+              {waiting.some((l) => l.level === lvl) && (
+                <span
+                  aria-label={appLanguage === 'en' ? 'has a lesson to practise' : 'hat eine Lektion zum Üben'}
+                  className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white dark:ring-zinc-900"
+                />
+              )}
             </button>
           ))}
         </div>
@@ -1455,7 +1463,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               playSound('tap');
               setIsLessonDropdownOpen(!isLessonDropdownOpen);
             }}
-            className="px-2.5 sm:px-3 py-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-98 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl shadow-xs border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer"
+            className={`px-2.5 sm:px-3 py-1 active:scale-98 font-black text-xs rounded-xl shadow-xs border flex items-center gap-1.5 transition-all cursor-pointer ${
+              typeof selectedLektion === 'number' && waiting.some((l) => l.level === selectedLevel && l.lektion === selectedLektion)
+                ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border-amber-500'
+                : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700'
+            }`}
           >
             <span>
               {selectedLektion === 'ALL'
@@ -1508,6 +1520,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {[1, 2, 3, 4, 5, 6, 7].map((num) => {
                       const isDone = isLessonFullyCompleted(selectedLevel, num);
                       const isSelected = selectedLektion === num;
+                      const isWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === num);
                       return (
                         <button
                           key={num}
@@ -1522,7 +1535,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           }
                           className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
                             isSelected
-                              ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ring-zinc-400/80 dark:ring-zinc-500/80'
+                              ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ${isWaiting ? 'ring-amber-400' : 'ring-zinc-400/80 dark:ring-zinc-500/80'}`
+                              : isWaiting
+                              ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 shadow-2xs'
                               : isDone
                               ? 'bg-zinc-400 hover:bg-zinc-450 text-zinc-950 dark:bg-zinc-500 dark:hover:bg-zinc-450 dark:text-zinc-950 border border-zinc-500/70 dark:border-zinc-400/70 shadow-2xs'
                               : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -1552,6 +1567,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {[8, 9, 10, 11, 12, 13, 14].map((num) => {
                       const isDone = isLessonFullyCompleted(selectedLevel, num);
                       const isSelected = selectedLektion === num;
+                      const isWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === num);
                       return (
                         <button
                           key={num}
@@ -1566,7 +1582,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           }
                           className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
                             isSelected
-                              ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ring-zinc-400/80 dark:ring-zinc-500/80'
+                              ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ${isWaiting ? 'ring-amber-400' : 'ring-zinc-400/80 dark:ring-zinc-500/80'}`
+                              : isWaiting
+                              ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 shadow-2xs'
                               : isDone
                               ? 'bg-zinc-400 hover:bg-zinc-450 text-zinc-950 dark:bg-zinc-500 dark:hover:bg-zinc-450 dark:text-zinc-950 border border-zinc-500/70 dark:border-zinc-400/70 shadow-2xs'
                               : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -1660,7 +1678,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   );
 
   // Filter Bar Component inside other Vocab Exercises
-  const renderVocabFilterBar = () => renderFilterBanner();
+  const renderVocabFilterBar = () =>
+    renderFilterBanner(activeDrillSkill === 'plural' ? pluralReadyLessons : articleReadyLessons);
 
   // Review mixes words from every lesson, so the filter can't apply there. This is the
   // same bar, read-only: it shows the current word's level and lesson, and nothing is tappable.
@@ -2782,34 +2801,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col">
             {renderDrillModeSwitch()}
             {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
-            {drillSubMode === 'practice' && (isArticle ? articleReadyLessons : pluralReadyLessons).length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap mb-2 px-1">
-                <span className="text-[11px] font-black text-amber-700 dark:text-amber-400">
-                  {appLanguage === 'en' ? 'Ready to practise:' : 'Bereit zum Üben:'}
-                </span>
-                {(isArticle ? articleReadyLessons : pluralReadyLessons).map(({ level, lektion }) => {
-                  const current = selectedLevel === level && selectedLektion === lektion;
-                  return (
-                    <button
-                      key={`${level}-${lektion}`}
-                      type="button"
-                      onClick={() => {
-                        playSound('tap');
-                        setSelectedLevel(level as CEFRLevel);
-                        setSelectedLektion(lektion);
-                      }}
-                      className={`px-2 py-0.5 rounded-lg text-[11px] font-black border cursor-pointer transition-all ${
-                        current
-                          ? 'bg-amber-400 border-amber-500 text-amber-950'
-                          : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100'
-                      }`}
-                    >
-                      {appLanguage === 'en' ? 'Lesson' : 'Lektion'} {lektion}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
             <form
               onSubmit={(e) => {
                 if (isArticle) e.preventDefault();
