@@ -93,11 +93,15 @@ From then on:
 
 - Changes upload every few seconds, and when the tab is closed.
 - Signing in on a new device downloads your saved progress.
-- **Continue as guest** skips sign-in. Guest progress stays in that browser
-  only and is never uploaded. If a guest later logs in on the same browser
-  and has no saved progress yet, the guest progress is kept in the account.
-  Anyone with the link can use guest mode — it can't see your or May's data.
-- **Sign out** (Settings) saves one last time, then clears this browser so the
+- **Sandbox** (on the first page) is a private test area for trying new
+  updates. It never signs in and never uploads anything. Its test data is
+  kept apart from real progress: entering sets this browser's progress
+  aside, leaving puts it back exactly as it was. A yellow "Sandbox · test
+  data" tag shows while you're in it.
+- **Continue as …** on the Log in page lists accounts that logged in on this
+  device. It still confirms who you are — one tap on Google, or a new email
+  link — so the other person can't open your account just by tapping your name.
+- **Log out** (bottom of Settings) saves one last time, then clears this browser so the
   other person can sign in without seeing your data. If you are offline, it
   refuses to sign out rather than lose anything.
 - If you study on two devices at the same time, the one that saves last wins.

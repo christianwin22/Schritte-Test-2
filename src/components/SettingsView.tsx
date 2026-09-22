@@ -66,7 +66,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const t = getTranslation(appLanguage);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const auth = useAuth();
-  const [signOutState, setSignOutState] = useState<'idle' | 'working' | 'failed'>('idle');
+  const [leaveState, setLeaveState] = useState<'idle' | 'working' | 'failed'>('idle');
   const [ttsFeedback, setTtsFeedback] = useState(false);
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -361,133 +361,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
             </div>
           </div>
-
-          {/* Card: Reset Progress Danger Zone */}
-          <div className="bg-rose-50/70 dark:bg-rose-950/20 rounded-3xl p-6 border-2 border-rose-200 dark:border-rose-900/60 shadow-xs space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-base font-black text-rose-900 dark:text-rose-200 flex items-center gap-2">
-                  <RotateCcw className="w-4 h-4" />
-                  <span>{t.resetProgress}</span>
-                </h2>
-                <p className="text-xs text-rose-700/90 dark:text-rose-300/80 font-medium mt-1">
-                  {t.resetProgressDesc}
-                </p>
-              </div>
-
-              {!showResetConfirm ? (
-                <button
-                  type="button"
-                  onClick={() => setShowResetConfirm(true)}
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>{t.resetBtn}</span>
-                </button>
-              ) : (
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowResetConfirm(false)}
-                    className="px-3 py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold rounded-xl cursor-pointer"
-                  >
-                    {appLanguage === 'en' ? 'Cancel' : 'Abbrechen'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onResetProgress();
-                      setShowResetConfirm(false);
-                    }}
-                    className="px-3.5 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer active:scale-95"
-                  >
-                    {appLanguage === 'en' ? 'Yes, Reset All' : 'Ja, Zurücksetzen'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Account */}
+      {/* Log out — back to the login home page */}
       {auth && (
-        <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <UserCircle2 className="w-6 h-6 text-zinc-500 shrink-0" />
-              <div className="min-w-0">
-                {auth.isGuest ? (
-                  <>
-                    <p className="text-sm font-black text-zinc-900 dark:text-zinc-100">
-                      {appLanguage === 'en' ? 'Guest' : 'Gast'}
-                    </p>
-                    <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                      {appLanguage === 'en'
-                        ? 'Progress is saved on this device only'
-                        : 'Fortschritt wird nur auf diesem Gerät gespeichert'}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                      {appLanguage === 'en' ? 'Signed in as' : 'Angemeldet als'}
-                    </p>
-                    <p className="text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">{auth.email}</p>
-                  </>
-                )}
-              </div>
-            </div>
-            {auth.isGuest ? (
-              <button
-                type="button"
-                onClick={auth.logInInstead}
-                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95 transition-all"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>{appLanguage === 'en' ? 'Log in' : 'Anmelden'}</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={signOutState === 'working'}
-                onClick={async () => {
-                  setSignOutState('working');
-                  const ok = await auth.signOut();
-                  if (!ok) setSignOutState('failed');
-                }}
-                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-60 active:scale-95 transition-all"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>{appLanguage === 'en' ? 'Sign out' : 'Abmelden'}</span>
-              </button>
-            )}
-          </div>
-          {signOutState === 'failed' && (
-            <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
+        <div className="space-y-2">
+          <button
+            type="button"
+            disabled={leaveState === 'working'}
+            onClick={async () => {
+              setLeaveState('working');
+              const ok = await auth.leave();
+              if (!ok) setLeaveState('failed');
+            }}
+            className="w-full py-3.5 bg-white dark:bg-[#252a35] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700/80 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 active:scale-[0.99] transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>
+              {auth.isSandbox
+                ? appLanguage === 'en' ? 'Exit sandbox' : 'Sandbox verlassen'
+                : appLanguage === 'en' ? 'Log out' : 'Abmelden'}
+            </span>
+          </button>
+          {leaveState === 'failed' && (
+            <p className="text-xs font-bold text-center text-rose-700 dark:text-rose-300">
               {appLanguage === 'en'
-                ? "Couldn't save your latest progress — you're probably offline. You're still signed in; try again once you're connected."
+                ? "Couldn't save your latest progress — you're probably offline. You're still logged in; try again once you're connected."
                 : 'Dein Fortschritt konnte nicht gespeichert werden – vermutlich bist du offline. Du bist weiterhin angemeldet.'}
             </p>
           )}
         </div>
       )}
-
-      {/* App Architecture & Schritte Course Info Banner */}
-      <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-        <div className="flex items-center gap-3">
-          <BookOpen className="w-4 h-4 text-zinc-400" />
-          <span>
-            {appLanguage === 'en'
-              ? `Schritte International Neu A1–B1 Curriculum • ${totalWordsCount} Mastered Vocabulary Items`
-              : `Schritte International Neu A1–B1 Lehrplan • ${totalWordsCount} Vokabeln aktiv`}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span>{appLanguage === 'en' ? 'FSRS SRS Engine Active' : 'FSRS Algorithmus aktiv'}</span>
-        </div>
-      </div>
     </div>
   );
 };

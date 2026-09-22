@@ -2,26 +2,31 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import type { Session } from '@supabase/supabase-js';
 import { Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { restoreForUser, signOutAndClear, startAutoSync } from '../lib/progressSync';
+import {
+  enterSandbox,
+  exitSandbox,
+  rememberAccount,
+  restoreForUser,
+  signOutAndClear,
+  startAutoSync,
+} from '../lib/progressSync';
 import { LoginScreen, friendlyAuthError } from './LoginScreen';
 
 interface AuthContextValue {
   email: string | null;
-  /** Using the app without an account: progress lives in this browser only. */
-  isGuest: boolean;
-  /** Saves, clears this browser and signs out. Resolves false if the final save failed. */
-  signOut: () => Promise<boolean>;
-  /** Guest only: back to the sign-in screen. This browser's progress is kept. */
-  logInInstead: () => void;
+  /** In the sandbox: test data on this device only, separate from any account. */
+  isSandbox: boolean;
+  /** Logs out, or leaves the sandbox; either way back to the login home page. Resolves false if logging out couldn't save. */
+  leave: () => Promise<boolean>;
 }
 
-// Remembers "continue as guest" so reopening the app doesn't ask again.
+// Remembers being in the sandbox, so reopening the app returns there.
 // Outside the synced key families on purpose.
-const GUEST_KEY = 'cpa_guest';
+const SANDBOX_KEY = 'cpa_sandbox';
 
-function readGuestFlag(): boolean {
+function readSandboxFlag(): boolean {
   try {
-    return localStorage.getItem(GUEST_KEY) === '1';
+    return localStorage.getItem(SANDBOX_KEY) === '1';
   } catch {
     return false;
   }
@@ -60,7 +65,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [session, setSession] = useState<Session | null>(null);
   const [phase, setPhase] = useState<Phase>('checking');
   const [urlError] = useState(takeAuthErrorFromUrl);
-  const [isGuest, setIsGuest] = useState(readGuestFlag);
+  const [isSandbox, setIsSandbox] = useState(readSandboxFlag);
   const restoredFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -78,9 +83,15 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           setPhase('signed-out');
           return;
         }
-        localStorage.removeItem(GUEST_KEY);
-        setIsGuest(false);
         if (restoredFor.current === next.user.id) return; // token refresh, same person
+        const meta = next.user.user_metadata ?? {};
+        if (next.user.email) {
+          rememberAccount({
+            email: next.user.email,
+            name: (meta.full_name as string) || (meta.name as string) || null,
+            provider: next.user.app_metadata?.provider === 'google' ? 'google' : 'email',
+          });
+        }
         restoredFor.current = next.user.id;
         setPhase('restoring');
         restoreForUser(next.user.id)
@@ -106,26 +117,35 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   if (phase === 'checking') return <Splash label="Loading…" />;
   if (phase === 'restoring') return <Splash label="Loading your progress…" />;
 
-  if (!userId && isGuest) {
-    const guest: AuthContextValue = {
+  if (!userId && isSandbox) {
+    const sandbox: AuthContextValue = {
       email: null,
-      isGuest: true,
-      signOut: async () => true,
-      logInInstead: () => {
-        localStorage.removeItem(GUEST_KEY);
-        setIsGuest(false);
+      isSandbox: true,
+      leave: async () => {
+        exitSandbox();
+        localStorage.removeItem(SANDBOX_KEY);
+        setIsSandbox(false);
+        return true;
       },
     };
-    return <AuthContext.Provider value={guest}>{children}</AuthContext.Provider>;
+    return (
+      <AuthContext.Provider value={sandbox}>
+        {children}
+        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-3 py-1 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black uppercase tracking-wider shadow-sm">
+          Sandbox · test data
+        </div>
+      </AuthContext.Provider>
+    );
   }
 
   if (phase === 'signed-out' || !userId) {
     return (
       <LoginScreen
         initialError={urlError}
-        onContinueAsGuest={() => {
-          localStorage.setItem(GUEST_KEY, '1');
-          setIsGuest(true);
+        onOpenSandbox={() => {
+          enterSandbox();
+          localStorage.setItem(SANDBOX_KEY, '1');
+          setIsSandbox(true);
         }}
       />
     );
@@ -152,9 +172,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   const value: AuthContextValue = {
     email: session?.user.email ?? null,
-    isGuest: false,
-    logInInstead: () => {},
-    signOut: async () => {
+    isSandbox: false,
+    leave: async () => {
       const ok = await signOutAndClear(userId);
       if (ok) window.location.reload();
       return ok;

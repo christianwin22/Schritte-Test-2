@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, MailCheck, Mail } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, MailCheck, Mail, FlaskConical, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AppLogo } from './AppLogo';
+import { forgetAccount, getKnownAccounts, KnownAccount } from '../lib/progressSync';
 
 /** Turns Supabase's error text into something a learner can act on. */
 export function friendlyAuthError(message: string): string {
@@ -39,9 +40,9 @@ const mainBtn =
   'w-full py-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:hover:bg-zinc-100 cursor-pointer';
 const googleBtn =
   'w-full py-3.5 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer';
-// Guest is the fallback path, so it is lighter than Log in.
-const guestBtn =
-  'w-full py-3 rounded-2xl text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-black text-sm transition-all active:scale-[0.98] cursor-pointer';
+// Sandbox is for testing, so it is lighter than Log in, but still clearly a button.
+const sandboxBtn =
+  'w-full py-3 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer';
 const inputClass =
   'w-full px-4 py-3.5 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-400 dark:focus:border-zinc-500 outline-none font-bold text-sm';
 
@@ -87,16 +88,17 @@ const Brand = () => (
 interface LoginScreenProps {
   /** An error to show on arrival, e.g. a refused Google sign-in or an expired link. */
   initialError?: string | null;
-  /** Use the app without an account; progress stays in this browser only. */
-  onContinueAsGuest: () => void;
+  /** Open the sandbox: a private test area whose data never touches an account. */
+  onOpenSandbox: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, onContinueAsGuest }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, onOpenSandbox }) => {
   const [step, setStep] = useState<'welcome' | 'login'>(initialError ? 'login' : 'welcome');
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [knownAccounts, setKnownAccounts] = useState<KnownAccount[]>(getKnownAccounts);
 
   if (!supabase) {
     return (
@@ -110,8 +112,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
             (or to Vercel's environment variables), then reload. Steps are in SETUP-LOGIN.md.
           </p>
         </div>
-        <button type="button" onClick={onContinueAsGuest} className={guestBtn}>
-          Continue as guest
+        <button type="button" onClick={onOpenSandbox} className={sandboxBtn}>
+          <FlaskConical className="w-4 h-4" />
+          <span>Sandbox</span>
         </button>
       </AuthCard>
     );
@@ -128,8 +131,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
           <button type="button" onClick={() => setStep('login')} className={mainBtn}>
             Log in
           </button>
-          <button type="button" onClick={onContinueAsGuest} className={guestBtn}>
-            Continue as guest
+          <button type="button" onClick={onOpenSandbox} className={sandboxBtn}>
+            <FlaskConical className="w-4 h-4" />
+            <span>Sandbox</span>
           </button>
         </div>
       </AuthCard>
@@ -146,6 +150,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
       setError(friendlyAuthError(error.message));
       setBusy(false);
     }
+  };
+
+  /** One tap back into an account used on this device. It still confirms: Google asks once, email sends a link. */
+  const continueAs = async (account: KnownAccount) => {
+    setError(null);
+    setBusy(true);
+    if (account.provider === 'google') {
+      const { error } = await auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, queryParams: { login_hint: account.email } },
+      });
+      if (error) {
+        setError(friendlyAuthError(error.message));
+        setBusy(false);
+      }
+      return;
+    }
+    const { error } = await auth.signInWithOtp({ email: account.email, options: { emailRedirectTo: redirectTo } });
+    setBusy(false);
+    if (error) setError(friendlyAuthError(error.message));
+    else setSentTo(account.email);
   };
 
   const sendLink = async (e: React.FormEvent) => {
@@ -186,6 +211,55 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
         </div>
       ) : (
         <div className="space-y-4">
+          {knownAccounts.length > 0 && (
+            <>
+              <div className="space-y-2">
+                {knownAccounts.map((account) => {
+                  const label = account.name || account.email.split('@')[0];
+                  return (
+                    <div key={account.email} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => continueAs(account)}
+                        disabled={busy}
+                        className="w-full p-3 pr-11 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-3 text-left transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                      >
+                        <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
+                          {label.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">
+                            Continue as {label}
+                          </span>
+                          <span className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate">
+                            {account.email}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          forgetAccount(account.email);
+                          setKnownAccounts(getKnownAccounts());
+                        }}
+                        aria-label={`Remove ${account.email} from this device`}
+                        title="Remove from this device"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-600/60 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+                or use another account
+                <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+              </div>
+            </>
+          )}
+
           <button type="button" onClick={continueWithGoogle} disabled={busy} className={googleBtn}>
             <GoogleMark />
             <span>Continue with Google</span>
