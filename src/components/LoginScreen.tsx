@@ -92,15 +92,31 @@ interface LoginScreenProps {
   onOpenSandbox: () => void;
 }
 
+/** The pretend account shown on the sandbox's practice Log in page. */
+const SANDBOX_ACCOUNT: KnownAccount = { email: 'test.user@sandbox.test', name: 'Test User', provider: 'google' };
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, onOpenSandbox }) => {
-  const [step, setStep] = useState<'welcome' | 'login'>(initialError ? 'login' : 'welcome');
+  // 'sandbox-login' is a practice copy of the Log in page: same screens, but every
+  // choice just opens the sandbox and nothing is sent anywhere.
+  const [step, setStep] = useState<'welcome' | 'login' | 'sandbox-login'>(initialError ? 'login' : 'welcome');
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [knownAccounts, setKnownAccounts] = useState<KnownAccount[]>(getKnownAccounts);
 
-  if (!supabase) {
+  const isSandbox = step === 'sandbox-login';
+  const auth = supabase?.auth ?? null;
+  const redirectTo = window.location.origin;
+
+  const openLoginPage = (next: 'login' | 'sandbox-login') => {
+    setStep(next);
+    setError(null);
+    setSentTo(null);
+    setEmail('');
+  };
+
+  if (!auth && !isSandbox) {
     return (
       <AuthCard>
         <Brand />
@@ -112,15 +128,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
             (or to Vercel's environment variables), then reload. Steps are in SETUP-LOGIN.md.
           </p>
         </div>
-        <button type="button" onClick={onOpenSandbox} className={sandboxBtn}>
+        <button type="button" onClick={() => openLoginPage('sandbox-login')} className={sandboxBtn}>
           <FlaskConical className="w-4 h-4" />
           <span>Sandbox</span>
         </button>
       </AuthCard>
     );
   }
-  const auth = supabase.auth;
-  const redirectTo = window.location.origin;
 
   // --- First page -----------------------------------------------------------
   if (step === 'welcome') {
@@ -128,10 +142,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
       <AuthCard>
         <Brand />
         <div className="space-y-2">
-          <button type="button" onClick={() => setStep('login')} className={mainBtn}>
+          <button type="button" onClick={() => openLoginPage('login')} className={mainBtn}>
             Log in
           </button>
-          <button type="button" onClick={onOpenSandbox} className={sandboxBtn}>
+          <button type="button" onClick={() => openLoginPage('sandbox-login')} className={sandboxBtn}>
             <FlaskConical className="w-4 h-4" />
             <span>Sandbox</span>
           </button>
@@ -140,8 +154,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     );
   }
 
-  // --- Log in ---------------------------------------------------------------
+  // --- Log in (real, or the sandbox's practice copy) --------------------------
   const continueWithGoogle = async () => {
+    if (isSandbox) return onOpenSandbox();
+    if (!auth) return;
     setError(null);
     setBusy(true);
     const { error } = await auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
@@ -154,6 +170,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
 
   /** One tap back into an account used on this device. It still confirms: Google asks once, email sends a link. */
   const continueAs = async (account: KnownAccount) => {
+    if (isSandbox) return onOpenSandbox();
+    if (!auth) return;
     setError(null);
     setBusy(true);
     if (account.provider === 'google') {
@@ -177,6 +195,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     e.preventDefault();
     const address = email.trim();
     if (!address) return;
+    if (isSandbox) {
+      setSentTo(address); // pretend: nothing is sent
+      return;
+    }
+    if (!auth) return;
     setError(null);
     setBusy(true);
     // The first link creates the account; every later one just signs in.
@@ -186,6 +209,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     else setSentTo(address);
   };
 
+  const accounts = isSandbox ? [SANDBOX_ACCOUNT] : knownAccounts;
+
   return (
     <AuthCard
       onBack={() => {
@@ -194,7 +219,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
         setSentTo(null);
       }}
     >
-      <h2 className="text-center font-black text-xl pt-1.5">Log in</h2>
+      <div className="flex flex-col items-center gap-1.5 pt-1.5">
+        <h2 className="text-center font-black text-xl">Log in</h2>
+        {isSandbox && (
+          <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-amber-950 text-[10px] font-black uppercase tracking-wider">
+            Sandbox · test
+          </span>
+        )}
+      </div>
 
       {sentTo ? (
         <div className="space-y-4">
@@ -202,19 +234,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
             <MailCheck className="w-6 h-6 mx-auto text-emerald-600 dark:text-emerald-400" />
             <p className="font-black text-sm text-emerald-900 dark:text-emerald-100">Check your inbox</p>
             <p className="text-xs font-medium text-emerald-800/90 dark:text-emerald-300/90">
-              We sent a sign-in link to <span className="font-bold">{sentTo}</span>. Open it on this device and you're in.
+              {isSandbox ? (
+                <>Test only — no email was sent to <span className="font-bold">{sentTo}</span>. Open the test link below.</>
+              ) : (
+                <>
+                  We sent a sign-in link to <span className="font-bold">{sentTo}</span>. Open it on this device and you're in.
+                </>
+              )}
             </p>
           </div>
-          <button type="button" onClick={() => setSentTo(null)} className={mainBtn}>
+          {isSandbox && (
+            <button type="button" onClick={onOpenSandbox} className={mainBtn}>
+              <MailCheck className="w-4 h-4" />
+              <span>Open the test link</span>
+            </button>
+          )}
+          <button type="button" onClick={() => setSentTo(null)} className={isSandbox ? sandboxBtn : mainBtn}>
             Use a different email
           </button>
         </div>
       ) : (
         <div className="space-y-4">
-          {knownAccounts.length > 0 && (
+          {accounts.length > 0 && (
             <>
               <div className="space-y-2">
-                {knownAccounts.map((account) => {
+                {accounts.map((account) => {
                   const label = account.name || account.email.split('@')[0];
                   return (
                     <div key={account.email} className="relative">
@@ -222,7 +266,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
                         type="button"
                         onClick={() => continueAs(account)}
                         disabled={busy}
-                        className="w-full p-3 pr-11 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-3 text-left transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                        className={`w-full p-3 ${isSandbox ? '' : 'pr-11'} rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-3 text-left transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer`}
                       >
                         <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
                           {label.charAt(0).toUpperCase()}
@@ -236,18 +280,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
                           </span>
                         </span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          forgetAccount(account.email);
-                          setKnownAccounts(getKnownAccounts());
-                        }}
-                        aria-label={`Remove ${account.email} from this device`}
-                        title="Remove from this device"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-600/60 cursor-pointer"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      {!isSandbox && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            forgetAccount(account.email);
+                            setKnownAccounts(getKnownAccounts());
+                          }}
+                          aria-label={`Remove ${account.email} from this device`}
+                          title="Remove from this device"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-600/60 cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
