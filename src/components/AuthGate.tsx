@@ -132,7 +132,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       <AuthContext.Provider value={sandbox}>
         {children}
         <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-3 py-1 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black uppercase tracking-wider shadow-sm">
-          Sandbox · test data
+          Sandbox · test
         </div>
       </AuthContext.Provider>
     );

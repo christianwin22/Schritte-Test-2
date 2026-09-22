@@ -24,7 +24,6 @@ import { playSound } from '../utils/audioEffects';
 import { speakGerman } from '../utils/speech';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
-import { useAuth } from './AuthGate';
 
 interface SettingsViewProps {
   isDark: boolean;
@@ -65,8 +64,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const t = getTranslation(appLanguage);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const auth = useAuth();
-  const [leaveState, setLeaveState] = useState<'idle' | 'working' | 'failed'>('idle');
   const [ttsFeedback, setTtsFeedback] = useState(false);
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -364,35 +361,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Log out — back to the login home page */}
-      {auth && (
-        <div className="space-y-2">
-          <button
-            type="button"
-            disabled={leaveState === 'working'}
-            onClick={async () => {
-              setLeaveState('working');
-              const ok = await auth.leave();
-              if (!ok) setLeaveState('failed');
-            }}
-            className="w-full py-3.5 bg-white dark:bg-[#252a35] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700/80 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 active:scale-[0.99] transition-all"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>
-              {auth.isSandbox
-                ? appLanguage === 'en' ? 'Exit sandbox' : 'Sandbox verlassen'
-                : appLanguage === 'en' ? 'Log out' : 'Abmelden'}
-            </span>
-          </button>
-          {leaveState === 'failed' && (
-            <p className="text-xs font-bold text-center text-rose-700 dark:text-rose-300">
-              {appLanguage === 'en'
-                ? "Couldn't save your latest progress — you're probably offline. You're still logged in; try again once you're connected."
-                : 'Dein Fortschritt konnte nicht gespeichert werden – vermutlich bist du offline. Du bist weiterhin angemeldet.'}
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 };

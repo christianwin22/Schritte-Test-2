@@ -9,10 +9,10 @@ import {
   ShieldCheck,
   Settings,
 } from 'lucide-react';
-import { SCHRITTE_LEKTIONEN } from '../data/schritteLektionen';
 import { WordEntry } from '../types';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { playSound } from '../utils/audioEffects';
+import { LogOutButton } from './LogOutButton';
 
 interface DuolingoProfileViewProps {
   streak: number;
@@ -230,38 +230,8 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Schritte International Neu Lektion Badges */}
-      <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 sm:p-8 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-black text-lg text-zinc-900 dark:text-zinc-100 tracking-tight">
-            {appLanguage === 'en' ? 'Schritte Lessons Mastery' : 'Schritte Lektions-Erfolge'}
-          </h3>
-          <span className="text-xs font-bold text-zinc-400">
-            {SCHRITTE_LEKTIONEN.length} {appLanguage === 'en' ? 'Lessons total' : 'Lektionen gesamt'}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {SCHRITTE_LEKTIONEN.map((lek) => (
-            <div
-              key={`${lek.level}-${lek.book}-${lek.number}`}
-              className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center space-x-3"
-            >
-              <div className="w-9 h-9 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-sm font-black shrink-0 text-zinc-900 dark:text-white">
-                {lek.number}
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-black text-zinc-900 dark:text-zinc-100 truncate">
-                  {lek.title}
-                </p>
-                <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
-                  {lek.book} • {appLanguage === 'en' ? 'Active' : 'Aktiv'}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Log out — back to the login home page */}
+      <LogOutButton appLanguage={appLanguage} />
     </div>
   );
 };
