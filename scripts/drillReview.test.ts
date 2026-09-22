@@ -61,8 +61,8 @@ check('practising a lesson twice does not reset its schedule', unlockDrillsAfter
 
 console.log('5. A real day later, the gap grows with each right answer');
 const yesterday = new Date(Date.now() - 864e5).toISOString();
-let c = { ...records[id], lastReviewedAt: yesterday };
-const days = (r: typeof c) => (new Date(r.nextReviewDate).getTime() - Date.now()) / 864e5;
+let c: (typeof records)[string] = { ...records[id], lastReviewedAt: yesterday };
+const days = (r: { nextReviewDate: string }) => (new Date(r.nextReviewDate).getTime() - Date.now()) / 864e5;
 const gaps: number[] = [];
 for (let n = 0; n < 4; n++) {
   c = reviewCard(id, true, c);

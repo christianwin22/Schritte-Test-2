@@ -17,6 +17,7 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
+import { BLANK, articleSentence, barePlural, fillBlank, pluralSentence } from '../data/nounDrillSentences';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
 import { speakGerman, listenToGermanSpeech, isSpeechRecognitionSupported } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
@@ -31,6 +32,7 @@ import {
   drillCardId,
   drillReviewPool,
   reviewCard,
+  isDrillable,
   DrillSkill,
 } from '../utils/srsEngine';
 
@@ -367,7 +369,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       ? currentPracticeWord
       : filteredWords[flashcardIndex % (filteredWords.length || 1)];
   const currentBlitzNoun = nounWords[blitzIndex % (nounWords.length || 1)];
-  const currentPluralNoun = nounWords[pluralIndex % (nounWords.length || 1)];
+  const pluralNouns = useMemo(() => nounWords.filter((w) => isDrillable('plural', w)), [nounWords]);
+  const currentPluralNoun = pluralNouns[pluralIndex % (pluralNouns.length || 1)];
 
   // Der/Die/Das and Plural: Practice (the chosen lesson, as before) or Review
   // (nouns from lessons finished in Flashcard Practice, scheduled like Flashcard Review).
@@ -1060,11 +1063,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     if (isCorrect) {
       playSound('correct');
       onCorrectAnswer(10);
-      speakGerman(`${choice} ${activeBlitzNoun.lemma}`);
+      speakGerman(fillBlank(articleSentence(activeBlitzNoun), choice));
     } else {
       playSound('wrong');
       onWrongAnswer();
-      speakGerman(`${activeBlitzNoun.nounDetails?.gender} ${activeBlitzNoun.lemma}`);
+      speakGerman(fillBlank(articleSentence(activeBlitzNoun), activeBlitzNoun.nounDetails?.gender ?? ''));
     }
     if (isDrillReview) recordDrillAnswer('article', activeBlitzNoun, isCorrect);
     setBlitzFeedback({
@@ -1097,11 +1100,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     if (isCorrect) {
       playSound('correct');
       onCorrectAnswer(15);
-      speakGerman(expected);
+      speakGerman(fillBlank(pluralSentence(activePluralNoun), barePlural(activePluralNoun)));
     } else {
       playSound('wrong');
       onWrongAnswer();
-      speakGerman(expected);
+      speakGerman(fillBlank(pluralSentence(activePluralNoun), barePlural(activePluralNoun)));
     }
     if (isDrillReview) recordDrillAnswer('plural', activePluralNoun, isCorrect);
     setPluralFeedback({
@@ -1115,7 +1118,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setPluralFeedback(null);
     setPluralInput('');
     if (isDrillReview) advanceDrillReview();
-    else setPluralIndex((prev) => (prev + 1) % nounWords.length);
+    else setPluralIndex((prev) => (prev + 1) % (pluralNouns.length || 1));
   };
 
   const getGenderBadge = (gender?: Gender) => {
@@ -2456,230 +2459,148 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       )}
 
       {/* SUB-MODE 2: GENDER BLITZ */}
-      {activeExerciseMode === 'gender_blitz' && (
-        <div className="max-w-md mx-auto w-full">
-          {renderDrillModeSwitch()}
-          {drillSubMode === 'practice' && renderVocabFilterBar()}
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 text-center">
-            {renderDrillReviewStatus() ?? (!isDrillReview && nounWords.length === 0 ? (
-              <div className="py-6 text-center space-y-3">
-                <p className="font-bold text-zinc-500">
-                  {appLanguage === 'en' ? 'No nouns found in this selection.' : 'Keine Nomen in dieser Auswahl gefunden.'}
-                </p>
-                <button
-                  onClick={() => {
-                    setSelectedLevel('A1');
-                    setSelectedLektion('ALL');
-                    setBlitzIndex(0);
-                  }}
-                  className="px-4 py-2 bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl cursor-pointer"
-                >
-                  {appLanguage === 'en' ? 'Load all A1 nouns' : 'Alle A1 Nomen laden'}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between text-xs font-bold text-zinc-400">
-                  <span>
-                    {isDrillReview ? (appLanguage === 'en' ? 'Review' : 'Wiederholung') : appLanguage === 'en' ? 'Noun' : 'Nomen'}{' '}
-                    {isDrillReview ? drillQueueIndex + 1 : (blitzIndex % nounWords.length) + 1}{' '}
-                    {appLanguage === 'en' ? 'of' : 'von'} {isDrillReview ? drillQueue.length : nounWords.length}
-                  </span>
-                  <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 px-2 py-0.5 rounded-md font-bold text-[11px] border border-zinc-200 dark:border-zinc-700">
-                    {isDrillReview ? activeBlitzNoun?.level : selectedLevel} • Lek {activeBlitzNoun?.lektion || 1}
-                  </span>
-                </div>
+      {/* SUB-MODE 2 & 3: DER/DIE/DAS and PLURAL — a sentence with one blank, answers at the bottom */}
+      {(activeExerciseMode === 'gender_blitz' || activeExerciseMode === 'plural_drill') && (() => {
+        const isArticle = activeExerciseMode === 'gender_blitz';
+        const noun = isArticle ? activeBlitzNoun : activePluralNoun;
+        const practiceList = isArticle ? nounWords : pluralNouns;
+        const practiceIndex = isArticle ? blitzIndex : pluralIndex;
+        const position = isDrillReview ? drillQueueIndex + 1 : (practiceIndex % (practiceList.length || 1)) + 1;
+        const total = isDrillReview ? drillQueue.length : practiceList.length;
+        const answered = isArticle ? blitzFeedback : pluralFeedback;
+        const correct = !!answered?.correct;
 
-                {/* Word Display */}
-                <div className="py-2.5 space-y-1.5">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
-                    {appLanguage === 'en' ? 'Which article is correct?' : 'Welcher Artikel ist richtig?'}
-                  </span>
-                  <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                    ___ {activeBlitzNoun?.lemma}
-                  </h3>
-                  <p className="text-xs sm:text-sm font-semibold text-zinc-500">
-                    {activeBlitzNoun?.translation}
+        const sentence = noun ? (isArticle ? articleSentence(noun) : pluralSentence(noun)) : '';
+        const [before, after = ''] = sentence.split(BLANK);
+        const rightAnswer = noun ? (isArticle ? noun.nounDetails?.gender ?? '' : barePlural(noun)) : '';
+        const shown = (text: string) => (before === '' ? text.charAt(0).toUpperCase() + text.slice(1) : text);
+
+        const status = renderDrillReviewStatus();
+        const emptyPractice = !isDrillReview && practiceList.length === 0;
+
+        return (
+          <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col">
+            {renderDrillModeSwitch()}
+            {drillSubMode === 'practice' && renderVocabFilterBar()}
+            <form
+              onSubmit={(e) => {
+                if (isArticle) e.preventDefault();
+                else handlePluralSubmit(e);
+              }}
+              className="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm"
+            >
+              {status ?? (emptyPractice ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3">
+                  <p className="font-bold text-zinc-500">
+                    {appLanguage === 'en' ? 'No nouns found in this selection.' : 'Keine Nomen in dieser Auswahl gefunden.'}
                   </p>
-                </div>
-
-                {/* 3 Large Article Buttons */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  {(['der', 'die', 'das'] as Gender[]).map((gender) => (
-                    <button
-                      key={gender}
-                      disabled={!!blitzFeedback}
-                      onClick={() => handleGenderChoice(gender)}
-                      className="py-3.5 rounded-2xl text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-950 hover:text-white dark:hover:bg-white dark:hover:text-zinc-950 font-black text-base uppercase border-2 border-zinc-300 dark:border-zinc-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
-                    >
-                      {gender}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Feedback & Next */}
-                {blitzFeedback && (
-                  <div
-                    className={`p-4 rounded-2xl border-2 space-y-2.5 ${
-                      blitzFeedback.correct
-                        ? 'bg-zinc-50 dark:bg-zinc-800 border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100'
-                        : 'bg-zinc-100 dark:bg-zinc-800/80 border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100'
-                    }`}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLevel('A1');
+                      setSelectedLektion('ALL');
+                      setBlitzIndex(0);
+                      setPluralIndex(0);
+                    }}
+                    className="px-4 py-2 bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl cursor-pointer"
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      {blitzFeedback.correct ? (
-                        <div className="w-5 h-5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center text-xs font-black">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </div>
+                    {appLanguage === 'en' ? 'Load all A1 nouns' : 'Alle A1 Nomen laden'}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Counter, top right — like Flashcard */}
+                  <div className="flex justify-end text-xs font-bold text-zinc-400">
+                    {position} / {total}
+                  </div>
+
+                  {/* The sentence, with the blank to fill */}
+                  <div className="flex-1 flex items-center justify-center px-1">
+                    <p className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 leading-relaxed text-center">
+                      {before}
+                      {isArticle || answered ? (
+                        <span
+                          className={`inline-block min-w-[2.6em] mx-1 px-1 border-b-4 align-baseline ${
+                            !answered
+                              ? 'border-zinc-300 dark:border-zinc-600 text-transparent'
+                              : correct
+                              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                              : 'border-rose-500 text-rose-600 dark:text-rose-400'
+                          }`}
+                        >
+                          {answered ? shown(rightAnswer) : ' '}
+                        </span>
                       ) : (
-                        <div className="w-5 h-5 rounded-full bg-zinc-400 text-white flex items-center justify-center text-xs font-black">
-                          <X className="w-3 h-3 stroke-[3]" />
-                        </div>
+                        <input
+                          type="text"
+                          autoFocus
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          aria-label={appLanguage === 'en' ? 'Plural' : 'Plural'}
+                          value={pluralInput}
+                          onChange={(e) => setPluralInput(e.target.value)}
+                          style={{ width: `${Math.max(4, pluralInput.length + 1)}ch` }}
+                          className="inline-block mx-1 px-1 bg-transparent border-b-4 border-zinc-400 dark:border-zinc-500 focus:border-zinc-950 dark:focus:border-white outline-none text-center font-black text-zinc-900 dark:text-zinc-100"
+                        />
                       )}
-                      <p className="font-black text-sm">
-                        {blitzFeedback.correct
-                          ? appLanguage === 'en'
-                            ? `Correct! "${blitzFeedback.word.nounDetails?.gender} ${blitzFeedback.word.lemma}"`
-                            : `Richtig! ${blitzFeedback.word.nounDetails?.gender} ${blitzFeedback.word.lemma}`
-                          : appLanguage === 'en'
-                          ? `Incorrect. Correct: "${blitzFeedback.word.nounDetails?.gender} ${blitzFeedback.word.lemma}"`
-                          : `Falsch! Richtig: ${blitzFeedback.word.nounDetails?.gender} ${blitzFeedback.word.lemma}`}
-                      </p>
-                    </div>
-
-                    {blitzFeedback.word.nounDetails?.genderRuleHint && (
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold">
-                        💡 {appLanguage === 'en' ? 'Tip:' : 'Tipp:'} {blitzFeedback.word.nounDetails.genderRuleHint}
-                      </p>
-                    )}
-
-                    <button
-                      onClick={handleNextBlitz}
-                      className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98 transition-all"
-                    >
-                      <span>{appLanguage === 'en' ? 'Next Word' : 'Nächstes Wort'}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-              </>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* SUB-MODE 3: PLURAL DRILL */}
-      {activeExerciseMode === 'plural_drill' && (
-        <div className="max-w-md mx-auto w-full">
-          {renderDrillModeSwitch()}
-          {drillSubMode === 'practice' && renderVocabFilterBar()}
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 text-center">
-            {renderDrillReviewStatus() ?? (!isDrillReview && nounWords.length === 0 ? (
-              <div className="py-6 text-center space-y-3">
-                <p className="font-bold text-zinc-500">
-                  {appLanguage === 'en' ? 'No nouns found in this selection.' : 'Keine Nomen in dieser Auswahl gefunden.'}
-                </p>
-                <button
-                  onClick={() => {
-                    setSelectedLevel('A1');
-                    setSelectedLektion('ALL');
-                    setPluralIndex(0);
-                  }}
-                  className="px-4 py-2 bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl cursor-pointer"
-                >
-                  {appLanguage === 'en' ? 'Load all A1 nouns' : 'Alle A1 Nomen laden'}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between text-xs font-bold text-zinc-400">
-                  <span>
-                    {isDrillReview ? (appLanguage === 'en' ? 'Review' : 'Wiederholung') : 'Plural'}{' '}
-                    {isDrillReview ? drillQueueIndex + 1 : (pluralIndex % nounWords.length) + 1}{' '}
-                    {appLanguage === 'en' ? 'of' : 'von'} {isDrillReview ? drillQueue.length : nounWords.length}
-                  </span>
-                  <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 px-2 py-0.5 rounded-md font-bold text-[11px] border border-zinc-200 dark:border-zinc-700">
-                    {isDrillReview ? activePluralNoun?.level : selectedLevel} • Lek {activePluralNoun?.lektion || 1}
-                  </span>
-                </div>
-
-                <div className="py-2 space-y-1.5">
-                  <span className="text-[11px] font-black uppercase text-zinc-400">
-                    {appLanguage === 'en' ? 'What is the plural form?' : 'Wie lautet der Plural?'}
-                  </span>
-                  <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                    {activePluralNoun?.nounDetails?.gender} {activePluralNoun?.lemma}
-                  </h3>
-                  <p className="text-xs sm:text-sm font-semibold text-zinc-500">
-                    {activePluralNoun?.translation}
-                  </p>
-                </div>
-
-                {/* Plural Input Form */}
-                <form onSubmit={handlePluralSubmit} className="space-y-3.5">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={pluralInput}
-                      disabled={!!pluralFeedback}
-                      onChange={(e) => setPluralInput(e.target.value)}
-                      placeholder={appLanguage === 'en' ? 'e.g. die Bücher or Bücher' : 'z.B. die Bücher / Bücher'}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 text-center font-bold text-sm focus:border-zinc-950 dark:focus:border-white outline-none text-zinc-900 dark:text-white"
-                    />
+                      {after}
+                    </p>
                   </div>
 
-                  {!pluralFeedback ? (
-                    <button
-                      type="submit"
-                      disabled={!pluralInput.trim()}
-                      className="w-full py-3 bg-zinc-950 hover:bg-zinc-800 active:scale-98 text-white font-black text-xs rounded-2xl shadow-xs disabled:opacity-50 transition-all cursor-pointer"
-                    >
-                      {t.checkSentence}
-                    </button>
-                  ) : (
-                    <div
-                      className={`p-3.5 rounded-2xl border-2 space-y-2.5 ${
-                        pluralFeedback.correct
-                          ? 'bg-zinc-50 dark:bg-zinc-800 border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100'
-                          : 'bg-zinc-100 dark:bg-zinc-800/80 border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100'
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        {pluralFeedback.correct ? (
-                          <div className="w-5 h-5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center text-xs font-black">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-zinc-400 text-white flex items-center justify-center text-xs font-black">
-                            <X className="w-3 h-3 stroke-[3]" />
-                          </div>
-                        )}
-                        <p className="font-black text-sm">
-                          {pluralFeedback.correct
-                            ? appLanguage === 'en'
-                              ? `Correct! Plural: ${pluralFeedback.expected}`
-                              : `Richtig! Der Plural lautet: ${pluralFeedback.expected}`
-                            : appLanguage === 'en'
-                            ? `Incorrect. Correct: ${pluralFeedback.expected}`
-                            : `Falsch! Richtig: ${pluralFeedback.expected}`}
+                  {/* Bottom of the screen: the answers, then the result */}
+                  <div className="pt-4 space-y-2.5">
+                    {answered ? (
+                      <>
+                        <p className={`text-center font-black text-sm ${correct ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                          {correct
+                            ? appLanguage === 'en' ? 'Correct!' : 'Richtig!'
+                            : `${appLanguage === 'en' ? 'Correct answer:' : 'Richtig:'} ${shown(rightAnswer)}`}
                         </p>
+                        {isArticle && !correct && blitzFeedback?.word.nounDetails?.genderRuleHint && (
+                          <p className="text-center text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold">
+                            💡 {blitzFeedback.word.nounDetails.genderRuleHint}
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={isArticle ? handleNextBlitz : handleNextPlural}
+                          className="w-full py-3.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-sm rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-98 transition-all"
+                        >
+                          <span>{appLanguage === 'en' ? 'Next Word' : 'Nächstes Wort'}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : isArticle ? (
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {(['der', 'die', 'das'] as Gender[]).map((gender) => (
+                          <button
+                            key={gender}
+                            type="button"
+                            onClick={() => handleGenderChoice(gender)}
+                            className="py-4 rounded-2xl text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-950 hover:text-white dark:hover:bg-white dark:hover:text-zinc-950 font-black text-base uppercase border-2 border-zinc-300 dark:border-zinc-700 active:scale-95 transition-all cursor-pointer shadow-xs"
+                          >
+                            {gender}
+                          </button>
+                        ))}
                       </div>
+                    ) : (
                       <button
-                        type="button"
-                        onClick={handleNextPlural}
-                        className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-all"
+                        type="submit"
+                        disabled={!pluralInput.trim()}
+                        className="w-full py-3.5 bg-zinc-950 hover:bg-zinc-800 active:scale-98 text-white dark:bg-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs disabled:opacity-40 transition-all cursor-pointer"
                       >
-                        <span>{appLanguage === 'en' ? 'Next Word' : 'Nächstes Wort'}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        {appLanguage === 'en' ? 'Check' : 'Prüfen'}
                       </button>
-                    </div>
-                  )}
-                </form>
-              </>
-            ))}
+                    )}
+                  </div>
+                </>
+              ))}
+            </form>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
