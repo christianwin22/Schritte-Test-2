@@ -39,6 +39,9 @@ const mainBtn =
   'w-full py-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:hover:bg-zinc-100 cursor-pointer';
 const googleBtn =
   'w-full py-3.5 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer';
+// Guest is the fallback path, so it is lighter than Log in.
+const guestBtn =
+  'w-full py-3 rounded-2xl text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-black text-sm transition-all active:scale-[0.98] cursor-pointer';
 const inputClass =
   'w-full px-4 py-3.5 rounded-2xl bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-400 dark:focus:border-zinc-500 outline-none font-bold text-sm';
 
@@ -84,9 +87,11 @@ const Brand = () => (
 interface LoginScreenProps {
   /** An error to show on arrival, e.g. a refused Google sign-in or an expired link. */
   initialError?: string | null;
+  /** Use the app without an account; progress stays in this browser only. */
+  onContinueAsGuest: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, onContinueAsGuest }) => {
   const [step, setStep] = useState<'welcome' | 'login'>(initialError ? 'login' : 'welcome');
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -105,6 +110,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null })
             (or to Vercel's environment variables), then reload. Steps are in SETUP-LOGIN.md.
           </p>
         </div>
+        <button type="button" onClick={onContinueAsGuest} className={guestBtn}>
+          Continue as guest
+        </button>
       </AuthCard>
     );
   }
@@ -116,9 +124,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null })
     return (
       <AuthCard>
         <Brand />
-        <button type="button" onClick={() => setStep('login')} className={mainBtn}>
-          Log in
-        </button>
+        <div className="space-y-2">
+          <button type="button" onClick={() => setStep('login')} className={mainBtn}>
+            Log in
+          </button>
+          <button type="button" onClick={onContinueAsGuest} className={guestBtn}>
+            Continue as guest
+          </button>
+        </div>
       </AuthCard>
     );
   }

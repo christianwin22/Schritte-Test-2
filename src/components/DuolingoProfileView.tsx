@@ -56,24 +56,6 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12 animate-fadeIn">
       {/* Profile Header Banner */}
       <div className="relative bg-white dark:bg-[#252a35] rounded-3xl p-6 sm:p-8 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs flex flex-col sm:flex-row items-center sm:items-start gap-6">
-        {/* Dedicated Top-Right Card Corner Settings Button */}
-        {onNavigateToSettings && (
-          <button
-            id="profile-top-right-corner-settings-btn"
-            type="button"
-            onClick={() => {
-              playSound('tap');
-              onNavigateToSettings();
-            }}
-            className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2.5 sm:px-3.5 sm:py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-700/80 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-600 active:scale-95 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer group z-10"
-            title={t.settingsTitle}
-            aria-label={t.settingsTitle}
-          >
-            <Settings className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2.2] group-hover:rotate-45 transition-transform duration-300 text-zinc-700 dark:text-zinc-300" />
-            <span className="hidden sm:inline text-xs font-black">{t.settingsTitle}</span>
-          </button>
-        )}
-
         {/* Avatar */}
         <div className="relative shrink-0">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 border-4 border-zinc-100 dark:border-zinc-700 shadow-sm flex items-center justify-center font-black text-2xl sm:text-3xl tracking-tighter">
@@ -85,7 +67,7 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
         </div>
 
         {/* User Info & Action Buttons */}
-        <div className="flex-1 text-center sm:text-left space-y-3 w-full pr-0 sm:pr-12">
+        <div className="flex-1 text-center sm:text-left space-y-3 w-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
@@ -98,36 +80,6 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
               </p>
             </div>
 
-            {/* Actions: Heart Refill + Settings */}
-            <div className="flex items-center justify-center sm:justify-end gap-2 self-center sm:self-auto">
-              {onNavigateToSettings && (
-                <button
-                  id="profile-nav-to-settings-btn"
-                  type="button"
-                  onClick={() => {
-                    playSound('tap');
-                    onNavigateToSettings();
-                  }}
-                  className="px-3.5 py-2 bg-zinc-100 dark:bg-zinc-700/80 hover:bg-zinc-200 dark:hover:bg-zinc-600 active:scale-95 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-2xl border border-zinc-200 dark:border-zinc-600 shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                  title={t.settingsTitle}
-                >
-                  <Settings className="w-4 h-4 text-zinc-700 dark:text-zinc-300 stroke-[2.5]" />
-                  <span>{t.settingsTitle}</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={onRefillHearts}
-                className="px-3.5 py-2 bg-zinc-950 hover:bg-zinc-800 active:scale-95 text-white font-black text-xs rounded-2xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all dark:bg-white dark:text-zinc-950"
-                title={t.refillHearts}
-              >
-                <Heart className="w-4 h-4 fill-current text-current" />
-                <span>
-                  {hearts}/{maxHearts}
-                </span>
-              </button>
-            </div>
           </div>
 
           {/* Quick Metrics Grid */}

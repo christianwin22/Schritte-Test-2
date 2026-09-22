@@ -93,6 +93,10 @@ From then on:
 
 - Changes upload every few seconds, and when the tab is closed.
 - Signing in on a new device downloads your saved progress.
+- **Continue as guest** skips sign-in. Guest progress stays in that browser
+  only and is never uploaded. If a guest later logs in on the same browser
+  and has no saved progress yet, the guest progress is kept in the account.
+  Anyone with the link can use guest mode — it can't see your or May's data.
 - **Sign out** (Settings) saves one last time, then clears this browser so the
   other person can sign in without seeing your data. If you are offline, it
   refuses to sign out rather than lose anything.

@@ -440,7 +440,7 @@ export default function App() {
     <div
       className={`w-full bg-[#f8f9fa] dark:bg-[#2b303a] text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200 ${
         isScrollableTab
-          ? 'min-h-screen h-auto overflow-y-auto custom-scrollbar'
+          ? 'h-[100dvh] overflow-y-auto custom-scrollbar' // fixed height, so the page scrolls inside it
           : 'h-[100dvh] max-h-[100dvh] overflow-hidden select-none'
       }`}
     >

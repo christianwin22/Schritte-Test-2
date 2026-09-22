@@ -7,8 +7,24 @@ import { LoginScreen, friendlyAuthError } from './LoginScreen';
 
 interface AuthContextValue {
   email: string | null;
+  /** Using the app without an account: progress lives in this browser only. */
+  isGuest: boolean;
   /** Saves, clears this browser and signs out. Resolves false if the final save failed. */
   signOut: () => Promise<boolean>;
+  /** Guest only: back to the sign-in screen. This browser's progress is kept. */
+  logInInstead: () => void;
+}
+
+// Remembers "continue as guest" so reopening the app doesn't ask again.
+// Outside the synced key families on purpose.
+const GUEST_KEY = 'cpa_guest';
+
+function readGuestFlag(): boolean {
+  try {
+    return localStorage.getItem(GUEST_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -44,6 +60,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [session, setSession] = useState<Session | null>(null);
   const [phase, setPhase] = useState<Phase>('checking');
   const [urlError] = useState(takeAuthErrorFromUrl);
+  const [isGuest, setIsGuest] = useState(readGuestFlag);
   const restoredFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -61,6 +78,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           setPhase('signed-out');
           return;
         }
+        localStorage.removeItem(GUEST_KEY);
+        setIsGuest(false);
         if (restoredFor.current === next.user.id) return; // token refresh, same person
         restoredFor.current = next.user.id;
         setPhase('restoring');
@@ -86,7 +105,31 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   if (phase === 'checking') return <Splash label="Loading…" />;
   if (phase === 'restoring') return <Splash label="Loading your progress…" />;
-  if (phase === 'signed-out' || !userId) return <LoginScreen initialError={urlError} />;
+
+  if (!userId && isGuest) {
+    const guest: AuthContextValue = {
+      email: null,
+      isGuest: true,
+      signOut: async () => true,
+      logInInstead: () => {
+        localStorage.removeItem(GUEST_KEY);
+        setIsGuest(false);
+      },
+    };
+    return <AuthContext.Provider value={guest}>{children}</AuthContext.Provider>;
+  }
+
+  if (phase === 'signed-out' || !userId) {
+    return (
+      <LoginScreen
+        initialError={urlError}
+        onContinueAsGuest={() => {
+          localStorage.setItem(GUEST_KEY, '1');
+          setIsGuest(true);
+        }}
+      />
+    );
+  }
 
   if (phase === 'restore-failed') {
     return (
@@ -109,6 +152,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   const value: AuthContextValue = {
     email: session?.user.email ?? null,
+    isGuest: false,
+    logInInstead: () => {},
     signOut: async () => {
       const ok = await signOutAndClear(userId);
       if (ok) window.location.reload();

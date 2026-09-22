@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ArrowLeft,
   BookOpen,
+  LogIn,
   LogOut,
   UserCircle2,
 } from 'lucide-react';
@@ -86,55 +87,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12 animate-fadeIn">
-      {/* Header Banner */}
-      <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 sm:p-8 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className="w-14 h-14 rounded-2xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 flex items-center justify-center shadow-sm shrink-0">
-            <Settings className="w-7 h-7 stroke-[2.5]" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-              {t.settingsTitle}
-            </h1>
-            <p className="text-xs sm:text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-              {appLanguage === 'en'
-                ? 'Preferences, sound effects, audio, appearance, and language'
-                : 'App-Einstellungen, Audio, Erscheinungsbild und Sprache'}
-            </p>
-          </div>
-        </div>
-
-        {/* Action / Back Navigation */}
-        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
-          {onBackToProfile && (
-            <button
-              type="button"
-              onClick={() => {
-                playSound('tap');
-                onBackToProfile();
-              }}
-              className="px-4 py-2.5 bg-zinc-100 dark:bg-zinc-700/80 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-black text-xs sm:text-sm rounded-2xl border border-zinc-200 dark:border-zinc-600 active:scale-95 transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
-            >
-              <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
-              <span>{appLanguage === 'en' ? 'Back to Profile' : 'Zurück zum Profil'}</span>
-            </button>
-          )}
-
-          {onBackToHome && (
-            <button
-              type="button"
-              onClick={() => {
-                playSound('tap');
-                onBackToHome();
-              }}
-              className="px-4 py-2.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 font-black text-xs sm:text-sm rounded-2xl active:scale-95 transition-all flex items-center gap-2 cursor-pointer shadow-xs"
-            >
-              <span>{appLanguage === 'en' ? 'Home' : 'Startseite'}</span>
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* Main Settings Sections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* ==================================================================== */}
@@ -465,25 +417,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex items-center gap-3 min-w-0">
               <UserCircle2 className="w-6 h-6 text-zinc-500 shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                  {appLanguage === 'en' ? 'Signed in as' : 'Angemeldet als'}
-                </p>
-                <p className="text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">{auth.email}</p>
+                {auth.isGuest ? (
+                  <>
+                    <p className="text-sm font-black text-zinc-900 dark:text-zinc-100">
+                      {appLanguage === 'en' ? 'Guest' : 'Gast'}
+                    </p>
+                    <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                      {appLanguage === 'en'
+                        ? 'Progress is saved on this device only'
+                        : 'Fortschritt wird nur auf diesem Gerät gespeichert'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                      {appLanguage === 'en' ? 'Signed in as' : 'Angemeldet als'}
+                    </p>
+                    <p className="text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">{auth.email}</p>
+                  </>
+                )}
               </div>
             </div>
-            <button
-              type="button"
-              disabled={signOutState === 'working'}
-              onClick={async () => {
-                setSignOutState('working');
-                const ok = await auth.signOut();
-                if (!ok) setSignOutState('failed');
-              }}
-              className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-60 active:scale-95 transition-all"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>{appLanguage === 'en' ? 'Sign out' : 'Abmelden'}</span>
-            </button>
+            {auth.isGuest ? (
+              <button
+                type="button"
+                onClick={auth.logInInstead}
+                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95 transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>{appLanguage === 'en' ? 'Log in' : 'Anmelden'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={signOutState === 'working'}
+                onClick={async () => {
+                  setSignOutState('working');
+                  const ok = await auth.signOut();
+                  if (!ok) setSignOutState('failed');
+                }}
+                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-60 active:scale-95 transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{appLanguage === 'en' ? 'Sign out' : 'Abmelden'}</span>
+              </button>
+            )}
           </div>
           {signOutState === 'failed' && (
             <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
