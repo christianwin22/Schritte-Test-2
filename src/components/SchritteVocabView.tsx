@@ -777,6 +777,75 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setFlashcardIndex((prev) => (prev > 0 ? prev - 1 : (filteredWords.length || 1) - 1));
   };
 
+  // Learn: swipe left = next card, swipe right = previous, with a slide. The card slides out
+  // as it is (front or back), and the next one slides in already on its front, so neither the
+  // back of the current card nor the next card's back is ever revealed.
+  const [cardDragX, setCardDragX] = useState(0);
+  const [cardSlide, setCardSlide] = useState<{ phase: 'idle' | 'out' | 'in'; dir: 1 | -1 }>({ phase: 'idle', dir: -1 });
+  const cardDragStart = useRef<{ x: number; y: number; id: number } | null>(null);
+  const cardWasDragged = useRef(false);
+  const SWIPE_DISTANCE = 60;
+  const SLIDE_MS = 180;
+
+  /** dir -1 = next (card leaves to the left), +1 = previous (leaves to the right). */
+  const goToCard = (dir: 1 | -1) => {
+    if (cardSlide.phase !== 'idle') return;
+    const navigate = dir === -1 ? handleNextFlashcard : handlePrevFlashcard;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setCardDragX(0);
+      navigate();
+      return;
+    }
+    setCardSlide({ phase: 'out', dir });
+    window.setTimeout(() => {
+      navigate(); // new index, front side — in the same render
+      setCardDragX(0);
+      setCardSlide({ phase: 'in', dir }); // parked off-screen on the other side, no transition
+      requestAnimationFrame(() => requestAnimationFrame(() => setCardSlide({ phase: 'idle', dir })));
+    }, SLIDE_MS);
+  };
+
+  const cardSwipeHandlers = {
+    onPointerDown: (e: React.PointerEvent) => {
+      if (cardSlide.phase !== 'idle') return;
+      cardDragStart.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      cardWasDragged.current = false;
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const start = cardDragStart.current;
+      if (!start || start.id !== e.pointerId) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+        cardWasDragged.current = true;
+        setCardDragX(dx);
+      }
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      const start = cardDragStart.current;
+      cardDragStart.current = null;
+      if (!start || start.id !== e.pointerId) return;
+      const dx = e.clientX - start.x;
+      if (cardWasDragged.current && Math.abs(dx) >= SWIPE_DISTANCE) goToCard(dx < 0 ? -1 : 1);
+      else setCardDragX(0); // not far enough: spring back
+    },
+    onPointerCancel: () => {
+      cardDragStart.current = null;
+      setCardDragX(0);
+    },
+  };
+
+  const cardSlideStyle: React.CSSProperties =
+    cardSlide.phase === 'out'
+      ? { transform: `translateX(${cardSlide.dir * 110}%)`, opacity: 0, transition: `transform ${SLIDE_MS}ms ease-in, opacity ${SLIDE_MS}ms ease-in` }
+      : cardSlide.phase === 'in'
+      ? { transform: `translateX(${-cardSlide.dir * 110}%)`, opacity: 0, transition: 'none' }
+      : {
+          transform: `translateX(${cardDragX}px) rotate(${cardDragX / 40}deg)`,
+          transition: cardDragStart.current ? 'none' : `transform ${SLIDE_MS}ms ease-out, opacity ${SLIDE_MS}ms ease-out`,
+        };
+
   // Check if practice or review is actively in progress (not completed, and user has made progress)
   const isPracticeInProgress =
     activeExerciseMode === 'explorer' &&
@@ -1808,11 +1877,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
                   return (
                     <div
+                      {...cardSwipeHandlers}
                       onClick={() => {
+                        if (cardWasDragged.current) {
+                          cardWasDragged.current = false;
+                          return; // that was a swipe, not a tap
+                        }
                         playSound('tap');
                         setIsCardFlipped(!isCardFlipped);
                       }}
-                      className="flex-1 min-h-[220px] sm:min-h-[260px] p-5 sm:p-7 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-between cursor-pointer hover:border-zinc-950 dark:hover:border-white transition-all select-none group"
+                      style={{ ...cardSlideStyle, touchAction: 'pan-y' }}
+                      className="flex-1 min-h-[220px] sm:min-h-[260px] p-5 sm:p-7 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-between cursor-pointer hover:border-zinc-950 dark:hover:border-white select-none group"
                     >
                       {/* Top spacer for optical centering */}
                       <div className="w-full shrink-0" />
@@ -2016,7 +2091,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 <div className="flex items-center gap-2 mt-3 shrink-0">
                   <button
                     type="button"
-                    onClick={handlePrevFlashcard}
+                    onClick={() => goToCard(1)}
                     className="p-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95 transition-all shrink-0"
                     title="Previous"
                   >
@@ -2075,7 +2150,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={handleNextFlashcard}
+                    onClick={() => goToCard(-1)}
                     className="p-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent cursor-pointer active:scale-95 transition-all shrink-0"
                     title="Next"
                   >
@@ -2263,8 +2338,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="flex items-center justify-center text-xs font-bold text-zinc-400">
-                    {/* Card counter & redo-round indicator, centred */}
+                  <div className="grid grid-cols-3 items-center text-xs font-bold text-zinc-400">
+                    {/* Left: which way this card goes. Picked at random per card — shown, not a control. */}
+                    <span className="justify-self-start text-[11px] font-black tracking-wider text-zinc-400 dark:text-zinc-500 select-none cursor-default">
+                      {practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}
+                    </span>
+                    {/* Centre: card counter & redo-round indicator */}
+                    <span className="justify-self-center">
                     {roundNumber > 1 ? (
                       <div className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs flex items-center space-x-2.5">
                         <span>{appLanguage === 'en' ? `Redo ${roundNumber - 1}` : `Wiederholung ${roundNumber - 1}`}</span>
@@ -2278,6 +2358,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         {(practiceQueueIndex % ((practiceQueue.length > 0 ? practiceQueue : filteredWords).length || 1)) + 1} / {(practiceQueue.length > 0 ? practiceQueue : filteredWords).length}
                       </span>
                     )}
+                    </span>
+                    <span />
                   </div>
 
                   {/* Question Box (Maintains full height on correct answers, shrinks only slightly for incorrect feedback to fill gap) */}
@@ -2639,6 +2721,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       </span>
                       {after}
                     </p>
+                    {answered && noun && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound('tap');
+                          speakGerman(fillBlank(sentence, rightAnswer));
+                        }}
+                        title={appLanguage === 'en' ? 'Listen to the sentence' : 'Satz anhören'}
+                        aria-label={appLanguage === 'en' ? 'Listen to the sentence' : 'Satz anhören'}
+                        className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer active:scale-95"
+                      >
+                        <Volume2 className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Bottom of the screen: the answers, then the result */}
