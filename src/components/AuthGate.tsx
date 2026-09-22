@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { restoreForUser, signOutAndClear, startAutoSync } from '../lib/progressSync';
-import { LoginScreen, friendlyAuthError } from './LoginScreen';
+import { LoginScreen, RESET_FLAG, SetPasswordScreen, friendlyAuthError } from './LoginScreen';
 
 interface AuthContextValue {
   email: string | null;
@@ -43,6 +43,9 @@ const Splash: React.FC<{ label: string }> = ({ label }) => (
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [phase, setPhase] = useState<Phase>('checking');
+  // Arrived from a password-reset email: ask for the new password before opening the app.
+  // Read before takeAuthErrorFromUrl, which tidies the URL.
+  const [recovering, setRecovering] = useState(() => new URLSearchParams(window.location.search).has(RESET_FLAG));
   const [urlError] = useState(takeAuthErrorFromUrl);
   const restoredFor = useRef<string | null>(null);
 
@@ -52,7 +55,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       return;
     }
 
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
       // Supabase asks that no other Supabase call runs inside this callback, so defer.
       setTimeout(() => {
         setSession(next);
@@ -85,6 +89,16 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }, [phase, userId]);
 
   if (phase === 'checking') return <Splash label="Loading…" />;
+  if (recovering && userId) {
+    return (
+      <SetPasswordScreen
+        onDone={() => {
+          window.history.replaceState(null, '', window.location.pathname);
+          setRecovering(false);
+        }}
+      />
+    );
+  }
   if (phase === 'restoring') return <Splash label="Loading your progress…" />;
   if (phase === 'signed-out' || !userId) return <LoginScreen initialError={urlError} />;
 

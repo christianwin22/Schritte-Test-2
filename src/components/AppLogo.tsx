@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface AppLogoProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   className?: string;
 }
@@ -12,23 +12,26 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   className = '',
 }) => {
   const sizeClasses = {
-    sm: 'w-7 h-7',
-    md: 'w-8 h-8',
-    lg: 'w-10 h-10',
+    sm: 'w-7 h-7 rounded-xl',
+    md: 'w-8 h-8 rounded-xl',
+    lg: 'w-10 h-10 rounded-xl',
+    xl: 'w-16 h-16 rounded-2xl',
   }[size];
+
+  const iconClasses = size === 'xl' ? 'w-10 h-10' : 'w-5 h-5';
 
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       {/* White Minimalist Geometric Logo Tile with Fading Black Steps */}
       <div
-        className={`${sizeClasses} rounded-xl bg-white text-zinc-950 flex items-center justify-center shadow-xs border border-zinc-300 dark:border-zinc-200 relative overflow-hidden group`}
+        className={`${sizeClasses} bg-white text-zinc-950 flex items-center justify-center shadow-xs border border-zinc-300 dark:border-zinc-200 relative overflow-hidden group`}
       >
         {/* Stylized Ascending Steps (Schritte) in Fading Black on Pure White */}
         <svg
           viewBox="0 0 32 32"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="w-5 h-5 text-zinc-950"
+          className={`${iconClasses} text-zinc-950`}
         >
           {/* Step 1 (Faded black / light step) */}
           <rect x="5" y="19" width="6" height="7" rx="1.5" fill="currentColor" opacity="0.35" />
