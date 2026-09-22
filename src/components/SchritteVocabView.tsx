@@ -424,6 +424,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const activeBlitzNoun = isDrillReview ? drillReviewNoun : currentBlitzNoun;
   const activePluralNoun = isDrillReview ? drillReviewNoun : currentPluralNoun;
 
+  // Plural: the answer box is focused whenever a new card appears, so you can just type.
+  const pluralInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (activeExerciseMode === 'plural_drill' && !pluralFeedback) pluralInputRef.current?.focus();
+  }, [activeExerciseMode, activePluralNoun?.id, pluralFeedback, drillSubMode]);
+
   const recordDrillAnswer = (skill: DrillSkill, word: WordEntry, passed: boolean) => {
     const id = drillCardId(skill, word.id);
     setFsrsRecords((prev) => ({ ...prev, [id]: reviewCard(id, passed, prev[id]) }));
@@ -1471,6 +1477,30 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // Filter Bar Component inside other Vocab Exercises
   const renderVocabFilterBar = () => renderFilterBanner();
 
+  // Review mixes words from every lesson, so the filter can't apply there. This is the
+  // same bar, read-only: it shows the current word's level and lesson, and nothing is tappable.
+  const renderReviewWordBanner = (word?: WordEntry) => (
+    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2">
+      <div className="flex flex-row items-center justify-between gap-1 sm:gap-2">
+        <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shrink-0">
+          {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
+            <span
+              key={lvl}
+              className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-black ${
+                word?.level === lvl ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs' : 'text-zinc-400 dark:text-zinc-500'
+              }`}
+            >
+              {lvl}
+            </span>
+          ))}
+        </div>
+        <span className="px-2.5 sm:px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 shrink-0">
+          {appLanguage === 'en' ? 'Lesson' : 'Lektion'} {word?.lektion ?? '–'}
+        </span>
+      </div>
+    </div>
+  );
+
   // Der/Die/Das and Plural: Practice | Review switch, styled like Flashcard's
   const renderDrillModeSwitch = () => {
     const due = (activeDrillSkill === 'plural' ? pluralPool : articlePool).due.length;
@@ -1560,8 +1590,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {/* SUB-MODE 1: FLASHCARD DRILL */}
       {activeExerciseMode === 'explorer' && (
         <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
-          {/* Banner 1: Level & Lesson Filters */}
-          {renderFilterBanner()}
+          {/* Banner 1: Level & Lesson Filters (in Review: the current word's, read-only) */}
+          {flashcardSubMode === 'review' ? renderReviewWordBanner(currentPracticeWord) : renderFilterBanner()}
           {/* Banner 2: Learn, Practice, Review Modes */}
           {renderModeBanner()}
 
@@ -2158,13 +2188,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold text-zinc-400">
-                    {/* Left: Random Direction Badge */}
-                    <div className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1">
-                      <span>{practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}</span>
-                    </div>
-
-                    {/* Right: Card Counter & Redo Round Indicator with pleasant spacing */}
+                  <div className="flex items-center justify-center text-xs font-bold text-zinc-400">
+                    {/* Card counter & redo-round indicator, centred */}
                     {roundNumber > 1 ? (
                       <div className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs flex items-center space-x-2.5">
                         <span>{appLanguage === 'en' ? `Redo ${roundNumber - 1}` : `Wiederholung ${roundNumber - 1}`}</span>
@@ -2481,7 +2506,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         return (
           <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col">
             {renderDrillModeSwitch()}
-            {drillSubMode === 'practice' && renderVocabFilterBar()}
+            {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
             <form
               onSubmit={(e) => {
                 if (isArticle) e.preventDefault();
@@ -2509,13 +2534,21 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
               ) : (
                 <>
-                  {/* Counter, top right — like Flashcard */}
-                  <div className="flex justify-end text-xs font-bold text-zinc-400">
+                  {/* Counter, top middle */}
+                  <div className="flex justify-center text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
                     {position} / {total}
                   </div>
 
-                  {/* The sentence, with the blank to fill */}
-                  <div className="flex-1 flex items-center justify-center px-1">
+                  {/* The sentence, with the blank to fill. Plural shows which noun, as "der Name". */}
+                  <div
+                    className="flex-1 flex flex-col items-center justify-center gap-4 px-1"
+                    onClick={() => !isArticle && !answered && pluralInputRef.current?.focus()}
+                  >
+                    {!isArticle && noun && (
+                      <span className="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-black text-zinc-600 dark:text-zinc-300">
+                        {noun.nounDetails?.gender} {noun.lemma}
+                      </span>
+                    )}
                     <p className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 leading-relaxed text-center">
                       {before}
                       {isArticle || answered ? (
@@ -2532,6 +2565,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         </span>
                       ) : (
                         <input
+                          ref={pluralInputRef}
                           type="text"
                           autoFocus
                           autoComplete="off"
@@ -2541,8 +2575,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           aria-label={appLanguage === 'en' ? 'Plural' : 'Plural'}
                           value={pluralInput}
                           onChange={(e) => setPluralInput(e.target.value)}
-                          style={{ width: `${Math.max(4, pluralInput.length + 1)}ch` }}
-                          className="inline-block mx-1 px-1 bg-transparent border-b-4 border-zinc-400 dark:border-zinc-500 focus:border-zinc-950 dark:focus:border-white outline-none text-center font-black text-zinc-900 dark:text-zinc-100"
+                          onKeyDown={(e) => {
+                            // Enter (or the phone keyboard's Go/Return) checks the answer
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.currentTarget.form?.requestSubmit();
+                            }
+                          }}
+                          enterKeyHint="done"
+                          style={{ width: `${Math.max(4, pluralInput.length + 1.5)}ch` }}
+                          className="inline-block mx-1 px-2 py-0.5 align-middle rounded-xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-300 dark:border-zinc-600 focus:border-zinc-950 dark:focus:border-white outline-none text-center font-black text-zinc-900 dark:text-zinc-100"
                         />
                       )}
                       {after}
