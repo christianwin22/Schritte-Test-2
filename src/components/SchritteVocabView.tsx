@@ -2338,13 +2338,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="grid grid-cols-3 items-center text-xs font-bold text-zinc-400">
-                    {/* Left: which way this card goes. Picked at random per card — shown, not a control. */}
-                    <span className="justify-self-start text-[11px] font-black tracking-wider text-zinc-400 dark:text-zinc-500 select-none cursor-default">
-                      {practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}
-                    </span>
-                    {/* Centre: card counter & redo-round indicator */}
-                    <span className="justify-self-center">
+                  <div className="flex items-center justify-between text-xs font-bold text-zinc-400">
+                    {/* Left: which way this card goes — same pill as Learn, but only a label: picked at
+                        random per card, and it ignores taps entirely. */}
+                    <div
+                      aria-label={practiceDirection === 'EN_TO_DE' ? 'English to German' : 'German to English'}
+                      className="pointer-events-none select-none px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1"
+                    >
+                      <span>{practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}</span>
+                    </div>
+                    {/* Right: card counter & redo-round indicator, as in Learn */}
+                    <span>
                     {roundNumber > 1 ? (
                       <div className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs flex items-center space-x-2.5">
                         <span>{appLanguage === 'en' ? `Redo ${roundNumber - 1}` : `Wiederholung ${roundNumber - 1}`}</span>
@@ -2359,7 +2363,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       </span>
                     )}
                     </span>
-                    <span />
                   </div>
 
                   {/* Question Box (Maintains full height on correct answers, shrinks only slightly for incorrect feedback to fill gap) */}
