@@ -1,4 +1,4 @@
-import { SRSRating, SRSItemState, SRSHistoryEntry, FSRSCardRecord } from '../types';
+import { SRSRating, SRSItemState, SRSHistoryEntry, FSRSCardRecord, WordEntry } from '../types';
 
 const SRS_STORAGE_KEY = 'deutschmeister_srs_state_v1';
 const FSRS_STORAGE_KEY = 'deutschmeister_fsrs_records_v1';
@@ -329,4 +329,83 @@ export function saveSRSStates(states: Record<string, SRSItemState>): void {
   } catch (err) {
     console.error('Failed to save SRS state to localStorage', err);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Der/Die/Das and Plural review
+// ---------------------------------------------------------------------------
+//
+// Same engine as Flashcard Review, but each drill keeps its own schedule per
+// noun: knowing what "Tisch" means is a different memory from knowing it is
+// "der Tisch" or "die Tische". Their cards live in the same records map under
+// "article:<wordId>" and "plural:<wordId>", so they save and sync with the rest.
+
+export type DrillSkill = 'article' | 'plural';
+
+export function drillCardId(skill: DrillSkill, wordId: string): string {
+  return `${skill}:${wordId}`;
+}
+
+/** Nouns a drill can review: every noun has an article; singular-only nouns ("(Sg.)") have no plural. */
+export function isDrillable(skill: DrillSkill, word: WordEntry): boolean {
+  const details = word.nounDetails;
+  if (!details?.gender) return false;
+  if (skill === 'plural') return !!details.plural && !/\(Sg\.?\)/i.test(details.plural);
+  return true;
+}
+
+/**
+ * When a lesson's Flashcard Practice is finished, its nouns join Der/Die/Das and
+ * Plural review too — first due tomorrow, the same rule as Flashcard Review.
+ */
+export function unlockDrillsAfterPractice(
+  words: WordEntry[],
+  existingRecords: Record<string, FSRSCardRecord>
+): Record<string, FSRSCardRecord> {
+  const ids = (['article', 'plural'] as DrillSkill[]).flatMap((skill) =>
+    words.filter((w) => isDrillable(skill, w)).map((w) => drillCardId(skill, w.id))
+  );
+  return unlockWordsAfterPractice(ids, existingRecords);
+}
+
+/** One review answer, scheduled exactly as Flashcard Review schedules it. */
+export function reviewCard(cardId: string, passed: boolean, existing?: FSRSCardRecord): FSRSCardRecord {
+  const base: FSRSCardRecord = existing ?? {
+    wordId: cardId,
+    status: 'review',
+    isUnlocked: true,
+    stability: 1.0,
+    difficulty: 5.0,
+    intervalDays: 1,
+    nextReviewDate: new Date().toISOString(),
+  };
+  const lastReviewed = base.lastReviewedAt ? new Date(base.lastReviewedAt).getTime() : Date.now();
+  const daysElapsed = Math.max(0, (Date.now() - lastReviewed) / (1000 * 60 * 60 * 24));
+  const result = processFSRSReview(passed, base.stability, base.difficulty, daysElapsed);
+  return {
+    ...base,
+    status: 'review',
+    isUnlocked: true,
+    stability: result.newStability,
+    difficulty: result.newDifficulty,
+    intervalDays: result.nextInterval,
+    nextReviewDate: result.nextReviewDate,
+    lastReviewedAt: new Date().toISOString(),
+    repetitionCount: (base.repetitionCount || 0) + 1,
+  };
+}
+
+/** Which nouns a drill's Review shows: the due ones, or — like Flashcard — the unlocked ones when nothing is due. */
+export function drillReviewPool(
+  skill: DrillSkill,
+  words: WordEntry[],
+  records: Record<string, FSRSCardRecord>
+): { due: WordEntry[]; unlocked: WordEntry[] } {
+  const drillable = words.filter((w) => isDrillable(skill, w));
+  const unlocked = drillable.filter((w) => {
+    const r = records[drillCardId(skill, w.id)];
+    return !!r?.isUnlocked && r.status === 'review';
+  });
+  const due = unlocked.filter((w) => isCardDueForReview(records[drillCardId(skill, w.id)]));
+  return { due, unlocked };
 }

@@ -157,8 +157,13 @@ export default function App() {
     };
   }, []);
 
+  // Everything due in Vocabulary: Flashcard reviews plus Der/Die/Das and Plural reviews.
   const globalDueCount = useMemo(() => {
-    return INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id])).length;
+    const flashcards = INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id])).length;
+    const drills = Object.keys(fsrsRecords).filter(
+      (id) => /^(article|plural):/.test(id) && isCardDueForReview(fsrsRecords[id])
+    ).length;
+    return flashcards + drills;
   }, [fsrsRecords]);
 
   // Persist State Changes

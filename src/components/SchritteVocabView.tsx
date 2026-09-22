@@ -27,6 +27,11 @@ import {
   processFSRSReview,
   isCardDueForReview,
   unlockWordsAfterPractice,
+  unlockDrillsAfterPractice,
+  drillCardId,
+  drillReviewPool,
+  reviewCard,
+  DrillSkill,
 } from '../utils/srsEngine';
 
 export interface FlashcardHotkeys {
@@ -364,6 +369,69 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const currentBlitzNoun = nounWords[blitzIndex % (nounWords.length || 1)];
   const currentPluralNoun = nounWords[pluralIndex % (nounWords.length || 1)];
 
+  // Der/Die/Das and Plural: Practice (the chosen lesson, as before) or Review
+  // (nouns from lessons finished in Flashcard Practice, scheduled like Flashcard Review).
+  const [drillSubMode, setDrillSubMode] = useState<'practice' | 'review'>(() => {
+    try {
+      return localStorage.getItem('schritte_saved_drill_submode') === 'review' ? 'review' : 'practice';
+    } catch {
+      return 'practice';
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('schritte_saved_drill_submode', drillSubMode);
+    } catch {
+      // ignore
+    }
+  }, [drillSubMode]);
+
+  const articlePool = useMemo(() => drillReviewPool('article', INITIAL_VOCABULARY, fsrsRecords), [fsrsRecords]);
+  const pluralPool = useMemo(() => drillReviewPool('plural', INITIAL_VOCABULARY, fsrsRecords), [fsrsRecords]);
+
+  const activeDrillSkill: DrillSkill | null =
+    activeExerciseMode === 'gender_blitz' ? 'article' : activeExerciseMode === 'plural_drill' ? 'plural' : null;
+  const isDrillReview = activeDrillSkill !== null && drillSubMode === 'review';
+
+  // A review session is a fixed list of up to 10 nouns, picked when it starts.
+  const [drillQueue, setDrillQueue] = useState<WordEntry[]>([]);
+  const [drillQueueIndex, setDrillQueueIndex] = useState(0);
+  const [drillCorrectCount, setDrillCorrectCount] = useState(0);
+  const [drillSessionDone, setDrillSessionDone] = useState(false);
+
+  const startDrillReview = (skill: DrillSkill) => {
+    const pool = skill === 'article' ? articlePool : pluralPool;
+    const source = pool.due.length > 0 ? pool.due : pool.unlocked; // like Flashcard: unlocked ones if nothing is due
+    setDrillQueue(source.slice(0, 10));
+    setDrillQueueIndex(0);
+    setDrillCorrectCount(0);
+    setDrillSessionDone(false);
+    setBlitzFeedback(null);
+    setPluralFeedback(null);
+    setPluralInput('');
+  };
+
+  // New session when Review is opened or the drill changes — not on every answer.
+  useEffect(() => {
+    if (isDrillReview && activeDrillSkill) startDrillReview(activeDrillSkill);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDrillReview, activeDrillSkill]);
+
+  const drillReviewNoun = isDrillReview ? drillQueue[drillQueueIndex] : undefined;
+  const activeBlitzNoun = isDrillReview ? drillReviewNoun : currentBlitzNoun;
+  const activePluralNoun = isDrillReview ? drillReviewNoun : currentPluralNoun;
+
+  const recordDrillAnswer = (skill: DrillSkill, word: WordEntry, passed: boolean) => {
+    const id = drillCardId(skill, word.id);
+    setFsrsRecords((prev) => ({ ...prev, [id]: reviewCard(id, passed, prev[id]) }));
+    if (passed) setDrillCorrectCount((n) => n + 1);
+  };
+
+  const advanceDrillReview = () => {
+    if (drillQueueIndex + 1 >= drillQueue.length) setDrillSessionDone(true);
+    else setDrillQueueIndex((i) => i + 1);
+  };
+
   // Helper to evaluate answer for practice & review
   const evaluateAnswer = (inputVal: string, card: WordEntry, direction: 'EN_TO_DE' | 'DE_TO_EN') => {
     const rawUser = inputVal.trim().toLowerCase();
@@ -628,7 +696,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         // set isUnlocked: true and status: 'review' so those words enter Review pool starting the next day.
         if (flashcardSubMode === 'practice') {
           const completedWordIds = filteredWords.map((w) => w.id);
-          setFsrsRecords((prev) => unlockWordsAfterPractice(completedWordIds, prev));
+          // ...and its nouns join Der/Die/Das and Plural review, on the same schedule rule.
+          setFsrsRecords((prev) => unlockDrillsAfterPractice(filteredWords, unlockWordsAfterPractice(completedWordIds, prev)));
           if (typeof selectedLektion === 'number') {
             recordLessonPracticeCompleted(selectedLevel, selectedLektion);
           }
@@ -986,35 +1055,37 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   // Handlers for Gender Blitz
   const handleGenderChoice = (choice: Gender) => {
-    if (!currentBlitzNoun || blitzFeedback) return;
-    const isCorrect = currentBlitzNoun.nounDetails?.gender === choice;
+    if (!activeBlitzNoun || blitzFeedback) return;
+    const isCorrect = activeBlitzNoun.nounDetails?.gender === choice;
     if (isCorrect) {
       playSound('correct');
       onCorrectAnswer(10);
-      speakGerman(`${choice} ${currentBlitzNoun.lemma}`);
+      speakGerman(`${choice} ${activeBlitzNoun.lemma}`);
     } else {
       playSound('wrong');
       onWrongAnswer();
-      speakGerman(`${currentBlitzNoun.nounDetails?.gender} ${currentBlitzNoun.lemma}`);
+      speakGerman(`${activeBlitzNoun.nounDetails?.gender} ${activeBlitzNoun.lemma}`);
     }
+    if (isDrillReview) recordDrillAnswer('article', activeBlitzNoun, isCorrect);
     setBlitzFeedback({
       correct: isCorrect,
       selected: choice,
-      word: currentBlitzNoun,
+      word: activeBlitzNoun,
     });
   };
 
   const handleNextBlitz = () => {
     playSound('tap');
     setBlitzFeedback(null);
-    setBlitzIndex((prev) => (prev + 1) % nounWords.length);
+    if (isDrillReview) advanceDrillReview();
+    else setBlitzIndex((prev) => (prev + 1) % nounWords.length);
   };
 
   // Handlers for Plural Drill
   const handlePluralSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentPluralNoun || pluralFeedback || !pluralInput.trim()) return;
-    const expected = currentPluralNoun.nounDetails?.plural || '';
+    if (!activePluralNoun || pluralFeedback || !pluralInput.trim()) return;
+    const expected = activePluralNoun.nounDetails?.plural || '';
     const cleanUser = pluralInput.trim().toLowerCase();
     const cleanExpected = expected.toLowerCase();
 
@@ -1032,6 +1103,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       onWrongAnswer();
       speakGerman(expected);
     }
+    if (isDrillReview) recordDrillAnswer('plural', activePluralNoun, isCorrect);
     setPluralFeedback({
       correct: isCorrect,
       expected,
@@ -1042,7 +1114,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     playSound('tap');
     setPluralFeedback(null);
     setPluralInput('');
-    setPluralIndex((prev) => (prev + 1) % nounWords.length);
+    if (isDrillReview) advanceDrillReview();
+    else setPluralIndex((prev) => (prev + 1) % nounWords.length);
   };
 
   const getGenderBadge = (gender?: Gender) => {
@@ -1103,6 +1176,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               className="relative bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-white shadow-xs hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 sm:hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center text-center min-h-[72px] sm:min-h-[150px] group"
             >
               {/* Red notification badge on Flashcards card if Spaced Repetition words are due */}
+              {ex.id !== 'explorer' && (ex.id === 'gender_blitz' ? articlePool : pluralPool).due.length > 0 && (
+                <span className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-md animate-pulse z-10">
+                  {(ex.id === 'gender_blitz' ? articlePool : pluralPool).due.length}
+                </span>
+              )}
               {ex.id === 'explorer' && globalDueCount > 0 && (
                 <span
                   id="vocab-flashcard-due-badge"
@@ -1389,6 +1467,89 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   // Filter Bar Component inside other Vocab Exercises
   const renderVocabFilterBar = () => renderFilterBanner();
+
+  // Der/Die/Das and Plural: Practice | Review switch, styled like Flashcard's
+  const renderDrillModeSwitch = () => {
+    const due = (activeDrillSkill === 'plural' ? pluralPool : articlePool).due.length;
+    const pill = (active: boolean) =>
+      `py-1.5 px-2 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+        active
+          ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+      }`;
+    const choose = (mode: 'practice' | 'review') => {
+      if (mode === drillSubMode) return;
+      playSound('tap');
+      setBlitzFeedback(null);
+      setPluralFeedback(null);
+      setPluralInput('');
+      setDrillSubMode(mode);
+    };
+    return (
+      <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
+        <div className="grid grid-cols-2 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
+          <button type="button" onClick={() => choose('practice')} className={pill(drillSubMode === 'practice')}>
+            <span>{appLanguage === 'en' ? 'Practice' : 'Üben'}</span>
+          </button>
+          <button type="button" onClick={() => choose('review')} className={pill(drillSubMode === 'review')}>
+            <span>{appLanguage === 'en' ? 'Review' : 'Wiederholen'}</span>
+            <span
+              className={
+                due > 0
+                  ? 'px-1.5 py-0.2 rounded-full text-[10px] font-black leading-tight bg-rose-500 text-white shadow-2xs animate-pulse'
+                  : 'px-1.5 py-0.2 rounded-full text-[10px] font-black leading-tight bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300 opacity-60'
+              }
+            >
+              {due}
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  /** Review with nothing unlocked yet, or a finished session. Null while a session is running. */
+  const renderDrillReviewStatus = () => {
+    if (!isDrillReview) return null;
+    if (drillQueue.length === 0) {
+      return (
+        <div className="py-6 text-center space-y-2">
+          <p className="font-black text-zinc-900 dark:text-zinc-100">
+            {appLanguage === 'en' ? 'Nothing to review yet' : 'Noch nichts zu wiederholen'}
+          </p>
+          <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+            {appLanguage === 'en'
+              ? "Finish a lesson's Practice in Flashcard — its nouns show up here from the next day."
+              : 'Schließe das Üben einer Lektion bei den Karteikarten ab – ihre Nomen erscheinen hier ab dem nächsten Tag.'}
+          </p>
+        </div>
+      );
+    }
+    if (drillSessionDone) {
+      return (
+        <div className="py-5 text-center space-y-3">
+          <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">
+            {appLanguage === 'en' ? 'Review done' : 'Wiederholung fertig'}
+          </p>
+          <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
+            {drillCorrectCount} {appLanguage === 'en' ? 'of' : 'von'} {drillQueue.length}{' '}
+            {appLanguage === 'en' ? 'right' : 'richtig'}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              playSound('tap');
+              if (activeDrillSkill) startDrillReview(activeDrillSkill);
+            }}
+            className="w-full py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl cursor-pointer active:scale-98 transition-all"
+          >
+            {appLanguage === 'en' ? 'Review again' : 'Nochmal wiederholen'}
+          </button>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // VIEW 2: ACTIVE EXERCISE SCREEN (With Filter Bar inside each exercise)
   return (
@@ -2297,9 +2458,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {/* SUB-MODE 2: GENDER BLITZ */}
       {activeExerciseMode === 'gender_blitz' && (
         <div className="max-w-md mx-auto w-full">
-          {renderVocabFilterBar()}
+          {renderDrillModeSwitch()}
+          {drillSubMode === 'practice' && renderVocabFilterBar()}
           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 text-center">
-            {nounWords.length === 0 ? (
+            {renderDrillReviewStatus() ?? (!isDrillReview && nounWords.length === 0 ? (
               <div className="py-6 text-center space-y-3">
                 <p className="font-bold text-zinc-500">
                   {appLanguage === 'en' ? 'No nouns found in this selection.' : 'Keine Nomen in dieser Auswahl gefunden.'}
@@ -2319,11 +2481,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               <>
                 <div className="flex items-center justify-between text-xs font-bold text-zinc-400">
                   <span>
-                    {appLanguage === 'en' ? 'Noun' : 'Nomen'} {(blitzIndex % nounWords.length) + 1}{' '}
-                    {appLanguage === 'en' ? 'of' : 'von'} {nounWords.length}
+                    {isDrillReview ? (appLanguage === 'en' ? 'Review' : 'Wiederholung') : appLanguage === 'en' ? 'Noun' : 'Nomen'}{' '}
+                    {isDrillReview ? drillQueueIndex + 1 : (blitzIndex % nounWords.length) + 1}{' '}
+                    {appLanguage === 'en' ? 'of' : 'von'} {isDrillReview ? drillQueue.length : nounWords.length}
                   </span>
                   <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 px-2 py-0.5 rounded-md font-bold text-[11px] border border-zinc-200 dark:border-zinc-700">
-                    {selectedLevel} • {appLanguage === 'en' ? 'Lek' : 'Lek'} {currentBlitzNoun?.lektion || 1}
+                    {isDrillReview ? activeBlitzNoun?.level : selectedLevel} • Lek {activeBlitzNoun?.lektion || 1}
                   </span>
                 </div>
 
@@ -2333,10 +2496,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {appLanguage === 'en' ? 'Which article is correct?' : 'Welcher Artikel ist richtig?'}
                   </span>
                   <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                    ___ {currentBlitzNoun?.lemma}
+                    ___ {activeBlitzNoun?.lemma}
                   </h3>
                   <p className="text-xs sm:text-sm font-semibold text-zinc-500">
-                    {currentBlitzNoun?.translation}
+                    {activeBlitzNoun?.translation}
                   </p>
                 </div>
 
@@ -2400,7 +2563,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   </div>
                 )}
               </>
-            )}
+            ))}
           </div>
         </div>
       )}
@@ -2408,9 +2571,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {/* SUB-MODE 3: PLURAL DRILL */}
       {activeExerciseMode === 'plural_drill' && (
         <div className="max-w-md mx-auto w-full">
-          {renderVocabFilterBar()}
+          {renderDrillModeSwitch()}
+          {drillSubMode === 'practice' && renderVocabFilterBar()}
           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 text-center">
-            {nounWords.length === 0 ? (
+            {renderDrillReviewStatus() ?? (!isDrillReview && nounWords.length === 0 ? (
               <div className="py-6 text-center space-y-3">
                 <p className="font-bold text-zinc-500">
                   {appLanguage === 'en' ? 'No nouns found in this selection.' : 'Keine Nomen in dieser Auswahl gefunden.'}
@@ -2430,11 +2594,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               <>
                 <div className="flex items-center justify-between text-xs font-bold text-zinc-400">
                   <span>
-                    {appLanguage === 'en' ? 'Plural' : 'Plural'} {(pluralIndex % nounWords.length) + 1}{' '}
-                    {appLanguage === 'en' ? 'of' : 'von'} {nounWords.length}
+                    {isDrillReview ? (appLanguage === 'en' ? 'Review' : 'Wiederholung') : 'Plural'}{' '}
+                    {isDrillReview ? drillQueueIndex + 1 : (pluralIndex % nounWords.length) + 1}{' '}
+                    {appLanguage === 'en' ? 'of' : 'von'} {isDrillReview ? drillQueue.length : nounWords.length}
                   </span>
                   <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 px-2 py-0.5 rounded-md font-bold text-[11px] border border-zinc-200 dark:border-zinc-700">
-                    {selectedLevel} • {appLanguage === 'en' ? 'Lek' : 'Lek'} {currentPluralNoun?.lektion || 1}
+                    {isDrillReview ? activePluralNoun?.level : selectedLevel} • Lek {activePluralNoun?.lektion || 1}
                   </span>
                 </div>
 
@@ -2443,10 +2608,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {appLanguage === 'en' ? 'What is the plural form?' : 'Wie lautet der Plural?'}
                   </span>
                   <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                    {currentPluralNoun?.nounDetails?.gender} {currentPluralNoun?.lemma}
+                    {activePluralNoun?.nounDetails?.gender} {activePluralNoun?.lemma}
                   </h3>
                   <p className="text-xs sm:text-sm font-semibold text-zinc-500">
-                    {currentPluralNoun?.translation}
+                    {activePluralNoun?.translation}
                   </p>
                 </div>
 
@@ -2511,7 +2676,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   )}
                 </form>
               </>
-            )}
+            ))}
           </div>
         </div>
       )}
