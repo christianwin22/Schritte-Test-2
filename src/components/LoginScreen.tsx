@@ -93,12 +93,30 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, onOpenSandbox }) => {
-  const [step, setStep] = useState<'welcome' | 'login'>(initialError ? 'login' : 'welcome');
+  const [step, setStep] = useState<'welcome' | 'login' | 'sandbox'>(initialError ? 'login' : 'welcome');
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [knownAccounts, setKnownAccounts] = useState<KnownAccount[]>(getKnownAccounts);
+
+  // --- Sandbox: second page, like Log in ------------------------------------
+  if (step === 'sandbox') {
+    return (
+      <AuthCard onBack={() => setStep('welcome')}>
+        <h2 className="text-center font-black text-xl pt-1.5">Sandbox</h2>
+        <p className="text-sm font-bold text-center text-zinc-500 dark:text-zinc-400">
+          Test new updates here.
+          <br />
+          Nothing is saved to your account.
+        </p>
+        <button type="button" onClick={onOpenSandbox} className={mainBtn}>
+          <FlaskConical className="w-4 h-4" />
+          <span>Enter sandbox</span>
+        </button>
+      </AuthCard>
+    );
+  }
 
   if (!supabase) {
     return (
@@ -112,7 +130,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
             (or to Vercel's environment variables), then reload. Steps are in SETUP-LOGIN.md.
           </p>
         </div>
-        <button type="button" onClick={onOpenSandbox} className={sandboxBtn}>
+        <button type="button" onClick={() => setStep('sandbox')} className={sandboxBtn}>
           <FlaskConical className="w-4 h-4" />
           <span>Sandbox</span>
         </button>
@@ -131,7 +149,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
           <button type="button" onClick={() => setStep('login')} className={mainBtn}>
             Log in
           </button>
-          <button type="button" onClick={onOpenSandbox} className={sandboxBtn}>
+          <button type="button" onClick={() => setStep('sandbox')} className={sandboxBtn}>
             <FlaskConical className="w-4 h-4" />
             <span>Sandbox</span>
           </button>
