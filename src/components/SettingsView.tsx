@@ -19,11 +19,15 @@ import {
   LogIn,
   LogOut,
   UserCircle2,
+  Lightbulb,
+  Trash2,
+  Copy,
 } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
 import { speakGerman } from '../utils/speech';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
+import { listSuggestions, removeSuggestion, suggestionsAsText, clearSuggestions } from '../lib/suggestions';
 
 interface SettingsViewProps {
   isDark: boolean;
@@ -64,6 +68,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const t = getTranslation(appLanguage);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [notes, setNotes] = useState(listSuggestions);
+  const [copied, setCopied] = useState(false);
   const [ttsFeedback, setTtsFeedback] = useState(false);
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -360,6 +366,75 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       </div>
+
+
+      {/* Ideas you noted while using the app */}
+      {notes.length > 0 && (
+        <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 font-black text-zinc-900 dark:text-zinc-100">
+              <Lightbulb className="w-5 h-5 text-amber-500" />
+              {appLanguage === 'en' ? `My ideas (${notes.length})` : `Meine Ideen (${notes.length})`}
+            </h2>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(suggestionsAsText());
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1200);
+                  } catch {
+                    // clipboard blocked; the notes are still listed below
+                  }
+                }}
+                className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>{copied ? (appLanguage === 'en' ? 'Copied' : 'Kopiert') : appLanguage === 'en' ? 'Copy all' : 'Alle kopieren'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  clearSuggestions();
+                  setNotes([]);
+                }}
+                className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+              >
+                {appLanguage === 'en' ? 'Clear' : 'Leeren'}
+              </button>
+            </div>
+          </div>
+
+          <ul className="space-y-2">
+            {notes.map((note) => (
+              <li
+                key={note.id}
+                className="flex items-start gap-2 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap break-words">{note.text}</p>
+                  <p className="text-[11px] font-bold text-zinc-400 mt-1">
+                    {new Date(note.at).toLocaleString()} · {note.where}
+                  </p>
+                  {note.onScreen && <p className="text-[11px] font-medium text-zinc-400 truncate">{note.onScreen}</p>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    removeSuggestion(note.id);
+                    setNotes(listSuggestions());
+                  }}
+                  aria-label={appLanguage === 'en' ? 'Delete idea' : 'Idee löschen'}
+                  className="p-2 rounded-xl text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
     </div>
   );

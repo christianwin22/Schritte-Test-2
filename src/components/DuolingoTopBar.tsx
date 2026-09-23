@@ -13,6 +13,8 @@ interface DuolingoTopBarProps {
   title?: string;
   appLanguage?: AppLanguage;
   currentTab?: string;
+  /** Rendered on the right, before Back/Profile (the 'note an idea' button). */
+  extraAction?: React.ReactNode;
 }
 
 export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
@@ -23,6 +25,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
   title,
   appLanguage = 'en',
   currentTab = 'home',
+  extraAction,
 }) => {
   const t = getTranslation(appLanguage);
   const isInsideSection = Boolean(canGoBack || currentTab !== 'home');
@@ -65,6 +68,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
 
         {/* Right: Profile on Main Home page; Back button inside any section */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-end">
+          {extraAction}
           {isInsideSection ? (
             <button
               id="topbar-back-button"

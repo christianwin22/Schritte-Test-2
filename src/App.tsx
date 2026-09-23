@@ -16,6 +16,7 @@ import { AppLanguage, getTranslation } from './utils/translations';
 import { clearAppData } from './lib/progressSync';
 import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLessons } from './utils/srsEngine';
 import { isTabLocked } from './config/features';
+import { SuggestionButton } from './components/SuggestionButton';
 import { useAuth } from './components/AuthGate';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
@@ -470,6 +471,12 @@ export default function App() {
         onBack={handleTopBack}
         onGoHome={handleGoHome}
         title={getTopBarTitle()}
+        extraAction={
+          <SuggestionButton
+            where={getTopBarTitle() || 'Home'}
+            appLanguage={appLanguage}
+          />
+        }
         appLanguage={appLanguage}
         currentTab={currentTab}
       />
