@@ -4,7 +4,11 @@ export type PartOfSpeech = 'noun' | 'verb' | 'adjective' | 'adverb' | 'prepositi
 
 export interface NounDetails {
   gender: Gender;
+  /** Words written with two articles: "der / das Joghurt" → ['der','das']. Either is accepted. */
+  genderAlternatives?: Gender[];
   plural: string;
+  /** "die Ski / die Skier" → both forms; either is accepted. */
+  pluralAlternatives?: string[];
   pluralEndingHint?: string;
   genderRuleHint?: string;
 }
@@ -41,6 +45,26 @@ export interface ClozeSentence {
 
 export interface WordEntry {
   id: string;
+  /** Exactly as written in the word list: "der / das Joghurt", "hin·fallen", "besonder-". */
+  display?: string;
+  /** Which book the word comes from: A1.1 … B1.2 */
+  volume?: string;
+  /** The word type as written in the list ("Adj/Adv", "Prefix", …) */
+  wordType?: string;
+  /** Headwords ending in "-": any ending counts as a correct answer. */
+  isStem?: boolean;
+  /** Accepted German answers (EN → DE), brackets and second articles included. */
+  answers?: string[];
+  /** English meanings: one entry per numbered sense, each with its comma variants. */
+  senses?: string[][];
+  /** The sentence shown under the card. */
+  sentence?: string;
+  /** Der/Die/Das drill: the sentence, and the same with {{blank}} in place of the article. */
+  articleSentence?: string;
+  articleSentenceBlank?: string;
+  /** Plural drill: the sentence, and the same with {{blank}} in place of the plural. */
+  pluralSentence?: string;
+  pluralSentenceBlank?: string;
   lemma: string; // e.g. "Zug", "ankommen", "schön"
   translation: string; // English translation
   level: CEFRLevel;

@@ -60,23 +60,7 @@ export function processFSRSReview(
   };
 }
 
-const INITIAL_SEEDED_WORD_IDS = [
-  'l1_name',
-  'l1_land',
-  'l1_stadt',
-  'l1_herr',
-  'l1_frau',
-  'l1_telefon',
-  'l1_bild',
-  'l1_buch',
-  'l1_stuhl',
-  'l1_tisch',
-];
-
-/**
- * Load all FSRS card records from localStorage
- * Seeds 10 words ready for immediate Spaced Repetition Review on initial launch
- */
+/** Load all FSRS card records from localStorage. A new account starts with none. */
 export function loadAllFSRSRecords(): Record<string, FSRSCardRecord> {
   try {
     const raw = localStorage.getItem(FSRS_STORAGE_KEY);
@@ -90,27 +74,7 @@ export function loadAllFSRSRecords(): Record<string, FSRSCardRecord> {
     console.warn('Failed to load FSRS records from localStorage', err);
   }
 
-  // Initial seed: 10 starter words due for review right away
-  const seededRecords: Record<string, FSRSCardRecord> = {};
-  const pastDate = new Date(Date.now() - 3600000).toISOString(); // Due 1 hour ago
-  const yesterday = new Date(Date.now() - 86400000).toISOString();
-
-  INITIAL_SEEDED_WORD_IDS.forEach((id) => {
-    seededRecords[id] = {
-      wordId: id,
-      status: 'review',
-      isUnlocked: true,
-      stability: 1.0,
-      difficulty: 5.0,
-      intervalDays: 1,
-      lastReviewedAt: yesterday,
-      nextReviewDate: pastDate,
-      repetitionCount: 1,
-    };
-  });
-
-  saveAllFSRSRecords(seededRecords);
-  return seededRecords;
+  return {};
 }
 
 /**

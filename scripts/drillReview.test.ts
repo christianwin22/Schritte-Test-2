@@ -22,12 +22,13 @@ function check(label: string, ok: boolean) {
 
 const lesson1 = INITIAL_VOCABULARY.filter((w) => w.lektion === 1);
 const lesson1Nouns = lesson1.filter((w) => w.nounDetails?.gender);
-const milk = INITIAL_VOCABULARY.find((w) => /\(Sg\.?\)/.test(w.nounDetails?.plural ?? ''));
+// singular-only nouns have no plural at all in the word list
+const milk = INITIAL_VOCABULARY.find((w) => !!w.nounDetails?.gender && !w.nounDetails?.plural);
 
 console.log('1. Which nouns each drill can review');
 check('every noun has an article to review', lesson1Nouns.every((w) => isDrillable('article', w)));
 check('verbs are never reviewed', !INITIAL_VOCABULARY.filter((w) => !w.nounDetails).some((w) => isDrillable('article', w)));
-check(`singular-only nouns skip Plural (${milk?.nounDetails?.plural})`, !!milk && !isDrillable('plural', milk));
+check(`singular-only nouns skip Plural (${milk?.display})`, !!milk && !isDrillable('plural', milk));
 
 console.log('2. Finishing a lesson\'s Flashcard Practice unlocks its nouns');
 let records = unlockDrillsAfterPractice(lesson1, {});
