@@ -27,8 +27,15 @@ You will end up with:
 3. In Supabase: **SQL Editor → New query**, paste the whole file, **Run**.
    You should see "Success. No rows returned."
 
+That one script sets up everything the app needs: the allowlist, your saved
+progress, the ideas you note with the bulb button, and a private bucket for the
+screenshots you attach to them. Running it again later is safe.
+
 To add or remove someone later, edit the `allowed_emails` table in
 **Table Editor**.
+
+Your ideas land in **Table Editor → suggestions**, and their screenshots in
+**Storage → idea-media**, so you can read them outside the app.
 
 ## 3. Give the app its keys
 

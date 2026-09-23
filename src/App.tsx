@@ -17,6 +17,7 @@ import { clearAppData } from './lib/progressSync';
 import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLessons } from './utils/srsEngine';
 import { isTabLocked } from './config/features';
 import { SuggestionButton } from './components/SuggestionButton';
+import { ChooserSheet } from './components/ChooserSheet';
 import { useAuth } from './components/AuthGate';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
@@ -30,6 +31,11 @@ const MUSIC_STORAGE_KEY = 'deutschmeister_music_enabled_v2';
 const NOTIF_STORAGE_KEY = 'deutschmeister_notif_enabled_v2';
 
 export default function App() {
+  // Which course and which levels the app is set to (shown on the home screen)
+  const [series, setSeries] = useState(() => localStorage.getItem('schritte_series') || 'Schritte International Neu');
+  const [levelRange, setLevelRange] = useState(() => localStorage.getItem('schritte_level_range') || 'A1–B1');
+  const [chooser, setChooser] = useState<null | 'series' | 'levels'>(null);
+
   // In the Sandbox every area stays open; in the real app only Vocabulary is.
   const isSandbox = useAuth()?.isSandbox ?? false;
 
@@ -418,6 +424,9 @@ export default function App() {
     setPendingAbandonCallback(null);
   };
 
+  // Room for a floating button: the home screen and the Vocabulary hub, not inside an exercise
+  const roomForFloatingButton = currentTab === 'home' || (currentTab === 'vocab' && !activeExerciseMode);
+
   const getTopBarTitle = () => {
     if (activeExerciseMode) {
       if (currentTab === 'vocab') {
@@ -472,10 +481,10 @@ export default function App() {
         onGoHome={handleGoHome}
         title={getTopBarTitle()}
         extraAction={
-          <SuggestionButton
-            where={getTopBarTitle() || 'Home'}
-            appLanguage={appLanguage}
-          />
+          // Inside an exercise there is no spare room, so the button rides in the top bar.
+          roomForFloatingButton ? undefined : (
+            <SuggestionButton where={getTopBarTitle() || 'Home'} appLanguage={appLanguage} />
+          )
         }
         appLanguage={appLanguage}
         currentTab={currentTab}
@@ -498,6 +507,10 @@ export default function App() {
           {currentTab === 'home' && (
             <HomeGuideView
               onSelectArea={(areaTab) => handleSelectTab(areaTab)}
+              series={series}
+              levelRange={levelRange}
+              onChangeSeries={() => setChooser('series')}
+              onChangeLevelRange={() => setChooser('levels')}
               streak={streak}
               xp={xp}
               gems={gems}
@@ -629,6 +642,48 @@ export default function App() {
       </div>
 
       {/* Abandon Exercise Confirmation Pop-up Dialog */}
+      {/* Home and the Vocabulary hub have space, so the button floats there instead */}
+      {roomForFloatingButton && (
+        <SuggestionButton where={getTopBarTitle() || 'Home'} appLanguage={appLanguage} variant="floating" />
+      )}
+
+      {chooser === 'series' && (
+        <ChooserSheet
+          title={appLanguage === 'en' ? 'Choose your course' : 'Kurs wählen'}
+          selected={series}
+          options={[
+            { value: 'Schritte International Neu', label: 'Schritte International Neu', hint: 'Hueber · A1.1 – B1.2' },
+            { value: 'Schritte Plus', label: 'Schritte Plus', comingSoon: true },
+          ]}
+          onPick={(value) => {
+            setSeries(value);
+            localStorage.setItem('schritte_series', value);
+          }}
+          onClose={() => setChooser(null)}
+          soonLabel={appLanguage === 'en' ? 'Soon' : 'Bald'}
+        />
+      )}
+
+      {chooser === 'levels' && (
+        <ChooserSheet
+          title={appLanguage === 'en' ? 'Which levels?' : 'Welche Stufen?'}
+          selected={levelRange}
+          options={[
+            { value: 'A1–B1', label: 'A1–B1', hint: appLanguage === 'en' ? 'the whole course' : 'der ganze Kurs' },
+            { value: 'A1', label: 'A1', hint: 'Schritte 1–2' },
+            { value: 'A2', label: 'A2', hint: 'Schritte 3–4' },
+            { value: 'B1', label: 'B1', hint: 'Schritte 5–6' },
+          ]}
+          onPick={(value) => {
+            setLevelRange(value);
+            localStorage.setItem('schritte_level_range', value);
+            // Picking one level also opens Vocabulary on that level
+            if (value !== 'A1–B1') localStorage.setItem('schritte_saved_level', value);
+          }}
+          onClose={() => setChooser(null)}
+        />
+      )}
+
       <AbandonExerciseModal
         isOpen={isAbandonModalOpen}
         onStay={handleStayInExercise}

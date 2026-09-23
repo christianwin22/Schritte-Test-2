@@ -61,7 +61,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
         ) : (
           <div className="text-center px-1">
             <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-              Schritte International Neu A1–B1
+              Deutsche Meister
             </span>
           </div>
         )}

@@ -71,3 +71,54 @@ create policy "update own progress" on public.user_progress
   for update to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+
+-------------------------------------------------------------------------------
+-- 3. Ideas noted while using the app (the bulb button)
+--    Each person sees only their own, exactly like progress.
+-------------------------------------------------------------------------------
+create table if not exists public.suggestions (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  text       text not null,
+  context    text,                      -- which screen you were on
+  on_screen  text,                      -- what was on it
+  media      jsonb not null default '[]'::jsonb,  -- paths in the screenshots bucket
+  created_at timestamptz not null default now()
+);
+
+alter table public.suggestions enable row level security;
+
+drop policy if exists "read own ideas" on public.suggestions;
+create policy "read own ideas" on public.suggestions
+  for select to authenticated using ((select auth.uid()) = user_id);
+
+drop policy if exists "add own ideas" on public.suggestions;
+create policy "add own ideas" on public.suggestions
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+
+drop policy if exists "delete own ideas" on public.suggestions;
+create policy "delete own ideas" on public.suggestions
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+-------------------------------------------------------------------------------
+-- 4. Screenshots attached to those ideas
+--    A private bucket; each person can only touch their own folder.
+-------------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('idea-media', 'idea-media', false)
+on conflict (id) do nothing;
+
+drop policy if exists "read own idea media" on storage.objects;
+create policy "read own idea media" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'idea-media' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "upload own idea media" on storage.objects;
+create policy "upload own idea media" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'idea-media' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "delete own idea media" on storage.objects;
+create policy "delete own idea media" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'idea-media' and (storage.foldername(name))[1] = (select auth.uid())::text);

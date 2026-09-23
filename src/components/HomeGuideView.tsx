@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   BookOpen,
+  ChevronDown,
   Zap,
   Headphones,
   Mic,
@@ -10,12 +11,18 @@ import {
 } from 'lucide-react';
 import { DuolingoTab } from '../types';
 import { isTabLocked } from '../config/features';
+import { CEFRLevel } from '../types';
 import { useAuth } from './AuthGate';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
 
 interface HomeGuideViewProps {
   onSelectArea: (tab: DuolingoTab) => void;
+  /** Which book series the app is using, and which levels of it. */
+  series?: string;
+  levelRange?: string;
+  onChangeSeries?: () => void;
+  onChangeLevelRange?: () => void;
   streak?: number;
   xp?: number;
   gems?: number;
@@ -28,6 +35,10 @@ interface HomeGuideViewProps {
 
 export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
   onSelectArea,
+  series = 'Schritte International Neu',
+  levelRange = 'A1–B1',
+  onChangeSeries,
+  onChangeLevelRange,
   dueReviewCount = 0,
   lessonsToPractiseCount = 0,
   appLanguage = 'en',
@@ -70,7 +81,46 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
   ];
 
   return (
-    <div className="w-full h-full flex flex-col justify-center py-1 sm:py-3 animate-fadeIn">
+    <div className="w-full h-full flex flex-col justify-center gap-3 sm:gap-4 py-1 sm:py-3 animate-fadeIn">
+      {/* Which book series, and which levels of it */}
+      <div className="w-full max-w-4xl mx-auto flex items-stretch gap-2.5 sm:gap-4">
+        <button
+          type="button"
+          id="home-series-button"
+          onClick={() => {
+            playSound('tap');
+            onChangeSeries?.();
+          }}
+          className="flex-1 min-w-0 px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-zinc-100 shadow-xs transition-all cursor-pointer text-left flex items-center justify-between gap-2"
+        >
+          <span className="min-w-0">
+            <span className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+              {appLanguage === 'en' ? 'Course' : 'Kurs'}
+            </span>
+            <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">{series}</span>
+          </span>
+          <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />
+        </button>
+
+        <button
+          type="button"
+          id="home-level-button"
+          onClick={() => {
+            playSound('tap');
+            onChangeLevelRange?.();
+          }}
+          className="px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-zinc-100 shadow-xs transition-all cursor-pointer text-left flex items-center gap-2 shrink-0"
+        >
+          <span>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
+              {appLanguage === 'en' ? 'Levels' : 'Stufen'}
+            </span>
+            <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100">{levelRange}</span>
+          </span>
+          <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 w-full max-w-4xl mx-auto">
         {learningAreas.map((area) => (
           <button

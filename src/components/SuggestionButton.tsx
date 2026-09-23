@@ -1,13 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Lightbulb, X, Check } from 'lucide-react';
-import { addSuggestion } from '../lib/suggestions';
+import { Lightbulb, X, Check, ImagePlus, Trash2, CloudOff } from 'lucide-react';
+import { PendingMedia, readFileAsMedia, saveSuggestion } from '../lib/suggestions';
 import { AppLanguage } from '../utils/translations';
 
 interface SuggestionButtonProps {
   /** Where you are, e.g. "Vocabulary · Flashcard". Saved with the note. */
   where: string;
   appLanguage?: AppLanguage;
+  /** 'inline' sits in the top bar; 'floating' sits in the bottom-right corner. */
+  variant?: 'inline' | 'floating';
 }
 
 /** Grabs the headline of whatever card is on screen, so a note has context later. */
@@ -19,43 +21,67 @@ function whatIsOnScreen(): string | undefined {
 }
 
 /**
- * A floating button, on every screen inside the app: tap it, type the idea, done.
- * Notes are kept on this device and listed in Settings.
+ * On every screen: tap it, type the idea, attach a screenshot, done.
+ * Notes go to your account. Without a login (Sandbox) or offline they wait on
+ * this device and go up the next time you are signed in.
  */
-export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLanguage = 'en' }) => {
+export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLanguage = 'en', variant = 'inline' }) => {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
-  const [saved, setSaved] = useState(false);
+  const [media, setMedia] = useState<PendingMedia[]>([]);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'queued'>('idle');
   const [onScreen, setOnScreen] = useState<string | undefined>();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const en = appLanguage === 'en';
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  const addFiles = useCallback(async (files: File[]) => {
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    if (!images.length) return;
+    const read = await Promise.all(images.map(readFileAsMedia));
+    setMedia((current) => [...current, ...read].slice(0, 4)); // four is plenty for one idea
+  }, []);
+
+  const submit = useCallback(async () => {
+    const note = text.trim();
+    if (!note || status === 'saving') return;
+    setStatus('saving');
+    const result = await saveSuggestion(note, where, onScreen, media);
+    setStatus(result);
+    setText('');
+    setMedia([]);
+    setTimeout(() => {
+      setStatus('idle');
+      setOpen(false);
+    }, result === 'saved' ? 900 : 1600);
+  }, [text, status, where, onScreen, media]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
       // ⌘/Ctrl + Enter saves, so you can stay on the keyboard
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit();
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void submit();
+    };
+    // ⌘/Ctrl + V anywhere in the dialog attaches a copied screenshot
+    const onPaste = (e: ClipboardEvent) => {
+      const files = Array.from(e.clipboardData?.files ?? []);
+      if (files.some((f) => f.type.startsWith('image/'))) {
+        e.preventDefault();
+        void addFiles(files);
+      }
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  });
-
-  const submit = () => {
-    const note = text.trim();
-    if (!note) return;
-    addSuggestion(note, where, onScreen);
-    setText('');
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      setOpen(false);
-    }, 900);
-  };
+    window.addEventListener('paste', onPaste);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('paste', onPaste);
+    };
+  }, [open, submit, addFiles]);
 
   return (
     <>
@@ -68,9 +94,13 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
         }}
         title={en ? 'Note an idea' : 'Idee notieren'}
         aria-label={en ? 'Note an idea' : 'Idee notieren'}
-        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 shadow-2xs flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+        className={
+          variant === 'floating'
+            ? 'fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-600 shadow-lg flex items-center justify-center active:scale-95 transition-all cursor-pointer'
+            : 'w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-600 shadow-2xs flex items-center justify-center active:scale-95 transition-all cursor-pointer'
+        }
       >
-        <Lightbulb className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+        <Lightbulb className={variant === 'floating' ? 'w-5 h-5' : 'w-4 h-4 sm:w-4.5 sm:h-4.5'} />
       </button>
 
       {/* Into <body>: the top bar's blur would otherwise trap this overlay inside the bar */}
@@ -102,29 +132,81 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
               className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-950 dark:focus:border-white outline-none font-bold text-sm resize-none"
             />
 
+            {media.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {media.map((shot, i) => (
+                  <div key={`${shot.name}-${i}`} className="relative">
+                    <img
+                      src={shot.dataUrl}
+                      alt={shot.name}
+                      className="w-16 h-16 object-cover rounded-xl border-2 border-zinc-200 dark:border-zinc-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMedia((current) => current.filter((_, j) => j !== i))}
+                      aria-label={en ? 'Remove screenshot' : 'Screenshot entfernen'}
+                      className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 text-zinc-500 hover:text-rose-600 flex items-center justify-center shadow-2xs cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void addFiles(Array.from(e.target.files ?? []));
+                e.target.value = ''; // so the same file can be picked again
+              }}
+            />
             <button
               type="button"
-              onClick={submit}
-              disabled={!text.trim() || saved}
+              onClick={() => fileRef.current?.click()}
+              disabled={media.length >= 4}
+              className="w-full py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ImagePlus className="w-4 h-4" />
+              <span>
+                {media.length >= 4
+                  ? en ? 'Four screenshots is the limit' : 'Maximal vier Screenshots'
+                  : en ? 'Add screenshot — or just paste one' : 'Screenshot hinzufügen — oder einfügen'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void submit()}
+              disabled={!text.trim() || status !== 'idle'}
               className={`w-full py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 ${
-                saved
+                status === 'saved'
                   ? 'bg-emerald-600 text-white'
+                  : status === 'queued'
+                  ? 'bg-zinc-600 text-white'
                   : 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950'
               }`}
             >
-              {saved ? (
+              {status === 'saved' && (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>{en ? 'Saved' : 'Gespeichert'}</span>
+                  <span>{en ? 'Saved to your account' : 'In deinem Konto gespeichert'}</span>
                 </>
-              ) : (
-                <span>{en ? 'Save idea' : 'Idee speichern'}</span>
               )}
+              {status === 'queued' && (
+                <>
+                  <CloudOff className="w-4 h-4" />
+                  <span>{en ? 'Kept here until you sign in' : 'Bleibt hier bis zur Anmeldung'}</span>
+                </>
+              )}
+              {status === 'saving' && <span>{en ? 'Saving…' : 'Speichern…'}</span>}
+              {status === 'idle' && <span>{en ? 'Save idea' : 'Idee speichern'}</span>}
             </button>
 
-            <p className="text-[11px] text-center font-medium text-zinc-400">
-              {en ? 'Kept on this device — see them all in Settings' : 'Nur auf diesem Gerät – alle in den Einstellungen'}
-            </p>
           </div>
         </div>,
         document.body

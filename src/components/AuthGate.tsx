@@ -9,6 +9,7 @@ import {
   signOutAndClear,
   startAutoSync,
 } from '../lib/progressSync';
+import { flushQueue } from '../lib/suggestions';
 import { LoginScreen, SandboxTag, friendlyAuthError } from './LoginScreen';
 
 interface AuthContextValue {
@@ -102,6 +103,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   useEffect(() => {
     if (phase !== 'ready' || !userId) return;
+    // Ideas noted in the Sandbox or offline go up now that we're signed in.
+    void flushQueue();
     return startAutoSync(userId);
   }, [phase, userId]);
 

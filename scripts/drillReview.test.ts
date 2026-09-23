@@ -56,7 +56,10 @@ const id = drillCardId('article', firstNoun.id);
 const right = reviewCard(id, true, records[id]);
 const wrong = reviewCard(id, false, records[id]);
 check('right answer: not due again today', new Date(right.nextReviewDate).getTime() > Date.now());
-check('right answer comes back later than a wrong one', new Date(right.nextReviewDate) >= new Date(wrong.nextReviewDate));
+// the two calls are a moment apart, so allow a second of slack; on a fresh card
+// both land on the same 1-day floor and only the stability tells them apart
+check('right answer comes back no sooner than a wrong one',
+  new Date(right.nextReviewDate).getTime() >= new Date(wrong.nextReviewDate).getTime() - 1000);
 check('wrong answer makes it harder', wrong.difficulty > records[id].difficulty);
 check('practising a lesson twice does not reset its schedule', unlockDrillsAfterPractice(lesson1, { ...records, [id]: right })[id].nextReviewDate === right.nextReviewDate);
 
