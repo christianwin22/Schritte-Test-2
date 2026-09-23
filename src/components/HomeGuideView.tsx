@@ -6,8 +6,11 @@ import {
   Mic,
   BookMarked,
   FileEdit,
+  Lock,
 } from 'lucide-react';
 import { DuolingoTab } from '../types';
+import { isTabLocked } from '../config/features';
+import { useAuth } from './AuthGate';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
 
@@ -30,6 +33,8 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
   appLanguage = 'en',
 }) => {
   const t = getTranslation(appLanguage);
+  // Everything stays open in the Sandbox; in the real app only Vocabulary is open for now.
+  const isSandbox = useAuth()?.isSandbox ?? false;
 
   const learningAreas = [
     {
@@ -71,12 +76,26 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
           <button
             key={area.id}
             id={`home-area-${area.id}`}
+            disabled={isTabLocked(area.id, isSandbox)}
+            aria-disabled={isTabLocked(area.id, isSandbox)}
+            title={isTabLocked(area.id, isSandbox) ? (appLanguage === 'en' ? 'Coming soon' : 'Kommt bald') : undefined}
             onClick={() => {
+              if (isTabLocked(area.id, isSandbox)) return;
               playSound('tap');
               onSelectArea(area.id);
             }}
-            className="w-full relative bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-zinc-100 shadow-xs hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 active:scale-[0.98] flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5 group min-h-[105px] sm:min-h-[130px]"
+            className={`w-full relative bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5 group min-h-[105px] sm:min-h-[130px] ${
+              isTabLocked(area.id, isSandbox)
+                ? 'opacity-40 grayscale cursor-not-allowed'
+                : 'hover:border-zinc-950 dark:hover:border-zinc-100 hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 active:scale-[0.98]'
+            }`}
           >
+            {isTabLocked(area.id, isSandbox) && (
+              <span className="absolute top-2 left-2 flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                <Lock className="w-2.5 h-2.5" />
+                {appLanguage === 'en' ? 'Soon' : 'Bald'}
+              </span>
+            )}
             {/* Notification Badge on Vocab Card for Pending Due Spaced Repetition Words */}
             {/* Amber = lessons waiting to practise, red = words due for review */}
             {area.id === 'vocab' && (dueReviewCount > 0 || lessonsToPractiseCount > 0) && (

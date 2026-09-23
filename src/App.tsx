@@ -15,6 +15,8 @@ import { playSound, setGlobalSoundEnabled, setGlobalMusicEnabled } from './utils
 import { AppLanguage, getTranslation } from './utils/translations';
 import { clearAppData } from './lib/progressSync';
 import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLessons } from './utils/srsEngine';
+import { isTabLocked } from './config/features';
+import { useAuth } from './components/AuthGate';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
 const STREAK_STORAGE_KEY = 'deutschmeister_streak_v2';
@@ -27,6 +29,9 @@ const MUSIC_STORAGE_KEY = 'deutschmeister_music_enabled_v2';
 const NOTIF_STORAGE_KEY = 'deutschmeister_notif_enabled_v2';
 
 export default function App() {
+  // In the Sandbox every area stays open; in the real app only Vocabulary is.
+  const isSandbox = useAuth()?.isSandbox ?? false;
+
   // App UI Language (English default)
   const [appLanguage, setAppLanguage] = useState<AppLanguage>(() => {
     try {
@@ -325,6 +330,8 @@ export default function App() {
 
   // Safe Navigation with Active Exercise Abandon Protection
   const handleSelectTab = (tab: 'home' | DuolingoTab) => {
+    // Locked areas are unreachable in the real app, whatever asks for them. The Sandbox is exempt.
+    if (isTabLocked(tab, isSandbox)) return;
     if (tab === currentTab && !activeExerciseMode) return;
     if (isQuizActive) {
       setPendingAbandonCallback(() => () => {
