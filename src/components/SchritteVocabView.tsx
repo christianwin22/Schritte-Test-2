@@ -19,6 +19,7 @@ import {
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import { BLANK, articleSentence, barePlural, fillBlank, pluralSentence } from '../data/nounDrillSentences';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
+import { checkEnglish, checkEnglishPair, checkGerman, englishSenses, meaningLines } from '../utils/answerCheck';
 import { speakGerman, listenToGermanSpeech, isSpeechRecognitionSupported } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
@@ -247,6 +248,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const [isPracticeComplete, setIsPracticeComplete] = useState(false);
   const [practiceDirection, setPracticeDirection] = useState<'EN_TO_DE' | 'DE_TO_EN'>('EN_TO_DE');
   const [practiceTypeInput, setPracticeTypeInput] = useState('');
+  // Words with two numbered meanings are asked for both (DE → EN only).
+  const [practiceTypeInput2, setPracticeTypeInput2] = useState('');
   const practiceTypeInputRef = useRef<HTMLInputElement>(null);
   const [isListening, setIsListening] = useState(false);
   const [practiceFeedback, setPracticeFeedback] = useState<{
@@ -497,61 +500,42 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
   };
 
+  // Does this word ask for two meanings? Only DE → EN, and only the 146 with two.
+  const twoMeanings = (card: WordEntry | null | undefined) =>
+    !!card && practiceDirection === 'DE_TO_EN' && englishSenses(card).length > 1;
+
   // Helper to evaluate answer for practice & review
-  const evaluateAnswer = (inputVal: string, card: WordEntry, direction: 'EN_TO_DE' | 'DE_TO_EN') => {
-    const rawUser = inputVal.trim().toLowerCase();
-    if (!rawUser) return { isCorrect: false, expectedDisplay: '' };
-
+  const evaluateAnswer = (
+    inputVal: string,
+    card: WordEntry,
+    direction: 'EN_TO_DE' | 'DE_TO_EN',
+    secondVal = ''
+  ) => {
     if (direction === 'EN_TO_DE') {
-      const rawLemma = card.lemma.toLowerCase();
-      const gender = card.nounDetails?.gender?.toLowerCase();
-      const rawWithArticle = gender ? `${gender} ${rawLemma}` : rawLemma;
-
-      const cleanUser = rawUser.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '').trim();
-      const cleanLemma = rawLemma.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '').trim();
-      const cleanWithArticle = rawWithArticle.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '').trim();
-      const cleanNoArticle = rawLemma.replace(/^(der|die|das)\s+/, '').replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '').trim();
-
-      const isCorrect =
-        cleanUser === cleanLemma ||
-        cleanUser === cleanWithArticle ||
-        cleanUser === cleanNoArticle ||
-        rawUser === rawLemma ||
-        rawUser === rawWithArticle ||
-        rawUser === rawLemma.replace(/^(der|die|das)\s+/, '');
-
-      const expectedDisplay = card.nounDetails?.gender
-        ? `${card.nounDetails.gender} ${card.lemma}`
-        : card.lemma;
-
-      return { isCorrect, expectedDisplay };
-    } else {
-      // DE_TO_EN
-      const userClean = rawUser.replace(/^(the|a|an)\s+/, '').replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '').trim();
-      const translationClean = card.translation.toLowerCase();
-      const translationParts = translationClean
-        .split(/[,/;\n]/)
-        .map((p) => p.trim().replace(/^(the|a|an)\s+/, '').replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '').trim())
-        .filter(Boolean);
-
-      const isCorrect =
-        rawUser === translationClean ||
-        userClean === translationClean.replace(/^(the|a|an)\s+/, '').trim() ||
-        translationParts.includes(rawUser) ||
-        translationParts.includes(userClean) ||
-        translationParts.some((part) => part.length > 2 && (userClean.includes(part) || part.includes(userClean)));
-
-      const expectedDisplay = card.translation;
-      return { isCorrect, expectedDisplay };
+      const { isCorrect, expected } = checkGerman(inputVal, card);
+      return { isCorrect, expectedDisplay: expected };
     }
+    const expectedDisplay = meaningLines(card).join(' · ');
+    if (englishSenses(card).length > 1) {
+      const both = checkEnglishPair([inputVal, secondVal], card);
+      return { isCorrect: both.every(Boolean), expectedDisplay };
+    }
+    return { isCorrect: checkEnglish(inputVal, card), expectedDisplay };
   };
 
   // Flashcard Practice & Review - Check Handler
   const handlePracticeCheck = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!currentPracticeWord || practiceFeedback || !practiceTypeInput.trim()) return;
+    // Both boxes have to be filled before a two-meaning word can be checked.
+    if (twoMeanings(currentPracticeWord) && !practiceTypeInput2.trim()) return;
 
-    const { isCorrect, expectedDisplay } = evaluateAnswer(practiceTypeInput, currentPracticeWord, practiceDirection);
+    const { isCorrect, expectedDisplay } = evaluateAnswer(
+      practiceTypeInput,
+      currentPracticeWord,
+      practiceDirection,
+      practiceTypeInput2
+    );
 
     if (isCorrect) {
       playSound('correct');
@@ -627,7 +611,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
     setPracticeFeedback({
       correct: isCorrect,
-      userText: practiceTypeInput.trim(),
+      userText: twoMeanings(currentPracticeWord)
+        ? [practiceTypeInput.trim(), practiceTypeInput2.trim()].filter(Boolean).join(' · ')
+        : practiceTypeInput.trim(),
       expected: expectedDisplay,
     });
   };
@@ -651,6 +637,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         setIsListening(false);
         const trimmedTranscript = transcript.trim();
         setPracticeTypeInput(trimmedTranscript);
+
+        // A two-meaning word needs the second box as well, so speaking only fills the first.
+        if (twoMeanings(currentPracticeWord)) return;
 
         const { isCorrect, expectedDisplay } = evaluateAnswer(trimmedTranscript, currentPracticeWord, practiceDirection);
 
@@ -733,6 +722,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       // Continue through current queue
       setPracticeFeedback(null);
       setPracticeTypeInput('');
+    setPracticeTypeInput2('');
       setIsListening(false);
       setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
       setPracticeQueueIndex((prev) => prev + 1);
@@ -747,6 +737,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         setRoundNumber((prev) => prev + 1);
         setPracticeFeedback(null);
         setPracticeTypeInput('');
+    setPracticeTypeInput2('');
         setIsListening(false);
         setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
       } else {
@@ -755,6 +746,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         setIsPracticeComplete(true);
         setPracticeFeedback(null);
         setPracticeTypeInput('');
+    setPracticeTypeInput2('');
         setIsListening(false);
 
         // Activation Rule: When a user finishes the "Practice" session for a lesson,
@@ -803,6 +795,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setIsPracticeComplete(false);
     setPracticeFeedback(null);
     setPracticeTypeInput('');
+    setPracticeTypeInput2('');
     setIsListening(false);
     setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
   };
@@ -811,6 +804,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     playSound('tap');
     setPracticeFeedback(null);
     setPracticeTypeInput('');
+    setPracticeTypeInput2('');
     setIsCardFlipped(false);
     setIsListening(false);
     if (flashcardIndex + 1 >= (filteredWords.length || 1)) {
@@ -828,6 +822,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     playSound('tap');
     setPracticeFeedback(null);
     setPracticeTypeInput('');
+    setPracticeTypeInput2('');
     setIsCardFlipped(false);
     setIsListening(false);
     if (isLearnComplete) {
@@ -967,6 +962,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       setIsLearnComplete(false);
       setPracticeFeedback(null);
       setPracticeTypeInput('');
+    setPracticeTypeInput2('');
       setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
       setBlitzIndex(0);
       setPluralIndex(0);
@@ -999,6 +995,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       setPracticeScore(0);
       setPracticeFeedback(null);
       setPracticeTypeInput('');
+    setPracticeTypeInput2('');
       setIsListening(false);
 
       if (mode === 'learn') {
@@ -2546,7 +2543,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       }`}
                     >
                       {practiceDirection === 'EN_TO_DE'
-                        ? currentPracticeWord?.translation
+                        ? currentPracticeWord && meaningLines(currentPracticeWord).length > 1
+                          ? meaningLines(currentPracticeWord).map((line, i) => (
+                              <span key={i} className="block">{`${i + 1}. ${line}`}</span>
+                            ))
+                          : currentPracticeWord && meaningLines(currentPracticeWord)[0]
                         : currentPracticeWord?.nounDetails?.gender
                         ? `${currentPracticeWord.nounDetails.gender} ${currentPracticeWord.lemma}`
                         : currentPracticeWord?.lemma}
@@ -2557,7 +2558,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   {!practiceFeedback ? (
                     <form onSubmit={handlePracticeCheck} className="w-full space-y-3">
                       {/* Answer Input Box (fits width like question box) */}
-                      <div className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs">
+                      <div className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs flex items-center gap-2">
+                        {twoMeanings(currentPracticeWord) && (
+                          <span className="text-sm font-black text-zinc-400 shrink-0">1.</span>
+                        )}
                         <input
                           ref={practiceTypeInputRef}
                           type="text"
@@ -2568,6 +2572,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           className="w-full bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
                         />
                       </div>
+
+                      {/* Two meanings, two boxes — either one can go in either box */}
+                      {twoMeanings(currentPracticeWord) && (
+                        <div className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs flex items-center gap-2">
+                          <span className="text-sm font-black text-zinc-400 shrink-0">2.</span>
+                          <input
+                            type="text"
+                            value={practiceTypeInput2}
+                            onChange={(e) => setPracticeTypeInput2(e.target.value)}
+                            placeholder=""
+                            className="w-full bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
+                          />
+                        </div>
+                      )}
 
                       {/* 2 Buttons: Speak and Check */}
                       <div className="flex items-center gap-2.5 w-full">
@@ -2591,7 +2609,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
                         <button
                           type="submit"
-                          disabled={!practiceTypeInput.trim()}
+                          disabled={
+                            !practiceTypeInput.trim() ||
+                            (twoMeanings(currentPracticeWord) && !practiceTypeInput2.trim())
+                          }
                           className="flex-1 py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs shadow-xs cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {appLanguage === 'en' ? 'Check' : 'Prüfen'}
