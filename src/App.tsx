@@ -18,6 +18,7 @@ import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLe
 import { isTabLocked } from './config/features';
 import { SuggestionButton } from './components/SuggestionButton';
 import { ChooserSheet } from './components/ChooserSheet';
+import { clearActivity, currentStreak, recordActivity } from './utils/streak';
 
 /** As Hueber writes it. */
 const SCHRITTE = 'Schritte international Neu';
@@ -317,14 +318,17 @@ export default function App() {
   }, [soundEnabled]);
 
   // Gamification Handlers
+  // Any answered card counts as having practised today, right or wrong.
   const handleCorrectAnswer = (xpGained: number = 10, gemsGained: number = 5) => {
     playSound('correct');
+    recordActivity();
     setXp((prev) => prev + xpGained);
     setGems((prev) => prev + gemsGained);
   };
 
   const handleWrongAnswer = () => {
     playSound('wrong');
+    recordActivity();
     setHearts((prev) => Math.max(0, prev - 1));
   };
 
@@ -332,6 +336,25 @@ export default function App() {
     playSound('correct');
     setHearts(maxHearts);
   };
+
+  /**
+   * The level on the profile badge: the lowest one you have actually worked in,
+   * so studying A1 and A2 side by side still reads A1. Nothing done yet falls
+   * back to the lowest level you have chosen.
+   */
+  const workingLevel = useMemo(() => {
+    const order = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    let touched: string[] = [];
+    try {
+      const progress = JSON.parse(localStorage.getItem('schritte_lesson_progress_v2') || '{}');
+      // keys look like "A1_L3"
+      touched = Object.keys(progress).map((key) => key.split('_')[0]);
+    } catch {
+      // no progress saved yet
+    }
+    const lowestTouched = order.find((level) => touched.includes(level));
+    return lowestTouched ?? order.find((level) => levels.includes(level));
+  }, [levels]);
 
   const handleResetProgress = () => {
     if (
@@ -342,6 +365,7 @@ export default function App() {
       )
     ) {
       playSound('wrong');
+      clearActivity();
       setStreak(1);
       setXp(0);
       setGems(100);
@@ -528,7 +552,7 @@ export default function App() {
               levels={levels}
               onChangeSeries={() => setChooser('series')}
               onChangeLevelRange={() => setChooser('levels')}
-              streak={streak}
+              streak={currentStreak()}
               xp={xp}
               gems={gems}
               vocabCount={vocabulary.length}
@@ -619,13 +643,8 @@ export default function App() {
           {/* PROFIL TAB (FULL PAGE) */}
           {currentTab === 'profile' && (
             <DuolingoProfileView
-              streak={streak}
-              gems={gems}
-              hearts={hearts}
-              maxHearts={maxHearts}
-              xp={xp}
               vocabulary={vocabulary}
-              onRefillHearts={handleRefillHearts}
+              workingLevel={workingLevel}
               appLanguage={appLanguage}
               onNavigateToSettings={() => handleSelectTab('settings')}
             />

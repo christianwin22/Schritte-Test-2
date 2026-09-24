@@ -11,7 +11,6 @@ import {
   BellOff,
   Globe,
   RotateCcw,
-  Volume1,
   Check,
   ShieldCheck,
   ArrowLeft,
@@ -21,7 +20,6 @@ import {
   UserCircle2,
 } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
-import { speakGerman } from '../utils/speech';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
 
@@ -64,7 +62,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const t = getTranslation(appLanguage);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [ttsFeedback, setTtsFeedback] = useState(false);
 
   const handleThemeChange = (mode: ThemeMode) => {
     playSound('tap');
@@ -73,13 +70,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     } else {
       onToggleTheme();
     }
-  };
-
-  const handleTestTTS = () => {
-    playSound('tap');
-    setTtsFeedback(true);
-    speakGerman('Willkommen bei Schritte International Neu! Viel Erfolg beim Deutschlernen.');
-    setTimeout(() => setTtsFeedback(false), 2500);
   };
 
   return (
@@ -324,40 +314,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Card: German Native Speech Engine Voice Test */}
-          <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 flex items-center justify-center font-black text-xs shrink-0">
-                de-DE
-              </div>
-              <div className="flex-1">
-                <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
-                  {t.germanTts}
-                </h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                  {t.nativeVoice}
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3 bg-zinc-50 dark:bg-zinc-800/70 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-between gap-3">
-              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 italic">
-                „Willkommen bei Schritte International Neu!“
-              </span>
-              <button
-                type="button"
-                onClick={handleTestTTS}
-                className={`px-4 py-2 font-black text-xs rounded-xl border cursor-pointer shadow-2xs flex items-center gap-1.5 transition-all shrink-0 ${
-                  ttsFeedback
-                    ? 'bg-emerald-600 text-white border-emerald-600 scale-105'
-                    : 'bg-white dark:bg-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-600'
-                }`}
-              >
-                <Volume1 className="w-4 h-4" />
-                <span>{ttsFeedback ? (appLanguage === 'en' ? 'Playing...' : 'Spielt...') : t.testVoice}</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

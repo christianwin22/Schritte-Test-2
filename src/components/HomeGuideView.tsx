@@ -100,7 +100,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
             className="flex-1 w-full px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-zinc-100 shadow-xs transition-all cursor-pointer text-left flex items-center justify-between gap-2"
           >
             <span className="min-w-0">
-              <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight">{series}</span>
+              <span className="block text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight">{series}</span>
             </span>
             <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />
           </button>
@@ -119,7 +119,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
             }}
             className="flex-1 px-2.5 sm:px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-zinc-100 shadow-xs transition-all cursor-pointer text-left flex items-center gap-1.5"
           >
-            <span className="text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight whitespace-nowrap">
+            <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight whitespace-nowrap">
               {formatLevels(levels)}
             </span>
             <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400 shrink-0" />
