@@ -15,10 +15,12 @@ export interface ChooserOption {
 interface ChooserSheetProps {
   title: string;
   options: ChooserOption[];
-  selected: string;
+  /** A list turns the sheet into a multiple choice; picking then toggles. */
+  selected: string | string[];
   onPick: (value: string) => void;
   onClose: () => void;
   soonLabel?: string;
+  doneLabel?: string;
 }
 
 /** A small sheet for picking the course or the levels. */
@@ -29,8 +31,14 @@ export const ChooserSheet: React.FC<ChooserSheetProps> = ({
   onPick,
   onClose,
   soonLabel = 'Soon',
-}) =>
-  createPortal(
+  doneLabel = 'Done',
+}) => {
+  const multi = Array.isArray(selected);
+  const isPicked = (value: string) => (Array.isArray(selected) ? selected.includes(value) : selected === value);
+  // At least one has to stay picked, or there is nothing to study.
+  const isLastOne = (value: string) => Array.isArray(selected) && selected.length === 1 && selected[0] === value;
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-3 pb-3 sm:pb-0" onClick={onClose}>
       <div
         className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 shadow-xl p-5 space-y-3 animate-fadeIn"
@@ -50,15 +58,15 @@ export const ChooserSheet: React.FC<ChooserSheetProps> = ({
 
         <div className="space-y-2">
           {options.map((option) => {
-            const isSelected = option.value === selected;
+            const isSelected = isPicked(option.value);
             return (
               <button
                 key={option.value}
                 type="button"
-                disabled={option.comingSoon}
+                disabled={option.comingSoon || isLastOne(option.value)}
                 onClick={() => {
                   onPick(option.value);
-                  onClose();
+                  if (!multi) onClose();
                 }}
                 className={`w-full px-4 py-3 rounded-2xl border-2 flex items-center justify-between gap-3 text-left transition-all ${
                   option.comingSoon
@@ -83,7 +91,18 @@ export const ChooserSheet: React.FC<ChooserSheetProps> = ({
             );
           })}
         </div>
+
+        {multi && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm cursor-pointer active:scale-[0.98] transition-all"
+          >
+            {doneLabel}
+          </button>
+        )}
       </div>
     </div>,
     document.body
   );
+};

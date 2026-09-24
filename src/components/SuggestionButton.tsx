@@ -96,7 +96,7 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
         aria-label={en ? 'Note an idea' : 'Idee notieren'}
         className={
           variant === 'floating'
-            ? 'fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-600 shadow-lg flex items-center justify-center active:scale-95 transition-all cursor-pointer'
+            ? 'fixed bottom-4 right-4 z-40 w-12 h-12 rounded-2xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-600 shadow-lg flex items-center justify-center active:scale-95 transition-all cursor-pointer'
             : 'w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-600 shadow-2xs flex items-center justify-center active:scale-95 transition-all cursor-pointer'
         }
       >
@@ -128,11 +128,7 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
-              placeholder={
-                en
-                  ? 'What would you change, add or remove?\nYou can paste a screenshot straight in here.'
-                  : 'Was möchtest du ändern, ergänzen oder entfernen?\nDu kannst hier direkt einen Screenshot einfügen.'
-              }
+              placeholder={en ? 'What would you change, add or remove?' : 'Was möchtest du ändern, ergänzen oder entfernen?'}
               className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-950 dark:focus:border-white outline-none font-bold text-sm resize-none"
             />
 

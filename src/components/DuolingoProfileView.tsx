@@ -92,8 +92,8 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
               </h2>
               <p className="text-xs font-bold text-zinc-400 dark:text-zinc-400">
                 {appLanguage === 'en'
-                  ? 'Schritte International Neu A1–B1 • Active Learner'
-                  : 'Schritte International Neu A1–B1 • Aktives Training'}
+                  ? 'Active Learner'
+                  : 'Aktives Training'}
               </p>
             </div>
 

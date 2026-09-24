@@ -109,7 +109,7 @@ const getExampleSentence = (word: WordEntry): { german: string; english: string 
 };
 
 interface SchritteVocabViewProps {
-  onCorrectAnswer: (xpEarned?: number) => void;
+  onCorrectAnswer: (xpEarned?: number, gemsEarned?: number) => void;
   onWrongAnswer: () => void;
   activeExerciseMode: string | null;
   onSelectExerciseMode: (mode: string | null) => void;
@@ -1921,14 +1921,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     if (!isDrillReview) return null;
     if (drillQueue.length === 0) {
       return (
-        <div className="py-6 text-center space-y-2">
+        <div className="py-6 text-center">
           <p className="font-black text-zinc-900 dark:text-zinc-100">
             {appLanguage === 'en' ? 'Nothing to review yet' : 'Noch nichts zu wiederholen'}
-          </p>
-          <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-            {appLanguage === 'en'
-              ? "Finish a lesson's Practice here — its nouns show up in Review from the next day."
-              : 'Schließe das Üben einer Lektion hier ab – ihre Nomen erscheinen ab dem nächsten Tag in der Wiederholung.'}
           </p>
         </div>
       );
@@ -1973,14 +1968,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
             {flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
               /* Review with nothing unlocked: say so, instead of showing words you have not met */
-              <div className="py-6 text-center space-y-2">
+              <div className="py-6 text-center">
                 <p className="font-black text-zinc-900 dark:text-zinc-100">
                   {appLanguage === 'en' ? 'Nothing to review yet' : 'Noch nichts zu wiederholen'}
-                </p>
-                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  {appLanguage === 'en'
-                    ? "Finish a lesson's Practice — its words show up here from the next day."
-                    : 'Schließe das Üben einer Lektion ab – ihre Wörter erscheinen ab dem nächsten Tag hier.'}
                 </p>
               </div>
             ) : filteredWords.length === 0 ? (

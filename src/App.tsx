@@ -18,6 +18,15 @@ import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLe
 import { isTabLocked } from './config/features';
 import { SuggestionButton } from './components/SuggestionButton';
 import { ChooserSheet } from './components/ChooserSheet';
+
+/** Shown above the course box, and the line inside it. */
+const SERIES_PUBLISHER: Record<string, string> = {
+  'Schritte International Neu': 'Hueber',
+  'Schritte Plus': 'Hueber',
+};
+const SERIES_BOOKS: Record<string, string> = {
+  'Schritte International Neu': '6 books · A1.1 A1.2 A2.1 A2.2 B1.1 B1.2',
+};
 import { useAuth } from './components/AuthGate';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
@@ -33,7 +42,16 @@ const NOTIF_STORAGE_KEY = 'deutschmeister_notif_enabled_v2';
 export default function App() {
   // Which course and which levels the app is set to (shown on the home screen)
   const [series, setSeries] = useState(() => localStorage.getItem('schritte_series') || 'Schritte International Neu');
-  const [levelRange, setLevelRange] = useState(() => localStorage.getItem('schritte_level_range') || 'A1–B1');
+  // Which levels you are working through; one or more, never none.
+  const [levels, setLevels] = useState<string[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('schritte_levels') || 'null');
+      if (Array.isArray(saved) && saved.length) return saved;
+    } catch {
+      // fall through to the whole course
+    }
+    return ['A1', 'A2', 'B1'];
+  });
   const [chooser, setChooser] = useState<null | 'series' | 'levels'>(null);
 
   // In the Sandbox every area stays open; in the real app only Vocabulary is.
@@ -508,7 +526,9 @@ export default function App() {
             <HomeGuideView
               onSelectArea={(areaTab) => handleSelectTab(areaTab)}
               series={series}
-              levelRange={levelRange}
+              publisher={SERIES_PUBLISHER[series] ?? ''}
+              seriesDetail={SERIES_BOOKS[series] ?? ''}
+              levels={levels}
               onChangeSeries={() => setChooser('series')}
               onChangeLevelRange={() => setChooser('levels')}
               streak={streak}
@@ -667,9 +687,9 @@ export default function App() {
       {chooser === 'levels' && (
         <ChooserSheet
           title={appLanguage === 'en' ? 'Which levels?' : 'Welche Stufen?'}
-          selected={levelRange}
+          selected={levels}
+          doneLabel={appLanguage === 'en' ? 'Done' : 'Fertig'}
           options={[
-            { value: 'A1–B1', label: 'A1–B1', hint: appLanguage === 'en' ? 'Everything in this course' : 'Der ganze Kurs' },
             { value: 'A1', label: 'A1', hint: 'Schritte 1–2' },
             { value: 'A2', label: 'A2', hint: 'Schritte 3–4' },
             { value: 'B1', label: 'B1', hint: 'Schritte 5–6' },
@@ -679,10 +699,17 @@ export default function App() {
             { value: 'C2', label: 'C2', comingSoon: true, soonLabel: appLanguage === 'en' ? 'Not in this course' : 'Nicht im Kurs' },
           ]}
           onPick={(value) => {
-            setLevelRange(value);
-            localStorage.setItem('schritte_level_range', value);
-            // Picking one level also opens Vocabulary on that level
-            if (value !== 'A1–B1') localStorage.setItem('schritte_saved_level', value);
+            setLevels((current) => {
+              const next = current.includes(value)
+                ? current.filter((l) => l !== value)
+                : [...current, value];
+              if (next.length === 0) return current; // never leave it empty
+              const ordered = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].filter((l) => next.includes(l));
+              localStorage.setItem('schritte_levels', JSON.stringify(ordered));
+              // One level on its own also opens Vocabulary on it.
+              if (ordered.length === 1) localStorage.setItem('schritte_saved_level', ordered[0]);
+              return ordered;
+            });
           }}
           onClose={() => setChooser(null)}
         />
