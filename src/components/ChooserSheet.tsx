@@ -10,6 +10,8 @@ export interface ChooserOption {
   comingSoon?: boolean;
   /** Replaces that note, e.g. "not in this course". */
   soonLabel?: string;
+  /** A heading printed above this option, e.g. the publisher. */
+  group?: string;
 }
 
 interface ChooserSheetProps {
@@ -57,11 +59,17 @@ export const ChooserSheet: React.FC<ChooserSheetProps> = ({
         </div>
 
         <div className="space-y-2">
-          {options.map((option) => {
+          {options.map((option, index) => {
             const isSelected = isPicked(option.value);
+            const heading = option.group && option.group !== options[index - 1]?.group ? option.group : null;
             return (
+              <React.Fragment key={`group-${option.value}`}>
+              {heading && (
+                <p className={`text-[10px] font-black uppercase tracking-wider text-zinc-400 px-1 ${index ? 'pt-2' : ''}`}>
+                  {heading}
+                </p>
+              )}
               <button
-                key={option.value}
                 type="button"
                 disabled={option.comingSoon || isLastOne(option.value)}
                 onClick={() => {
@@ -90,6 +98,7 @@ export const ChooserSheet: React.FC<ChooserSheetProps> = ({
                   isSelected && <Check className="w-4 h-4 text-zinc-900 dark:text-white shrink-0" />
                 )}
               </button>
+              </React.Fragment>
             );
           })}
         </div>

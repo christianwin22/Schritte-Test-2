@@ -18,6 +18,9 @@ import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLe
 import { isTabLocked } from './config/features';
 import { SuggestionButton } from './components/SuggestionButton';
 import { ChooserSheet } from './components/ChooserSheet';
+
+/** As Hueber writes it. */
+const SCHRITTE = 'Schritte international Neu';
 import { useAuth } from './components/AuthGate';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
@@ -32,7 +35,12 @@ const NOTIF_STORAGE_KEY = 'deutschmeister_notif_enabled_v2';
 
 export default function App() {
   // Which course and which levels the app is set to (shown on the home screen)
-  const [series, setSeries] = useState(() => localStorage.getItem('schritte_series') || 'Schritte International Neu');
+  const [series, setSeries] = useState(() => {
+    const saved = localStorage.getItem('schritte_series');
+    // Hueber writes it with a small i; an older save used a capital one.
+    if (saved === 'Schritte International Neu') return SCHRITTE;
+    return saved || SCHRITTE;
+  });
   // Which levels you are working through; one or more, never none.
   const [levels, setLevels] = useState<string[]>(() => {
     try {
@@ -661,12 +669,15 @@ export default function App() {
           title={appLanguage === 'en' ? 'Choose your course' : 'Kurs wählen'}
           selected={series}
           options={[
+            // Hueber's two Grundstufe courses; both run A1.1 to B1.2 in six books.
+            { value: SCHRITTE, label: SCHRITTE, hint: '6 books', group: 'Hueber' },
             {
-              value: 'Schritte International Neu',
-              label: 'Schritte International Neu',
-              hint: 'Hueber · 6 books · A1.1 A1.2 A2.1 A2.2 B1.1 B1.2',
+              value: 'Schritte plus Neu',
+              label: 'Schritte plus Neu',
+              hint: '6 books',
+              group: 'Hueber',
+              comingSoon: true,
             },
-            { value: 'Schritte Plus', label: 'Schritte Plus', hint: 'Hueber', comingSoon: true },
           ]}
           onPick={(value) => {
             setSeries(value);

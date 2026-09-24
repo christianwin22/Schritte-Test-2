@@ -15,6 +15,7 @@ import { CEFRLevel } from '../types';
 import { useAuth } from './AuthGate';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
+import { formatLevels } from '../utils/levelRange';
 
 interface HomeGuideViewProps {
   onSelectArea: (tab: DuolingoTab) => void;
@@ -86,7 +87,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
           The publisher and the word Levels sit outside their boxes, as labels. */}
       <div className="w-full max-w-4xl mx-auto flex items-stretch gap-2.5 sm:gap-4 shrink-0">
         <div className="flex-1 min-w-0 flex flex-col">
-          <span className="block px-1 pb-1 text-[10px] font-black uppercase tracking-wider text-zinc-400">
+          <span className="block pl-4 pb-1 text-[10px] font-black uppercase tracking-wider text-zinc-400">
             {appLanguage === 'en' ? 'Courses' : 'Kurse'}
           </span>
           <button
@@ -106,7 +107,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
         </div>
 
         <div className="shrink-0 flex flex-col">
-          <span className="block px-1 pb-1 text-[10px] font-black uppercase tracking-wider text-zinc-400">
+          <span className="block pl-2.5 sm:pl-4 pb-1 text-[10px] font-black uppercase tracking-wider text-zinc-400">
             {appLanguage === 'en' ? 'Levels' : 'Stufen'}
           </span>
           <button
@@ -118,8 +119,8 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
             }}
             className="flex-1 px-2.5 sm:px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-zinc-100 shadow-xs transition-all cursor-pointer text-left flex items-center gap-1.5"
           >
-            <span className="text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight">
-              {levels.join(' · ')}
+            <span className="text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight whitespace-nowrap">
+              {formatLevels(levels)}
             </span>
             <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400 shrink-0" />
           </button>
