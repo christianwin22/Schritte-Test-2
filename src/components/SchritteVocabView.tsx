@@ -20,6 +20,10 @@ import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import { BLANK, articleSentence, barePlural, fillBlank, pluralSentence } from '../data/nounDrillSentences';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
 import { checkEnglish, checkEnglishPair, checkGerman, englishSenses, meaningLines } from '../utils/answerCheck';
+import { highlightWord, stemLabel } from '../utils/sentenceParts';
+
+/** Where a half-finished Review session waits. Synced with the rest of the progress. */
+const REVIEW_SESSION_KEY = 'schritte_review_session_v1';
 import { speakGerman, listenToGermanSpeech, isSpeechRecognitionSupported } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
@@ -63,6 +67,31 @@ const DEFAULT_HOTKEYS: FlashcardHotkeys = {
   exampleAudio: 'Meta',
   practiceCheck: 'Enter',
   practiceAudio: ' ',
+};
+
+/** The sentence with the word in bold, and a stem like "besonder-" named above it. */
+const SentenceWithWord: React.FC<{ sentence: string; word: WordEntry; className?: string }> = ({
+  sentence,
+  word,
+  className = '',
+}) => {
+  const label = stemLabel(word);
+  return (
+    <span className={className}>
+      {label && (
+        <span className="block text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-0.5">{label}</span>
+      )}
+      {highlightWord(sentence, word).map((part, i) =>
+        part.hit ? (
+          <strong key={i} className="font-black underline decoration-2 underline-offset-2 decoration-zinc-400 dark:decoration-zinc-500">
+            {part.text}
+          </strong>
+        ) : (
+          <React.Fragment key={i}>{part.text}</React.Fragment>
+        )
+      )}
+    </span>
+  );
 };
 
 const getExampleSentence = (word: WordEntry): { german: string; english: string } => {
@@ -245,6 +274,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const [mistakeCounts, setMistakeCounts] = useState<Record<string, number>>({});
   const [mistakeWords, setMistakeWords] = useState<WordEntry[]>([]);
   const [practiceScore, setPracticeScore] = useState(0);
+  // A Review session you walked out of, so it can be picked up where you left it.
+  const [resumedSession, setResumedSession] = useState(false);
   const [isPracticeComplete, setIsPracticeComplete] = useState(false);
   const [practiceDirection, setPracticeDirection] = useState<'EN_TO_DE' | 'DE_TO_EN'>('EN_TO_DE');
   const [practiceTypeInput, setPracticeTypeInput] = useState('');
@@ -346,16 +377,70 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // Due review words count (globally driven)
   const dueReviewCount = globalDueCount;
 
+  // Keep the saved session in step with where you actually are.
+  useEffect(() => {
+    if (flashcardSubMode !== 'review') return;
+    saveReviewSession(practiceQueue, practiceQueueIndex, practiceScore, sessionInitialCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashcardSubMode, practiceQueue, practiceQueueIndex, practiceScore, sessionInitialCount]);
+
+  /**
+   * Leaving in the middle of Review does not lose your place. Each answer is
+   * already scheduled the moment you give it, so the saved session is only the
+   * queue and where you were in it — coming back cannot bend the algorithm.
+   */
+  const saveReviewSession = (queue: WordEntry[], index: number, score: number, initial: number) => {
+    try {
+      if (queue.length === 0 || index >= queue.length) {
+        localStorage.removeItem(REVIEW_SESSION_KEY);
+        return;
+      }
+      localStorage.setItem(
+        REVIEW_SESSION_KEY,
+        JSON.stringify({ ids: queue.map((w) => w.id), index, score, initial, at: new Date().toISOString() })
+      );
+    } catch {
+      // out of space: the session just won't be resumable
+    }
+  };
+
+  const clearReviewSession = () => {
+    try {
+      localStorage.removeItem(REVIEW_SESSION_KEY);
+    } catch {
+      // nothing to do
+    }
+  };
+
+  const loadReviewSession = (): { queue: WordEntry[]; index: number; score: number; initial: number } | null => {
+    try {
+      const raw = localStorage.getItem(REVIEW_SESSION_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw) as { ids?: string[]; index?: number; score?: number; initial?: number };
+      const byId = new Map(INITIAL_VOCABULARY.map((w) => [w.id, w]));
+      const queue = (saved.ids ?? []).map((id) => byId.get(id)).filter((w): w is WordEntry => !!w);
+      const index = Math.min(Math.max(0, saved.index ?? 0), queue.length - 1);
+      if (queue.length === 0 || index < 0) return null;
+      return { queue, index, score: saved.score ?? 0, initial: saved.initial ?? queue.length };
+    } catch {
+      return null;
+    }
+  };
+
   // Sync practiceQueue when filteredWords changes or when queue is empty
   useEffect(() => {
     if (practiceQueue.length === 0) {
       if (flashcardSubMode === 'review') {
-        const targetQueue =
-          globalDueWords.length > 0
-            ? globalDueWords.slice(0, 10)
-            : globalUnlockedWords.length > 0
-            ? globalUnlockedWords.slice(0, 10)
-            : INITIAL_VOCABULARY.slice(0, 10);
+        const saved = loadReviewSession();
+        if (saved) {
+          setPracticeQueue(saved.queue);
+          setPracticeQueueIndex(saved.index);
+          setPracticeScore(saved.score);
+          setSessionInitialCount(saved.initial);
+          setResumedSession(true);
+          return;
+        }
+        const targetQueue = globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords;
         setPracticeQueue([...targetQueue]);
         setSessionInitialCount(targetQueue.length);
       } else if (filteredWords.length > 0) {
@@ -434,7 +519,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     let list: WordEntry[];
     if (mode === 'review') {
       const pool = skill === 'article' ? articlePool : pluralPool;
-      list = (pool.due.length > 0 ? pool.due : pool.unlocked).slice(0, 10); // like Flashcard
+      list = [...(pool.due.length > 0 ? pool.due : pool.unlocked)]; // like Flashcard: everything due
     } else {
       list = [...drillPracticeList(skill)];
     }
@@ -743,6 +828,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       } else {
         // All words answered correctly and all mistakes resolved!
         playSound('correct');
+        clearReviewSession(); // finished, so there is nothing to come back to
+        setResumedSession(false);
         setIsPracticeComplete(true);
         setPracticeFeedback(null);
         setPracticeTypeInput('');
@@ -772,13 +859,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     playSound('tap');
     let freshQueue: WordEntry[] = [];
     if (flashcardSubMode === 'review') {
-      const source =
-        globalDueWords.length > 0
-          ? globalDueWords
-          : globalUnlockedWords.length > 0
-          ? globalUnlockedWords
-          : INITIAL_VOCABULARY;
-      freshQueue = source.slice(0, 10);
+      freshQueue = globalDueWords.length > 0 ? [...globalDueWords] : [...globalUnlockedWords];
     } else {
       freshQueue = filteredWords.length > 0 ? [...filteredWords] : [];
     }
@@ -937,13 +1018,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       setFlashcardIndex(0);
 
       if (flashcardSubMode === 'review') {
-        const source =
-          globalDueWords.length > 0
-            ? globalDueWords
-            : globalUnlockedWords.length > 0
-            ? globalUnlockedWords
-            : INITIAL_VOCABULARY;
-        const q = source.slice(0, 10);
+        const q = globalDueWords.length > 0 ? [...globalDueWords] : [...globalUnlockedWords];
         setPracticeQueue(q);
         setSessionInitialCount(q.length);
       } else {
@@ -1005,13 +1080,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         setSessionInitialCount(filteredWords.length);
         setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
       } else if (mode === 'review') {
-        const source =
-          globalDueWords.length > 0
-            ? globalDueWords
-            : globalUnlockedWords.length > 0
-            ? globalUnlockedWords
-            : INITIAL_VOCABULARY;
-        const q = source.slice(0, 10);
+        const q = globalDueWords.length > 0 ? [...globalDueWords] : [...globalUnlockedWords];
         setPracticeQueue(q);
         setSessionInitialCount(q.length);
         setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
@@ -1902,7 +1971,19 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           {flashcardSubMode === 'review' ? renderReviewWordBanner(currentPracticeWord) : renderFilterBanner()}
 
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
-            {filteredWords.length === 0 ? (
+            {flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
+              /* Review with nothing unlocked: say so, instead of showing words you have not met */
+              <div className="py-6 text-center space-y-2">
+                <p className="font-black text-zinc-900 dark:text-zinc-100">
+                  {appLanguage === 'en' ? 'Nothing to review yet' : 'Noch nichts zu wiederholen'}
+                </p>
+                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  {appLanguage === 'en'
+                    ? "Finish a lesson's Practice — its words show up here from the next day."
+                    : 'Schließe das Üben einer Lektion ab – ihre Wörter erscheinen ab dem nächsten Tag hier.'}
+                </p>
+              </div>
+            ) : filteredWords.length === 0 ? (
               <div className="py-6 text-center space-y-3">
                 <p className="font-bold text-zinc-500">
                   {appLanguage === 'en' ? 'No words found for this filter.' : 'Keine Wörter für diesen Filter gefunden.'}
@@ -2194,7 +2275,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             <>
                               <div className="flex items-center justify-center gap-2">
                                 <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 leading-snug">
-                                  {example.german}
+                                  {currentFlashcard && (
+                                    <SentenceWithWord sentence={example.german} word={currentFlashcard} />
+                                  )}
                                 </p>
                                 <button
                                   type="button"
@@ -2209,19 +2292,25 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                   <Volume2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
+                              {example.english && (
+                                <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                                  ({example.english})
+                                </p>
+                              )}
+                            </>
+                          ) : learnDirection === 'EN_TO_DE' && !isCardFlipped ? (
+                            example.english ? (
                               <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
                                 ({example.english})
                               </p>
-                            </>
-                          ) : learnDirection === 'EN_TO_DE' && !isCardFlipped ? (
-                            <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                              ({example.english})
-                            </p>
+                            ) : null
                           ) : (
                             <>
                               <div className="flex items-center justify-center gap-2">
                                 <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 leading-snug">
-                                  {example.german}
+                                  {currentFlashcard && (
+                                    <SentenceWithWord sentence={example.german} word={currentFlashcard} />
+                                  )}
                                 </p>
                                 <button
                                   type="button"
@@ -2236,9 +2325,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                   <Volume2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
-                              <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                                ({example.english})
-                              </p>
+                              {example.english && (
+                                <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                                  ({example.english})
+                                </p>
+                              )}
                             </>
                           )}
                         </div>
@@ -2509,6 +2600,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     >
                       <span>{practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}</span>
                     </div>
+                    {/* Picked up where you left off */}
+                    {resumedSession && flashcardSubMode === 'review' && (
+                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                        {appLanguage === 'en' ? 'Resumed' : 'Fortgesetzt'}
+                      </span>
+                    )}
                     {/* Right: card counter & redo-round indicator, as in Learn */}
                     <span>
                     {roundNumber > 1 ? (

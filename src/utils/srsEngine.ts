@@ -12,6 +12,9 @@ export const FSRS_PARAMS = {
   targetRetention: 0.90, // 90% memory recall probability target
 };
 
+/** Half a year is far enough ahead; nothing is scheduled beyond it. */
+export const MAX_INTERVAL_DAYS = 180;
+
 /**
  * Core Binary FSRS Function: calculates new stability, difficulty, interval and next review date
  */
@@ -19,8 +22,14 @@ export function processFSRSReview(
   passed: boolean,
   currentStability: number = 1.0,
   currentDifficulty: number = 5.0,
-  daysElapsed: number = 0
+  daysElapsed: number = 0,
+  /**
+   * The gap the card was scheduled for. Answering a month late does not count
+   * as a month's memory: the gap it was given is what the maths uses.
+   */
+  scheduledDays?: number
 ) {
+  if (scheduledDays !== undefined) daysElapsed = Math.min(daysElapsed, Math.max(0, scheduledDays));
   let newDifficulty: number;
   let newStability: number;
 
@@ -47,7 +56,10 @@ export function processFSRSReview(
   }
 
   // Calculate interval in days to hit target memory retention
-  const nextInterval = Math.max(1, Math.round(newStability * 9 * (1 / FSRS_PARAMS.targetRetention - 1)));
+  const nextInterval = Math.min(
+    MAX_INTERVAL_DAYS,
+    Math.max(1, Math.round(newStability * 9 * (1 / FSRS_PARAMS.targetRetention - 1)))
+  );
 
   const nextReviewDate = new Date();
   nextReviewDate.setDate(nextReviewDate.getDate() + nextInterval);
@@ -346,7 +358,7 @@ export function reviewCard(cardId: string, passed: boolean, existing?: FSRSCardR
   };
   const lastReviewed = base.lastReviewedAt ? new Date(base.lastReviewedAt).getTime() : Date.now();
   const daysElapsed = Math.max(0, (Date.now() - lastReviewed) / (1000 * 60 * 60 * 24));
-  const result = processFSRSReview(passed, base.stability, base.difficulty, daysElapsed);
+  const result = processFSRSReview(passed, base.stability, base.difficulty, daysElapsed, base.intervalDays);
   return {
     ...base,
     status: 'review',
