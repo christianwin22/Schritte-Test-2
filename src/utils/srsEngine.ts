@@ -90,6 +90,16 @@ export function loadAllFSRSRecords(): Record<string, FSRSCardRecord> {
 }
 
 /**
+ * How many words you have actually learnt: the ones a finished Practice has
+ * put into the review schedule. Der/Die/Das and Plural cards sit in the same
+ * store under "article:"/"plural:" keys and are the same words again, so they
+ * are left out.
+ */
+export function learntWordCount(records: Record<string, FSRSCardRecord> = loadAllFSRSRecords()): number {
+  return Object.entries(records).filter(([id, card]) => !id.includes(':') && card?.isUnlocked).length;
+}
+
+/**
  * Save all FSRS card records to localStorage
  */
 export function saveAllFSRSRecords(records: Record<string, FSRSCardRecord>): void {

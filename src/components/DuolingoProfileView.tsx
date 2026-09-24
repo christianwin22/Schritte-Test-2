@@ -1,13 +1,12 @@
 import React from 'react';
 import { Flame, ShieldCheck, Settings } from 'lucide-react';
-import { WordEntry } from '../types';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { playSound } from '../utils/audioEffects';
 import { currentStreak, lastSevenDays } from '../utils/streak';
+import { learntWordCount } from '../utils/srsEngine';
 import { LogOutButton } from './LogOutButton';
 
 interface DuolingoProfileViewProps {
-  vocabulary: WordEntry[];
   /** The lowest level you are actually working in, e.g. "A1". */
   workingLevel?: string;
   appLanguage?: AppLanguage;
@@ -15,13 +14,13 @@ interface DuolingoProfileViewProps {
 }
 
 export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
-  vocabulary,
   workingLevel,
   appLanguage = 'en',
   onNavigateToSettings,
 }) => {
   const t = getTranslation(appLanguage);
   const streak = currentStreak();
+  const learnt = learntWordCount();
   const week = lastSevenDays();
   const dayNames =
     appLanguage === 'en'
@@ -87,12 +86,10 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
             <div className="p-3 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
               <div className="flex items-center justify-center gap-1 text-zinc-900 dark:text-white">
                 <ShieldCheck className="w-4 h-4" />
-                <span className="font-black text-base">
-                  {vocabulary.length} {appLanguage === 'en' ? 'Words' : 'Wörter'}
-                </span>
+                <span className="font-black text-base">{learnt}</span>
               </div>
               <p className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
-                {appLanguage === 'en' ? 'Vocabulary Box' : 'Wortschatzkiste'}
+                {appLanguage === 'en' ? 'Words learnt' : 'Gelernte Wörter'}
               </p>
             </div>
           </div>

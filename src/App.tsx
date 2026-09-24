@@ -643,7 +643,6 @@ export default function App() {
           {/* PROFIL TAB (FULL PAGE) */}
           {currentTab === 'profile' && (
             <DuolingoProfileView
-              vocabulary={vocabulary}
               workingLevel={workingLevel}
               appLanguage={appLanguage}
               onNavigateToSettings={() => handleSelectTab('settings')}
