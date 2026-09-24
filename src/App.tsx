@@ -669,10 +669,14 @@ export default function App() {
           title={appLanguage === 'en' ? 'Which levels?' : 'Welche Stufen?'}
           selected={levelRange}
           options={[
-            { value: 'A1–B1', label: 'A1–B1', hint: appLanguage === 'en' ? 'the whole course' : 'der ganze Kurs' },
+            { value: 'A1–B1', label: 'A1–B1', hint: appLanguage === 'en' ? 'Everything in this course' : 'Der ganze Kurs' },
             { value: 'A1', label: 'A1', hint: 'Schritte 1–2' },
             { value: 'A2', label: 'A2', hint: 'Schritte 3–4' },
             { value: 'B1', label: 'B1', hint: 'Schritte 5–6' },
+            // Schritte International Neu stops at B1; the higher levels need another course.
+            { value: 'B2', label: 'B2', comingSoon: true, soonLabel: appLanguage === 'en' ? 'Not in this course' : 'Nicht im Kurs' },
+            { value: 'C1', label: 'C1', comingSoon: true, soonLabel: appLanguage === 'en' ? 'Not in this course' : 'Nicht im Kurs' },
+            { value: 'C2', label: 'C2', comingSoon: true, soonLabel: appLanguage === 'en' ? 'Not in this course' : 'Nicht im Kurs' },
           ]}
           onPick={(value) => {
             setLevelRange(value);

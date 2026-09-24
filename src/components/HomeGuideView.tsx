@@ -81,9 +81,9 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
   ];
 
   return (
-    <div className="w-full h-full flex flex-col justify-center gap-3 sm:gap-4 py-1 sm:py-3 animate-fadeIn">
-      {/* Which book series, and which levels of it */}
-      <div className="w-full max-w-4xl mx-auto flex items-stretch gap-2.5 sm:gap-4">
+    <div className="w-full h-full flex flex-col py-1 sm:py-3 animate-fadeIn">
+      {/* Which book series, and which levels of it — straight under the header */}
+      <div className="w-full max-w-4xl mx-auto flex items-stretch gap-2.5 sm:gap-4 shrink-0">
         <button
           type="button"
           id="home-series-button"
@@ -97,7 +97,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
             <span className="block text-[10px] font-black uppercase tracking-wider text-zinc-400">
               {appLanguage === 'en' ? 'Course' : 'Kurs'}
             </span>
-            <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">{series}</span>
+            <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight">{series}</span>
           </span>
           <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />
         </button>
@@ -121,6 +121,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
         </button>
       </div>
 
+      <div className="flex-1 min-h-0 flex flex-col justify-center pt-3 sm:pt-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 w-full max-w-4xl mx-auto">
         {learningAreas.map((area) => (
           <button
@@ -180,6 +181,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
             </h3>
           </button>
         ))}
+      </div>
       </div>
     </div>
   );

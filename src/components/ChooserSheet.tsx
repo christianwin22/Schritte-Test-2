@@ -8,6 +8,8 @@ export interface ChooserOption {
   hint?: string;
   /** Shown greyed out with a "soon" note; can't be picked. */
   comingSoon?: boolean;
+  /** Replaces that note, e.g. "not in this course". */
+  soonLabel?: string;
 }
 
 interface ChooserSheetProps {
@@ -71,7 +73,9 @@ export const ChooserSheet: React.FC<ChooserSheetProps> = ({
                   {option.hint && <span className="block text-[11px] font-bold text-zinc-400 truncate">{option.hint}</span>}
                 </span>
                 {option.comingSoon ? (
-                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 shrink-0">{soonLabel}</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 shrink-0 text-right">
+                    {option.soonLabel ?? soonLabel}
+                  </span>
                 ) : (
                   isSelected && <Check className="w-4 h-4 text-zinc-900 dark:text-white shrink-0" />
                 )}

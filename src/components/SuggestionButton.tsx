@@ -128,7 +128,11 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
-              placeholder={en ? 'What would you change, add or remove?' : 'Was möchtest du ändern, ergänzen oder entfernen?'}
+              placeholder={
+                en
+                  ? 'What would you change, add or remove?\nYou can paste a screenshot straight in here.'
+                  : 'Was möchtest du ändern, ergänzen oder entfernen?\nDu kannst hier direkt einen Screenshot einfügen.'
+              }
               className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-950 dark:focus:border-white outline-none font-bold text-sm resize-none"
             />
 
@@ -165,47 +169,50 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
                 e.target.value = ''; // so the same file can be picked again
               }}
             />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={media.length >= 4}
-              className="w-full py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ImagePlus className="w-4 h-4" />
-              <span>
-                {media.length >= 4
-                  ? en ? 'Four screenshots is the limit' : 'Maximal vier Screenshots'
-                  : en ? 'Add screenshot — or just paste one' : 'Screenshot hinzufügen — oder einfügen'}
-              </span>
-            </button>
+            <div className="flex items-stretch gap-2">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={media.length >= 4}
+                title={
+                  media.length >= 4
+                    ? en ? 'Four screenshots is the limit' : 'Maximal vier Screenshots'
+                    : en ? 'Add a screenshot — or paste one into the box' : 'Screenshot hinzufügen — oder oben einfügen'
+                }
+                aria-label={en ? 'Add a screenshot' : 'Screenshot hinzufügen'}
+                className="w-12 shrink-0 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ImagePlus className="w-5 h-5" />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => void submit()}
-              disabled={!text.trim() || status !== 'idle'}
-              className={`w-full py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 ${
-                status === 'saved'
-                  ? 'bg-emerald-600 text-white'
-                  : status === 'queued'
-                  ? 'bg-zinc-600 text-white'
-                  : 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950'
-              }`}
-            >
-              {status === 'saved' && (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>{en ? 'Saved to your account' : 'In deinem Konto gespeichert'}</span>
-                </>
-              )}
-              {status === 'queued' && (
-                <>
-                  <CloudOff className="w-4 h-4" />
-                  <span>{en ? 'Kept here until you sign in' : 'Bleibt hier bis zur Anmeldung'}</span>
-                </>
-              )}
-              {status === 'saving' && <span>{en ? 'Saving…' : 'Speichern…'}</span>}
-              {status === 'idle' && <span>{en ? 'Save idea' : 'Idee speichern'}</span>}
-            </button>
+              <button
+                type="button"
+                onClick={() => void submit()}
+                disabled={!text.trim() || status !== 'idle'}
+                className={`flex-1 py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 ${
+                  status === 'saved'
+                    ? 'bg-emerald-600 text-white'
+                    : status === 'queued'
+                    ? 'bg-zinc-600 text-white'
+                    : 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950'
+                }`}
+              >
+                {status === 'saved' && (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>{en ? 'Saved to your account' : 'In deinem Konto gespeichert'}</span>
+                  </>
+                )}
+                {status === 'queued' && (
+                  <>
+                    <CloudOff className="w-4 h-4" />
+                    <span>{en ? 'Kept here until you sign in' : 'Bleibt hier bis zur Anmeldung'}</span>
+                  </>
+                )}
+                {status === 'saving' && <span>{en ? 'Saving…' : 'Speichern…'}</span>}
+                {status === 'idle' && <span>{en ? 'Save' : 'Speichern'}</span>}
+              </button>
+            </div>
 
           </div>
         </div>,

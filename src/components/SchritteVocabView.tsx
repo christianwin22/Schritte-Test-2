@@ -316,9 +316,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     let list = INITIAL_VOCABULARY;
     // Level filter
     list = list.filter((w) => w.level === selectedLevel);
-    // Lektion filter (1 to 14, PART_1 (1-7), PART_2 (8-14), or ALL)
+    // Lektion filter (Intro = 0, 1 to 14, PART_1 (Intro-7), PART_2 (8-14), or ALL)
     if (selectedLektion === 'PART_1') {
-      list = list.filter((w) => typeof w.lektion === 'number' && w.lektion >= 1 && w.lektion <= 7);
+      list = list.filter((w) => typeof w.lektion === 'number' && w.lektion >= 0 && w.lektion <= 7);
     } else if (selectedLektion === 'PART_2') {
       list = list.filter((w) => typeof w.lektion === 'number' && w.lektion >= 8 && w.lektion <= 14);
     } else if (typeof selectedLektion === 'number') {
@@ -932,7 +932,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       // Compute new filtered list for fresh queue
       let list = INITIAL_VOCABULARY.filter((w) => w.level === updatedLevel);
       if (updatedLektion === 'PART_1') {
-        list = list.filter((w) => typeof w.lektion === 'number' && w.lektion >= 1 && w.lektion <= 7);
+        list = list.filter((w) => typeof w.lektion === 'number' && w.lektion >= 0 && w.lektion <= 7);
       } else if (updatedLektion === 'PART_2') {
         list = list.filter((w) => typeof w.lektion === 'number' && w.lektion >= 8 && w.lektion <= 14);
       } else if (typeof updatedLektion === 'number') {
@@ -1426,7 +1426,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // Banner 1: Filter Selector (Level & Lesson)
   // `waiting`: lessons ready to practise in Der/Die/Das or Plural, highlighted in amber.
   // Flashcard passes nothing, so its filter looks as before.
-  const renderFilterBanner = (waiting: { level: string; lektion: number }[] = []) => (
+  const renderFilterBanner = (waiting: { level: string; lektion: number }[] = []) => {
+    const hasIntro = INITIAL_VOCABULARY.some((w) => w.level === selectedLevel && w.lektion === 0);
+    const introWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === 0);
+    const introDone = isLessonFullyCompleted(selectedLevel, 0);
+    return (
     <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2">
       <div className="flex flex-row items-center justify-between gap-1 sm:gap-2">
         {/* Filter 1: A1 / A2 / B1 Level Selector */}
@@ -1472,6 +1476,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             <span>
               {selectedLektion === 'ALL'
                 ? (appLanguage === 'en' ? 'All' : 'Alle')
+                : selectedLektion === 0
+                ? 'Intro'
                 : selectedLektion === 'PART_1'
                 ? `${selectedLevel}.1`
                 : selectedLektion === 'PART_2'
@@ -1499,19 +1505,45 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {appLanguage === 'en' ? 'Lesson Filter:' : 'Lektionsfilter:'}
                   </span>
 
-                  <button
-                    onClick={() => {
-                      playSound('tap');
-                      handleFilterChange(undefined, 'ALL');
-                    }}
-                    className={`text-[11px] font-black px-2.5 py-0.5 rounded-lg transition-all cursor-pointer ${
-                      selectedLektion === 'ALL'
-                        ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                        : 'text-zinc-500 hover:text-zinc-950 dark:hover:text-white'
-                    }`}
-                  >
-                    {appLanguage === 'en' ? 'All' : 'Alle'}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {/* Only A1.1 has an Intro (the Vorkurs), so the button shows there */}
+                    {hasIntro && (
+                      <button
+                        onClick={() => {
+                          playSound('tap');
+                          handleFilterChange(undefined, 0);
+                        }}
+                        title={appLanguage === 'en' ? 'Intro (before Lesson 1)' : 'Intro (vor Lektion 1)'}
+                        className={`text-[11px] font-black px-2.5 py-0.5 rounded-lg transition-all cursor-pointer ${
+                          selectedLektion === 0
+                            ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ${
+                                introWaiting ? 'ring-amber-400' : 'ring-zinc-400/80 dark:ring-zinc-500/80'
+                              }`
+                            : introWaiting
+                            ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500'
+                            : introDone
+                            ? 'bg-zinc-400 hover:bg-zinc-450 text-zinc-950 dark:bg-zinc-500 dark:text-zinc-950 border border-zinc-500/70'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                        }`}
+                      >
+                        Intro
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        playSound('tap');
+                        handleFilterChange(undefined, 'ALL');
+                      }}
+                      className={`text-[11px] font-black px-2.5 py-0.5 rounded-lg transition-all cursor-pointer ${
+                        selectedLektion === 'ALL'
+                          ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                          : 'text-zinc-500 hover:text-zinc-950 dark:hover:text-white'
+                      }`}
+                    >
+                      {appLanguage === 'en' ? 'All' : 'Alle'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Grid: Row 1 = 1 to 7 + Level.1, Row 2 = 8 to 14 + Level.2 */}
@@ -1616,7 +1648,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   {/* Banner 2: Flashcard Sub-Mode Selector (Learn, Practice, Review) */}
   const renderModeBanner = () => (
