@@ -20,10 +20,6 @@ interface HomeGuideViewProps {
   onSelectArea: (tab: DuolingoTab) => void;
   /** Which book series the app is using, and which levels of it. */
   series?: string;
-  /** Who publishes it — printed above the box. */
-  publisher?: string;
-  /** What is in it, e.g. "6 books · A1.1 A1.2 …". */
-  seriesDetail?: string;
   levels?: string[];
   onChangeSeries?: () => void;
   onChangeLevelRange?: () => void;
@@ -40,8 +36,6 @@ interface HomeGuideViewProps {
 export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
   onSelectArea,
   series = 'Schritte International Neu',
-  publisher = '',
-  seriesDetail = '',
   levels = ['A1', 'A2', 'B1'],
   onChangeSeries,
   onChangeLevelRange,
@@ -93,7 +87,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
       <div className="w-full max-w-4xl mx-auto flex items-stretch gap-2.5 sm:gap-4 shrink-0">
         <div className="flex-1 min-w-0 flex flex-col">
           <span className="block px-1 pb-1 text-[10px] font-black uppercase tracking-wider text-zinc-400">
-            {publisher || (appLanguage === 'en' ? 'Course' : 'Kurs')}
+            {appLanguage === 'en' ? 'Courses' : 'Kurse'}
           </span>
           <button
             type="button"
@@ -106,9 +100,6 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
           >
             <span className="min-w-0">
               <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight">{series}</span>
-              {seriesDetail && (
-                <span className="block text-[10px] font-bold text-zinc-400 leading-tight mt-0.5">{seriesDetail}</span>
-              )}
             </span>
             <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0" />
           </button>
@@ -127,16 +118,8 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
             }}
             className="flex-1 px-2.5 sm:px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-zinc-100 shadow-xs transition-all cursor-pointer text-left flex items-center gap-1.5"
           >
-            {/* Each picked level as its own chip, so two or three read clearly */}
-            <span className="flex items-center gap-1">
-              {levels.map((level) => (
-                <span
-                  key={level}
-                  className="px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[11px] sm:text-xs font-black text-zinc-900 dark:text-zinc-100"
-                >
-                  {level}
-                </span>
-              ))}
+            <span className="text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight">
+              {levels.join(' · ')}
             </span>
             <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400 shrink-0" />
           </button>

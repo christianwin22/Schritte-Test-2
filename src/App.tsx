@@ -18,15 +18,6 @@ import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLe
 import { isTabLocked } from './config/features';
 import { SuggestionButton } from './components/SuggestionButton';
 import { ChooserSheet } from './components/ChooserSheet';
-
-/** Shown above the course box, and the line inside it. */
-const SERIES_PUBLISHER: Record<string, string> = {
-  'Schritte International Neu': 'Hueber',
-  'Schritte Plus': 'Hueber',
-};
-const SERIES_BOOKS: Record<string, string> = {
-  'Schritte International Neu': '6 books · A1.1 A1.2 A2.1 A2.2 B1.1 B1.2',
-};
 import { useAuth } from './components/AuthGate';
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
@@ -526,8 +517,6 @@ export default function App() {
             <HomeGuideView
               onSelectArea={(areaTab) => handleSelectTab(areaTab)}
               series={series}
-              publisher={SERIES_PUBLISHER[series] ?? ''}
-              seriesDetail={SERIES_BOOKS[series] ?? ''}
               levels={levels}
               onChangeSeries={() => setChooser('series')}
               onChangeLevelRange={() => setChooser('levels')}
@@ -672,8 +661,12 @@ export default function App() {
           title={appLanguage === 'en' ? 'Choose your course' : 'Kurs wählen'}
           selected={series}
           options={[
-            { value: 'Schritte International Neu', label: 'Schritte International Neu', hint: 'Hueber · A1.1 – B1.2' },
-            { value: 'Schritte Plus', label: 'Schritte Plus', comingSoon: true },
+            {
+              value: 'Schritte International Neu',
+              label: 'Schritte International Neu',
+              hint: 'Hueber · 6 books · A1.1 A1.2 A2.1 A2.2 B1.1 B1.2',
+            },
+            { value: 'Schritte Plus', label: 'Schritte Plus', hint: 'Hueber', comingSoon: true },
           ]}
           onPick={(value) => {
             setSeries(value);

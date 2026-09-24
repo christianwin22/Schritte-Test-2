@@ -32,7 +32,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1f232c]/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-700/80 transition-colors">
-      <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="relative max-w-5xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Left: App Logo (always clickable to jump Home) */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <button
@@ -51,20 +51,12 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
           </button>
         </div>
 
-        {/* Center: Title or Schritte International Neu */}
-        {title ? (
-          <div className="text-center truncate px-2">
-            <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100">
-              {title}
-            </span>
-          </div>
-        ) : (
-          <div className="text-center px-1">
-            <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-              Deutsche Meister
-            </span>
-          </div>
-        )}
+        {/* Center: the title sits in the middle of the bar, whatever is beside it */}
+        <div className="absolute left-1/2 -translate-x-1/2 max-w-[55%] px-2 text-center pointer-events-none">
+          <span className="block truncate text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            {title || 'Deutsche Meister'}
+          </span>
+        </div>
 
         {/* Right: Profile on Main Home page; Back button inside any section */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-end">

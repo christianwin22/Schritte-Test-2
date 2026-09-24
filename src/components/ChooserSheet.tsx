@@ -77,8 +77,10 @@ export const ChooserSheet: React.FC<ChooserSheetProps> = ({
                 }`}
               >
                 <span className="min-w-0">
-                  <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">{option.label}</span>
-                  {option.hint && <span className="block text-[11px] font-bold text-zinc-400 truncate">{option.hint}</span>}
+                  <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 leading-tight">{option.label}</span>
+                  {option.hint && (
+                    <span className="block text-[11px] font-bold text-zinc-400 leading-tight mt-0.5">{option.hint}</span>
+                  )}
                 </span>
                 {option.comingSoon ? (
                   <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 shrink-0 text-right">
