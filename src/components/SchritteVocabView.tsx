@@ -247,14 +247,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     } catch {}
   }, [learnDirection]);
 
-  // Flashcard Sub-Mode: 'learn' (Flip) vs 'practice' vs 'review' - Persisted
-  const [flashcardSubMode, setFlashcardSubMode] = useState<FlashcardSubMode>(() => {
-    try {
-      const saved = localStorage.getItem('schritte_saved_submode');
-      if (saved === 'learn' || saved === 'practice' || saved === 'review') return saved as FlashcardSubMode;
-    } catch {}
-    return 'learn';
-  });
+  /**
+   * Flashcard sub-mode: 'learn' (Flip), 'practice' or 'review'.
+   *
+   * Always Learn on arrival. Practice and Review are just the card and the
+   * keyboard — the three buttons that switch between them live on the Learn
+   * screen — so resuming straight into Practice would leave no way back to
+   * them. Learn is where you choose, and the back arrow returns here.
+   */
+  const [flashcardSubMode, setFlashcardSubMode] = useState<FlashcardSubMode>('learn');
 
   // FSRS Records State
   const [fsrsRecords, setFsrsRecords] = useState<Record<string, FSRSCardRecord>>(() => loadAllFSRSRecords());
@@ -305,7 +306,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem('schritte_saved_submode', flashcardSubMode);
+      localStorage.setItem('schritte_saved_submode', flashcardSubMode); // kept for the drills' own memory
     } catch {}
   }, [flashcardSubMode]);
 
@@ -1964,12 +1965,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {/* SUB-MODE 1: FLASHCARD DRILL */}
       {activeExerciseMode === 'explorer' && (
         <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
-          {/* Banner 1: Learn, Practice, Review Modes */}
-          <div className="shrink-when-tight">{renderModeBanner()}</div>
-          {/* Banner 2: Level & Lesson Filters (in Review: the current word's, read-only) */}
-          <div className="shrink-when-tight hide-when-tiny">
-            {flashcardSubMode === 'review' ? renderReviewWordBanner(currentPracticeWord) : renderFilterBanner()}
-          </div>
+          {/* Both bars belong to Learn. Practice and Review are the card, the
+              keyboard and the header — there is no room for anything else, and
+              nothing here needs changing mid-session. Back arrow to come out. */}
+          {flashcardSubMode === 'learn' && (
+            <>
+              {renderModeBanner()}
+              {renderFilterBanner()}
+            </>
+          )}
 
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
             {flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
@@ -2602,6 +2606,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         {appLanguage === 'en' ? 'Resumed' : 'Fortgesetzt'}
                       </span>
                     )}
+                    {/* Review draws from every lesson, so each card says where it
+                        is from. That used to be a bar of its own. */}
+                    {flashcardSubMode === 'review' && currentPracticeWord && (
+                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                        {currentPracticeWord.level}
+                        {typeof currentPracticeWord.lektion === 'number'
+                          ? ` · ${currentPracticeWord.lektion === 0 ? 'Intro' : `L${currentPracticeWord.lektion}`}`
+                          : ''}
+                      </span>
+                    )}
                     {/* Right: card counter & redo-round indicator, as in Learn */}
                     <span>
                     {roundNumber > 1 ? (
@@ -2946,11 +2960,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col">
-            {/* Der/Die/Das and Plural type too, so their bars give way on a small screen as well */}
-            <div className="shrink-when-tight">{renderDrillModeSwitch()}</div>
-            <div className="shrink-when-tight hide-when-tiny">
-              {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
-            </div>
+            {/* The drills have no Learn screen to hold their two buttons, and a
+                session starts the moment you arrive — so the Practice/Review
+                switch stays, or there would be no way between them. The filter
+                goes while a card is up, and comes back on the finished screen. */}
+            {renderDrillModeSwitch()}
+            {(status || emptyPractice) && drillSubMode === 'practice' && renderVocabFilterBar()}
             <form
               onSubmit={(e) => {
                 if (isArticle) e.preventDefault();
