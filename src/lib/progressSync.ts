@@ -251,7 +251,10 @@ export async function signOutAndClear(userId: string): Promise<boolean> {
   clearAppData();
   localStorage.removeItem(OWNER_KEY);
   localStorage.removeItem(DIRTY_KEY);
-  await client?.auth.signOut();
+  // Local only: this device forgets you. A global sign-out would also revoke
+  // the tokens on your other phone or laptop, which is not what Log out here
+  // should mean — and it would kill a session kept for switching accounts.
+  await client?.auth.signOut({ scope: 'local' });
   return true;
 }
 

@@ -37,6 +37,13 @@ interface AuthContextValue {
   otherAccounts?: KnownAccount[];
   /** Saves up, puts this account's session away, and opens another one. */
   switchTo?: (account: KnownAccount) => Promise<boolean>;
+  /**
+   * Saves up, keeps this account's session, and goes to the Log in page so a
+   * second account can be added. Without this there would be no way to end up
+   * with two accounts to switch between: sessions are only kept when you step
+   * away from one, and Log out deliberately throws its session away.
+   */
+  addAccount?: () => Promise<boolean>;
 }
 
 // Remembers being in the sandbox, so reopening the app returns there.
@@ -238,6 +245,24 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         console.warn('Could not switch account', error.message);
         return false;
       }
+      window.location.reload();
+      return true;
+    },
+    addAccount: async () => {
+      if (!supabase) return false;
+      const saved = await pushSnapshot(userId, takeSnapshot());
+      if (!saved) return false;
+      const current = (await supabase.auth.getSession()).data.session;
+      if (email && current) {
+        keepSession(email, {
+          access_token: current.access_token,
+          refresh_token: current.refresh_token,
+        });
+      }
+      clearAppData();
+      // Local only: the kept session must stay usable, and a global sign-out
+      // would revoke the very token we just put away.
+      await supabase.auth.signOut({ scope: 'local' });
       window.location.reload();
       return true;
     },

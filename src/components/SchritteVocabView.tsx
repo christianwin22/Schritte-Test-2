@@ -2010,8 +2010,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
             {flashcardSubMode !== 'learn' && !sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-4 py-6">
-                <div className="space-y-1.5 max-w-xs">
+              <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8">
+                <div className="space-y-3 max-w-xs">
                   {flashcardSubMode === 'practice' ? (
                     <>
                       <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
@@ -2020,7 +2020,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           ? ` · ${selectedLektion === 0 ? 'Intro' : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}`
                           : ''}
                       </p>
-                      <p className="font-black text-lg text-zinc-900 dark:text-zinc-100 leading-snug">
+                      <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
                         {lessonTopics(filteredWords) || (appLanguage === 'en' ? 'Practice' : 'Üben')}
                       </p>
                     </>
@@ -3044,15 +3044,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               className="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm"
             >
               {status ?? (!drillStarted && !emptyPractice && drillSubMode === 'practice' ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-4 py-6 text-center">
-                  <div className="space-y-1.5 max-w-xs">
+                <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8 text-center">
+                  <div className="space-y-3 max-w-xs">
                     <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
                       {selectedLevel}
                       {typeof selectedLektion === 'number'
                         ? ` · ${selectedLektion === 0 ? 'Intro' : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}`
                         : ''}
                     </p>
-                    <p className="font-black text-lg text-zinc-900 dark:text-zinc-100 leading-snug">
+                    <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
                       {lessonTopics(drillQueue) ||
                         (isArticle
                           ? appLanguage === 'en' ? 'Der, die or das' : 'Der, die oder das'

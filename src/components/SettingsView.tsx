@@ -18,10 +18,11 @@ import {
   LogIn,
   LogOut,
   UserCircle2,
+  ChevronRight,
 } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
 import { runningBuild } from '../main';
-import { ProfileDetailsCard } from './ProfileDetailsCard';
+import { AccountDialog } from './AccountDialog';
 import { testGermanVoice, type VoiceCheck } from '../utils/speech';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
@@ -56,13 +57,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   totalWordsCount = 70,
 }) => {
   const t = getTranslation(appLanguage);
-  const [voice, setVoice] = useState<VoiceCheck | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12 animate-fadeIn">
-      {/* Who you are, above the app's own settings */}
-      <ProfileDetailsCard appLanguage={appLanguage} />
+      {/* Who you are: one row, opening the dialog */}
+      <button
+        type="button"
+        onClick={() => {
+          playSound('tap');
+          setAccountOpen(true);
+        }}
+        className="w-full bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
+      >
+        <span className="flex items-center space-x-3 min-w-0">
+          <span className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shrink-0">
+            <UserCircle2 className="w-5 h-5" />
+          </span>
+          <span className="text-base font-black text-zinc-900 dark:text-zinc-100">
+            {appLanguage === 'en' ? 'My account' : 'Mein Konto'}
+          </span>
+        </span>
+        <ChevronRight className="w-5 h-5 text-zinc-400 shrink-0" />
+      </button>
+
+      {accountOpen && <AccountDialog appLanguage={appLanguage} onClose={() => setAccountOpen(false)} />}
 
       {/* Main Settings Sections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -80,9 +100,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
                   {t.appLanguage}
                 </h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                  {appLanguage === 'en' ? 'Select interface display language' : 'Sprache der Benutzeroberfläche'}
-                </p>
               </div>
             </div>
 
@@ -138,11 +155,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
                     {appLanguage === 'en' ? 'Notifications' : 'Mitteilungen'}
                   </h2>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                    {notificationEnabled
-                      ? (appLanguage === 'en' ? 'Reviews, practice and your streak' : 'Wiederholungen, Üben und Streak')
-                      : (appLanguage === 'en' ? 'All muted' : 'Alle stumm')}
-                  </p>
                 </div>
               </div>
 
@@ -180,9 +192,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
                     {t.soundEffects}
                   </h2>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                    {soundEnabled ? t.soundOn : t.soundMuted}
-                  </p>
                 </div>
               </div>
 

@@ -3,11 +3,8 @@ import { loadProfile, saveProfile } from '../lib/profile';
 import { AppLogo } from './AppLogo';
 
 /**
- * Asked once, the first time an account opens the app.
- *
- * Only what the app actually uses: a name to greet you by. Everything else can
- * wait for Settings, and Skip is a real answer — the app works the same either
- * way, it just calls you by the front of your email instead.
+ * Asked once, the first time an account opens the app. A name is required —
+ * everything else waits for My account in Settings.
  */
 export const WelcomeSetup: React.FC<{ email: string | null; onDone: () => void }> = ({ email, onDone }) => {
   const [name, setName] = useState(() => loadProfile().name);
@@ -46,26 +43,13 @@ export const WelcomeSetup: React.FC<{ email: string | null; onDone: () => void }
           />
         </label>
 
-        <div className="space-y-2">
-          <button
-            type="submit"
-            disabled={!name.trim()}
-            className="w-full py-3.5 bg-zinc-950 text-white font-black text-sm rounded-2xl cursor-pointer active:scale-[0.98] transition-all disabled:opacity-40"
-          >
-            Start learning
-          </button>
-          <button
-            type="button"
-            onClick={() => finish('')}
-            className="w-full py-3 text-zinc-500 font-black text-xs cursor-pointer"
-          >
-            Skip for now
-          </button>
-        </div>
-
-        <p className="text-[11px] font-semibold text-zinc-400 text-center">
-          You can change this any time in Settings.
-        </p>
+        <button
+          type="submit"
+          disabled={!name.trim()}
+          className="w-full py-3.5 bg-zinc-950 text-white font-black text-sm rounded-2xl cursor-pointer active:scale-[0.98] transition-all disabled:opacity-40"
+        >
+          Start learning
+        </button>
       </form>
     </div>
   );

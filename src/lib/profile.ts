@@ -9,15 +9,19 @@
 
 const KEY = 'deutschmeister_profile_v1';
 
+/** What most apps ask for, and nothing more: a name, and two optional facts. */
+export type Gender = '' | 'female' | 'male' | 'other' | 'unsaid';
+
 export interface Profile {
   name: string;
-  /** Optional, shown under the name. */
-  about: string;
-  /** Set once the welcome page has been filled in or skipped. */
+  gender: Gender;
+  /** ISO date, "1990-04-23". Optional. */
+  birthday: string;
+  /** Set once the welcome page has been answered. */
   setUp: boolean;
 }
 
-export const EMPTY_PROFILE: Profile = { name: '', about: '', setUp: false };
+export const EMPTY_PROFILE: Profile = { name: '', gender: '', birthday: '', setUp: false };
 
 export function loadProfile(): Profile {
   try {

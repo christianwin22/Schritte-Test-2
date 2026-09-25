@@ -72,9 +72,6 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
               <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
                 {name}
               </h2>
-              {profile.about && (
-                <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{profile.about}</p>
-              )}
             </div>
 
           </div>

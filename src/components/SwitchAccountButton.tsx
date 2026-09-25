@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2, Plus, Users } from 'lucide-react';
 import { useAuth } from './AuthGate';
 import { AppLanguage } from '../utils/translations';
 import { LogOutButton } from './LogOutButton';
@@ -18,9 +18,8 @@ export const SwitchAccountButton: React.FC<{ appLanguage: AppLanguage }> = ({ ap
   const others = auth?.otherAccounts ?? [];
   const en = appLanguage === 'en';
 
-  // No second account: just the way out, on its own.
   if (!auth) return null;
-  if (auth.isSandbox || others.length === 0) return <LogOutButton appLanguage={appLanguage} />;
+  if (auth.isSandbox) return <LogOutButton appLanguage={appLanguage} />;
 
   return (
     <div className="space-y-2">
@@ -40,6 +39,11 @@ export const SwitchAccountButton: React.FC<{ appLanguage: AppLanguage }> = ({ ap
         </div>
       ) : (
         <div className="space-y-2">
+          {others.length === 0 && (
+            <p className="text-xs font-bold text-center text-zinc-500 dark:text-zinc-400 py-1">
+              {en ? 'No other account on this device yet.' : 'Noch kein weiteres Konto auf diesem Gerät.'}
+            </p>
+          )}
           {others.map((account) => (
             <button
               key={account.email}
@@ -70,6 +74,29 @@ export const SwitchAccountButton: React.FC<{ appLanguage: AppLanguage }> = ({ ap
               {busy === account.email && <Loader2 className="w-4 h-4 animate-spin text-zinc-400 shrink-0" />}
             </button>
           ))}
+          <button
+            type="button"
+            disabled={!!busy}
+            onClick={async () => {
+              setBusy('add');
+              setFailed(false);
+              const ok = await auth.addAccount?.();
+              if (!ok) {
+                setBusy(null);
+                setFailed(true);
+              }
+            }}
+            className="w-full p-3 rounded-2xl bg-white dark:bg-[#252a35] border-2 border-dashed border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 text-left cursor-pointer disabled:opacity-60"
+          >
+            <span className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-500 flex items-center justify-center shrink-0">
+              <Plus className="w-4 h-4" />
+            </span>
+            <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">
+              {en ? 'Add another account' : 'Weiteres Konto hinzufügen'}
+            </span>
+            {busy === 'add' && <Loader2 className="w-4 h-4 animate-spin text-zinc-400 shrink-0" />}
+          </button>
+
           <button
             type="button"
             onClick={() => setOpen(false)}
