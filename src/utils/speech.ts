@@ -20,7 +20,7 @@ function prime(): void {
   if (primed || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   primed = true;
   try {
-    const silent = new SpeechSynthesisUtterance('');
+    const silent = new SpeechSynthesisUtterance(' ');
     silent.volume = 0;
     window.speechSynthesis.speak(silent);
   } catch {
@@ -50,6 +50,61 @@ function germanVoice(): SpeechSynthesisVoice | null {
 
 export function isSpeechAvailable(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
+}
+
+export interface VoiceCheck {
+  supported: boolean;
+  /** How many voices the device offers at all. Empty means they are still loading. */
+  voices: number;
+  /** How many of those are German. Zero is why a phone can stay silent. */
+  german: number;
+  /** The voice that would be used, if any. */
+  chosen: string | null;
+  /** Filled in after a test: what actually happened. */
+  outcome?: 'spoke' | 'silent' | 'error';
+  error?: string;
+}
+
+/** What this device can do, for the check in Settings. */
+export function voiceReport(): VoiceCheck {
+  if (!isSpeechAvailable()) return { supported: false, voices: 0, german: 0, chosen: null };
+  const all = window.speechSynthesis.getVoices();
+  const chosen = germanVoice();
+  return {
+    supported: true,
+    voices: all.length,
+    german: all.filter((v) => v.lang.startsWith('de')).length,
+    chosen: chosen ? `${chosen.name} (${chosen.lang})` : null,
+  };
+}
+
+/**
+ * Says a word and reports back whether anything actually happened.
+ *
+ * "It doesn't work" can mean the browser has no voices, or that it accepted
+ * the words and stayed quiet — which on an iPhone usually means the ring
+ * switch is set to silent. These are different problems, so the test tells
+ * them apart instead of leaving us to guess.
+ */
+export function testGermanVoice(onDone: (result: VoiceCheck) => void): void {
+  const report = voiceReport();
+  if (!report.supported) return onDone({ ...report, outcome: 'error', error: 'This browser has no speech at all.' });
+
+  prime();
+  const utterance = new SpeechSynthesisUtterance('Guten Tag');
+  utterance.lang = 'de-DE';
+  const voice = germanVoice();
+  if (voice) utterance.voice = voice;
+
+  let started = false;
+  utterance.onstart = () => {
+    started = true;
+  };
+  utterance.onerror = (e) => onDone({ ...report, outcome: 'error', error: e.error || 'unknown' });
+  window.speechSynthesis.speak(utterance);
+  window.setTimeout(() => {
+    onDone({ ...voiceReport(), outcome: started || window.speechSynthesis.speaking ? 'spoke' : 'silent' });
+  }, 1200);
 }
 
 /** Text-to-speech utility for German pronunciation using Web Speech API */

@@ -16,8 +16,24 @@
   --app-height: 100dvh;
 }
 
-/* When the visible screen is too small for everything, these give way first. */
-:root[data-tight='1'] .hide-when-tight {
+/*
+ * When the visible screen is short — a keyboard is up, or the phone is small —
+ * the bars shrink rather than disappear. Losing sight of which mode you are in
+ * is worse than a thinner bar. They only go at the very smallest sizes.
+ */
+:root[data-tight='1'] .shrink-when-tight {
+  padding: 0.125rem;
+  margin-bottom: 0.25rem;
+  transform: scale(0.92);
+  transform-origin: top center;
+}
+
+:root[data-tight='1'] .shrink-when-tight button {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+
+:root[data-tiny='1'] .hide-when-tiny {
   display: none;
 }
 

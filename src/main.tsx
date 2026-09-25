@@ -18,12 +18,13 @@ function trackVisibleHeight(): void {
     const height = vv?.height ?? window.innerHeight;
     document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
     /*
-     * Rows marked hide-when-tight step aside only when there is genuinely no
-     * room for them. With a keyboard up on a normal phone there still is — the
-     * whole card ends around 480px — so the mode and filter bars stay. On a
-     * small phone they go, because the Check button matters more.
+     * Two steps, not one. Short of room, the bars shrink but stay readable —
+     * which mode you are in is worth keeping in view. Only when even that will
+     * not fit does the level and lesson row go, because reaching the Check
+     * button matters more than seeing the filter.
      */
-    document.documentElement.dataset.tight = height < 490 ? '1' : '0';
+    document.documentElement.dataset.tight = height < 620 ? '1' : '0';
+    document.documentElement.dataset.tiny = height < 430 ? '1' : '0';
     // iOS may scroll the page to chase the focused box. The layout already
     // fits the space, so any scrolling just hides the top of the card.
     if (window.scrollY !== 0) window.scrollTo(0, 0);

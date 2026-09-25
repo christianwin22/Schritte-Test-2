@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
 import { runningBuild } from '../main';
+import { testGermanVoice, type VoiceCheck } from '../utils/speech';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
 
@@ -62,6 +63,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   totalWordsCount = 70,
 }) => {
   const t = getTranslation(appLanguage);
+  const [voice, setVoice] = useState<VoiceCheck | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -316,6 +318,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
         </div>
+      </div>
+
+      {/* Voice check: says a word and reports what the device did with it */}
+      <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
+              {appLanguage === 'en' ? 'German voice' : 'Deutsche Stimme'}
+            </h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+              {appLanguage === 'en' ? 'Check whether this device can speak' : 'Prüfen, ob dieses Gerät sprechen kann'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              playSound('tap');
+              setVoice(null);
+              testGermanVoice(setVoice);
+            }}
+            className="px-4 py-2 font-black text-xs rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 cursor-pointer shrink-0"
+          >
+            {appLanguage === 'en' ? 'Test' : 'Testen'}
+          </button>
+        </div>
+
+        {voice && (
+          <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700 space-y-1">
+            <p className="text-xs font-black text-zinc-900 dark:text-zinc-100">
+              {voice.outcome === 'spoke'
+                ? appLanguage === 'en' ? 'It spoke' : 'Es hat gesprochen'
+                : voice.outcome === 'silent'
+                ? appLanguage === 'en' ? 'Accepted, but no sound came out' : 'Angenommen, aber kein Ton'
+                : appLanguage === 'en' ? 'It could not speak' : 'Konnte nicht sprechen'}
+            </p>
+            {voice.outcome === 'silent' && (
+              <p className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                {appLanguage === 'en'
+                  ? 'On an iPhone this is almost always the ring/silent switch on the side.'
+                  : 'Auf dem iPhone liegt das fast immer am Stummschalter an der Seite.'}
+              </p>
+            )}
+            <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+              {voice.voices} voices · {voice.german} German · {voice.chosen ?? 'none chosen'}
+              {voice.error ? ` · ${voice.error}` : ''}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Which build this is. Useful when a phone is holding an old copy. */}
