@@ -1,23 +1,15 @@
 {
-  "name": "DeutschMeister - Schritte Neu A1-B1 Trainer",
+  "name": "DeutschMeister",
   "short_name": "DeutschMeister",
-  "description": "A comprehensive German learning platform based on Schritte International Neu A1 to B1.",
+  "description": "German vocabulary from Schritte international Neu, A1 to B1.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#18181b",
-  "theme_color": "#18181b",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "orientation": "portrait",
   "icons": [
-    {
-      "src": "/icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    }
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
   ]
 }

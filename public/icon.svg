@@ -1,34 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Background: Flat solid dark slate for iOS home screen icon mask -->
-  <rect width="512" height="512" fill="#18181b"/>
-  
-  <!-- Subtle inner ambient gradient -->
-  <radialGradient id="glow" cx="50%" cy="30%" r="60%">
-    <stop offset="0%" stop-color="#27272a" stop-opacity="1"/>
-    <stop offset="100%" stop-color="#09090b" stop-opacity="1"/>
-  </radialGradient>
-  <rect width="512" height="512" fill="url(#glow)"/>
-
-  <!-- Centered Inner Emblem Container -->
-  <g transform="translate(106, 106)">
-    <!-- German Flag Accent Bar (Top Edge Minimal Accent) -->
-    <g transform="translate(15, 0)">
-      <rect x="0" y="0" width="90" height="6" rx="3" fill="#111111"/>
-      <rect x="90" y="0" width="90" height="6" rx="3" fill="#dd0000"/>
-      <rect x="180" y="0" width="90" height="6" rx="3" fill="#ffce00"/>
-    </g>
-
-    <!-- Stylized Ascending Steps (Schritte) -->
-    <!-- Step 1 (Starter A1) -->
-    <rect x="30" y="180" width="65" height="85" rx="16" fill="#52525b" />
-    
-    <!-- Step 2 (Progress A2) -->
-    <rect x="118" y="110" width="65" height="155" rx="16" fill="#a1a1aa" />
-    
-    <!-- Step 3 (Mastery B1) -->
-    <rect x="206" y="40" width="65" height="225" rx="16" fill="#ffffff" />
-
-    <!-- Mastery Peak Star/Dot -->
-    <circle cx="238.5" cy="72" r="14" fill="#ffce00" />
+  <!-- The app's own mark: three rising steps, darkening as they climb. -->
+  <rect width="512" height="512" fill="#ffffff"/>
+  <g transform="translate(256 256) scale(0.85) translate(-256 -256)" fill="#09090b">
+    <rect x="80"  y="304" width="96" height="112" rx="24" opacity="0.35"/>
+    <rect x="208" y="192" width="96" height="224" rx="24" opacity="0.7"/>
+    <rect x="336" y="96"  width="96" height="320" rx="24"/>
+    <circle cx="384" cy="144" r="19" fill="#ffffff"/>
   </g>
 </svg>
