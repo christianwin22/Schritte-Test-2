@@ -285,26 +285,6 @@ export default function App() {
     setHearts(maxHearts);
   };
 
-  /**
-   * The level on the profile badge: the lowest one you have actually worked in,
-   * so studying A1 and A2 side by side still reads A1. Nothing done yet falls
-   * back to the lowest level you have chosen.
-   */
-  const workingLevel = useMemo(() => {
-    const order = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-    let touched: string[] = [];
-    try {
-      const progress = JSON.parse(localStorage.getItem('schritte_lesson_progress_v2') || '{}');
-      // keys look like "A1_L3"
-      touched = Object.keys(progress).map((key) => key.split('_')[0]);
-    } catch {
-      // no progress saved yet
-    }
-    // Nothing touched yet means nothing to claim: the badge stays off until
-    // a lesson has actually been worked on.
-    return order.find((level) => touched.includes(level));
-  }, [levels]);
-
   const handleResetProgress = () => {
     if (
       window.confirm(
@@ -594,7 +574,6 @@ export default function App() {
           {/* PROFIL TAB (FULL PAGE) */}
           {currentTab === 'profile' && (
             <DuolingoProfileView
-              workingLevel={workingLevel}
               appLanguage={appLanguage}
               onNavigateToSettings={() => handleSelectTab('settings')}
             />

@@ -48,10 +48,11 @@ const inputClass =
 
 /** The white card every sign-in page sits in. */
 const AuthCard: React.FC<{ children: React.ReactNode; onBack?: () => void }> = ({ children, onBack }) => {
-  // The app sets light/dark itself once it loads; before that, follow the device.
+  // This page used to follow the phone's dark setting, from when the app had a
+  // dark theme of its own. It no longer has one, and that line was the only
+  // thing still turning the app dark — on the one page seen before sign-in.
   useEffect(() => {
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-    document.documentElement.classList.toggle('dark', !!prefersDark);
+    document.documentElement.classList.remove('dark');
   }, []);
 
   return (

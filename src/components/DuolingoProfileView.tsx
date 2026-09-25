@@ -1,28 +1,26 @@
-import React from 'react';
-import { Flame, ShieldCheck, Settings } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Camera, Flame, ShieldCheck, Settings, Trash2 } from 'lucide-react';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { playSound } from '../utils/audioEffects';
 import { currentStreak, thisWeek } from '../utils/streak';
 import { learntWordCount } from '../utils/srsEngine';
 import { SwitchAccountButton } from './SwitchAccountButton';
 import { useAuth } from './AuthGate';
-import { initialsFor, loadProfile, nameFor } from '../lib/profile';
+import { initialsFor, loadProfile, nameFor, saveProfile, shrinkPhoto } from '../lib/profile';
 
 interface DuolingoProfileViewProps {
-  /** The lowest level you are actually working in, e.g. "A1". */
-  workingLevel?: string;
   appLanguage?: AppLanguage;
   onNavigateToSettings?: () => void;
 }
 
 export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
-  workingLevel,
   appLanguage = 'en',
   onNavigateToSettings,
 }) => {
   const t = getTranslation(appLanguage);
   const auth = useAuth();
-  const profile = loadProfile();
+  const [profile, setProfile] = useState(loadProfile);
+  const fileRef = useRef<HTMLInputElement>(null);
   const name = nameFor(profile, auth?.email ?? null);
   const streak = currentStreak();
   const learnt = learntWordCount();
@@ -66,11 +64,48 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
               {initialsFor(name)}
             </div>
           )}
-          {workingLevel && (
-            <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-lg bg-zinc-900 text-white font-black text-[10px] uppercase tracking-wider border-2 border-white dark:border-zinc-800 shadow-xs">
-              {workingLevel}
-            </span>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            aria-label={appLanguage === 'en' ? 'Change picture' : 'Bild ändern'}
+            title={appLanguage === 'en' ? 'Change picture' : 'Bild ändern'}
+            className="absolute -bottom-1.5 -right-1.5 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 flex items-center justify-center shadow-xs cursor-pointer active:scale-95 transition-all"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
+          {profile.photo && (
+            <button
+              type="button"
+              onClick={() => {
+                const next = { ...profile, photo: undefined };
+                saveProfile(next);
+                setProfile(next);
+              }}
+              aria-label={appLanguage === 'en' ? 'Remove picture' : 'Bild entfernen'}
+              title={appLanguage === 'en' ? 'Remove picture' : 'Bild entfernen'}
+              className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-600 text-zinc-500 hover:text-rose-600 flex items-center justify-center shadow-xs cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              try {
+                const next = { ...profile, photo: await shrinkPhoto(file), setUp: true };
+                saveProfile(next);
+                setProfile(next);
+              } catch {
+                // not a picture we can read; leave what was there
+              }
+            }}
+          />
         </div>
 
         {/* User Info & Action Buttons */}

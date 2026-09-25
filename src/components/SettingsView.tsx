@@ -21,7 +21,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
-import { runningBuild } from '../main';
 import { AccountDialog } from './AccountDialog';
 import { useAuth } from './AuthGate';
 import { seedDueForTesting } from '../utils/srsEngine';
@@ -63,6 +62,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const t = getTranslation(appLanguage);
   const [accountOpen, setAccountOpen] = useState(false);
   const [seeded, setSeeded] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const isSandbox = useAuth()?.isSandbox ?? false;
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -115,58 +115,60 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* SECTION 1: LANGUAGE & APPEARANCE */}
         {/* ==================================================================== */}
         <div className="space-y-6">
-          {/* Card: Interface Language */}
-          <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shrink-0">
-                <Globe className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
-                  {t.appLanguage}
-                </h2>
-              </div>
-            </div>
+          {/* Language: the flag stands in for the value, the way the ON/OFF
+              switches do. Tapping opens the two, like My account's rows. */}
+          <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-3">
+            <button
+              type="button"
+              onClick={() => {
+                playSound('tap');
+                setLanguageOpen(!languageOpen);
+              }}
+              className="w-full flex items-center justify-between gap-3 cursor-pointer"
+            >
+              <span className="flex items-center space-x-3 min-w-0">
+                <span className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shrink-0">
+                  <Globe className="w-5 h-5" />
+                </span>
+                <span className="text-base font-black text-zinc-900 dark:text-zinc-100">{t.appLanguage}</span>
+              </span>
+              <span className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex items-center gap-2 shrink-0">
+                <span className="text-base leading-none">{appLanguage === 'en' ? '🇬🇧' : '🇩🇪'}</span>
+                <span className="font-black text-xs text-zinc-900 dark:text-zinc-100">
+                  {appLanguage === 'en' ? 'English' : 'Deutsch'}
+                </span>
+              </span>
+            </button>
 
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('tap');
-                  onSelectLanguage('en');
-                }}
-                className={`p-3.5 rounded-2xl font-black text-xs sm:text-sm transition-all border-2 flex items-center justify-between cursor-pointer ${
-                  appLanguage === 'en'
-                    ? 'bg-zinc-950 text-white border-zinc-950 dark:bg-white dark:text-zinc-950 dark:border-white shadow-xs'
-                    : 'bg-zinc-50 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-base">🇬🇧</span>
-                  <span>English</span>
-                </div>
-                {appLanguage === 'en' && <Check className="w-4 h-4 stroke-[3]" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('tap');
-                  onSelectLanguage('de');
-                }}
-                className={`p-3.5 rounded-2xl font-black text-xs sm:text-sm transition-all border-2 flex items-center justify-between cursor-pointer ${
-                  appLanguage === 'de'
-                    ? 'bg-zinc-950 text-white border-zinc-950 dark:bg-white dark:text-zinc-950 dark:border-white shadow-xs'
-                    : 'bg-zinc-50 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-base">🇩🇪</span>
-                  <span>Deutsch</span>
-                </div>
-                {appLanguage === 'de' && <Check className="w-4 h-4 stroke-[3]" />}
-              </button>
-            </div>
+            {languageOpen && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {([
+                  { code: 'en' as const, flag: '🇬🇧', label: 'English' },
+                  { code: 'de' as const, flag: '🇩🇪', label: 'Deutsch' },
+                ]).map((option) => (
+                  <button
+                    key={option.code}
+                    type="button"
+                    onClick={() => {
+                      playSound('tap');
+                      onSelectLanguage(option.code);
+                      setLanguageOpen(false);
+                    }}
+                    className={`p-3.5 rounded-2xl font-black text-sm transition-all border-2 flex items-center justify-between cursor-pointer ${
+                      appLanguage === option.code
+                        ? 'bg-zinc-950 text-white border-zinc-950 dark:bg-white dark:text-zinc-950 dark:border-white'
+                        : 'bg-zinc-50 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-base">{option.flag}</span>
+                      <span>{option.label}</span>
+                    </span>
+                    {appLanguage === option.code && <Check className="w-4 h-4 stroke-[3]" />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Card: Notifications, of every kind the app sends */}
@@ -241,8 +243,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Which build this is. Useful when a phone is holding an old copy. */}
-      <p className="text-center text-[10px] font-bold text-zinc-400 pt-1">{runningBuild()}</p>
     </div>
   );
 };
