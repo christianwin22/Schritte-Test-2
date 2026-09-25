@@ -1,13 +1,17 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { Loader2, WifiOff } from 'lucide-react';
+import { Loader2, Smartphone, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import {
+  adoptRemote,
   enterSandbox,
   exitSandbox,
+  pushSnapshot,
   restoreForUser,
   signOutAndClear,
   startAutoSync,
+  takeSnapshot,
+  type OtherDeviceEvent,
 } from '../lib/progressSync';
 import { flushQueue } from '../lib/suggestions';
 import { LoginScreen, SandboxTag, friendlyAuthError } from './LoginScreen';
@@ -67,6 +71,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [urlError] = useState(takeAuthErrorFromUrl);
   const [isSandbox, setIsSandbox] = useState(readSandboxFlag);
   const restoredFor = useRef<string | null>(null);
+  /** Set when the saved progress has moved on under us, on another device. */
+  const [otherDevice, setOtherDevice] = useState<OtherDeviceEvent | null>(null);
+  const [syncRun, setSyncRun] = useState(0); // bumping this restarts the sync
 
   useEffect(() => {
     if (!supabase) {
@@ -105,8 +112,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     if (phase !== 'ready' || !userId) return;
     // Ideas noted in the Sandbox or offline go up now that we're signed in.
     void flushQueue();
-    return startAutoSync(userId);
-  }, [phase, userId]);
+    return startAutoSync(userId, 4000, setOtherDevice);
+  }, [phase, userId, syncRun]);
 
   if (phase === 'checking') return <Splash label="Loading…" />;
   if (phase === 'restoring') return <Splash label="Loading your progress…" />;
@@ -172,5 +179,79 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     },
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {otherDevice && (
+        <OtherDeviceNotice
+          hasLocalChanges={otherDevice.hasLocalChanges}
+          onTakeOther={async () => {
+            await adoptRemote(userId);
+            window.location.reload();
+          }}
+          onKeepThis={async () => {
+            await pushSnapshot(userId, takeSnapshot());
+            setOtherDevice(null);
+            setSyncRun((n) => n + 1); // start saving again
+          }}
+        />
+      )}
+    </AuthContext.Provider>
+  );
 };
+
+/**
+ * Shown when the same account has been used somewhere else since this device
+ * last saved. Saving stops until it is answered, so neither side is silently
+ * written over.
+ */
+const OtherDeviceNotice: React.FC<{
+  hasLocalChanges: boolean;
+  onTakeOther: () => void;
+  onKeepThis: () => void;
+}> = ({ hasLocalChanges, onTakeOther, onKeepThis }) => (
+  <div className="fixed inset-x-0 bottom-0 z-[60] p-3 font-sans">
+    <div className="mx-auto max-w-md bg-white dark:bg-zinc-900 border-2 border-amber-400 dark:border-amber-500 rounded-3xl shadow-xl p-4 space-y-3">
+      <div className="flex items-start gap-2.5">
+        <Smartphone className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="min-w-0">
+          <p className="font-black text-sm text-zinc-900 dark:text-zinc-100">
+            You've been studying on another device
+          </p>
+          <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-0.5">
+            {hasLocalChanges
+              ? 'This device has work of its own that is not saved yet. Keep which one?'
+              : 'Catch this device up to your latest progress.'}
+          </p>
+        </div>
+      </div>
+
+      {hasLocalChanges ? (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onTakeOther}
+            className="flex-1 py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs cursor-pointer"
+          >
+            Use the other device
+          </button>
+          <button
+            type="button"
+            onClick={onKeepThis}
+            className="flex-1 py-2.5 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-xs cursor-pointer"
+          >
+            Keep this one
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onTakeOther}
+          className="w-full py-2.5 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-xs cursor-pointer"
+        >
+          Catch up
+        </button>
+      )}
+    </div>
+  </div>
+);

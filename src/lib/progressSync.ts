@@ -67,25 +67,73 @@ function applySnapshot(snapshot: ProgressSnapshot): void {
   }
 }
 
-async function pullRemote(userId: string): Promise<ProgressSnapshot | null> {
-  if (!client) return null;
-  const { data, error } = await client.from(TABLE).select('data').eq('user_id', userId).maybeSingle();
+/**
+ * The stamp on the saved row the last time this device wrote or read it.
+ * If the row carries a different stamp later, another device has been at it.
+ */
+let lastSeenUpdatedAt: string | null = null;
+
+interface RemoteRow {
+  snapshot: ProgressSnapshot | null;
+  updatedAt: string | null;
+}
+
+async function pullRemote(userId: string): Promise<RemoteRow> {
+  if (!client) return { snapshot: null, updatedAt: null };
+  const { data, error } = await client
+    .from(TABLE)
+    .select('data, updated_at')
+    .eq('user_id', userId)
+    .maybeSingle();
   if (error) throw error;
-  return (data?.data as ProgressSnapshot | undefined) ?? null;
+  return {
+    snapshot: (data?.data as ProgressSnapshot | undefined) ?? null,
+    updatedAt: (data?.updated_at as string | undefined) ?? null,
+  };
+}
+
+/**
+ * Has another device saved since this one last did?
+ *
+ * Unknown (network down, no client) counts as "no", so a flaky connection
+ * never raises a false alarm.
+ */
+export async function otherDeviceHasSaved(userId: string): Promise<boolean> {
+  if (!client || lastSeenUpdatedAt === null) return false;
+  try {
+    const { updatedAt } = await pullRemote(userId);
+    return updatedAt !== null && updatedAt !== lastSeenUpdatedAt;
+  } catch {
+    return false;
+  }
+}
+
+/** Takes the saved progress as it now stands, throwing away this device's copy. */
+export async function adoptRemote(userId: string): Promise<boolean> {
+  try {
+    const { snapshot, updatedAt } = await pullRemote(userId);
+    if (!snapshot) return false;
+    applySnapshot(snapshot);
+    localStorage.removeItem(DIRTY_KEY);
+    lastSeenUpdatedAt = updatedAt;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Uploads a snapshot. Resolves true once Supabase has it. */
 export async function pushSnapshot(userId: string, snapshot: ProgressSnapshot): Promise<boolean> {
   if (!client) return false;
   localStorage.setItem(DIRTY_KEY, '1');
-  const { error } = await client
-    .from(TABLE)
-    .upsert({ user_id: userId, data: snapshot, updated_at: new Date().toISOString() });
+  const updatedAt = new Date().toISOString();
+  const { error } = await client.from(TABLE).upsert({ user_id: userId, data: snapshot, updated_at: updatedAt });
   if (error) {
     console.warn('Progress sync failed; will retry', error.message);
     return false;
   }
   localStorage.removeItem(DIRTY_KEY);
+  lastSeenUpdatedAt = updatedAt;
   return true;
 }
 
@@ -108,7 +156,8 @@ export async function restoreForUser(userId: string): Promise<void> {
     localStorage.removeItem(DIRTY_KEY);
   }
 
-  const remote = await pullRemote(userId);
+  const { snapshot: remote, updatedAt } = await pullRemote(userId);
+  lastSeenUpdatedAt = updatedAt;
 
   if (remote && !(owner === userId && hasUnsentChanges)) {
     applySnapshot(remote);
@@ -120,38 +169,72 @@ export async function restoreForUser(userId: string): Promise<void> {
   localStorage.setItem(OWNER_KEY, userId);
 }
 
+/** What the app is told when a second device turns out to have been used. */
+export interface OtherDeviceEvent {
+  /** True when this device has work of its own that has not been saved yet. */
+  hasLocalChanges: boolean;
+}
+
 /**
  * Uploads changes as they happen: checks every few seconds, and once more
  * when the tab is hidden or closed. Returns a function that stops it.
+ *
+ * Before every upload it checks whether another device has saved since this
+ * one last did. If so it uploads nothing — overwriting the other device's work
+ * is the one thing this must never do — and reports it instead.
  */
-export function startAutoSync(userId: string, intervalMs = 4000): () => void {
+export function startAutoSync(
+  userId: string,
+  intervalMs = 4000,
+  onOtherDevice?: (event: OtherDeviceEvent) => void
+): () => void {
   let lastSent = JSON.stringify(takeSnapshot());
   let inFlight = false;
+  let halted = false;
+
+  const halt = (hasLocalChanges: boolean) => {
+    halted = true;
+    onOtherDevice?.({ hasLocalChanges });
+  };
 
   const syncIfChanged = async () => {
-    if (inFlight) return;
+    if (inFlight || halted) return;
     const snapshot = takeSnapshot();
     const serialized = JSON.stringify(snapshot);
-    if (serialized === lastSent && localStorage.getItem(DIRTY_KEY) !== '1') return;
+    const changedHere = serialized !== lastSent || localStorage.getItem(DIRTY_KEY) === '1';
+    if (!changedHere) return;
     inFlight = true;
     try {
+      if (await otherDeviceHasSaved(userId)) {
+        halt(true);
+        return;
+      }
       if (await pushSnapshot(userId, snapshot)) lastSent = serialized;
     } finally {
       inFlight = false;
     }
   };
 
-  const onHide = () => {
+  /** Coming back to the app: catch up before anything is typed into stale data. */
+  const onShow = async () => {
+    if (halted || inFlight) return;
+    if (!(await otherDeviceHasSaved(userId))) return;
+    const changedHere = JSON.stringify(takeSnapshot()) !== lastSent;
+    halt(changedHere);
+  };
+
+  const onVisibility = () => {
     if (document.visibilityState === 'hidden') void syncIfChanged();
+    else void onShow();
   };
 
   const timer = window.setInterval(syncIfChanged, intervalMs);
-  document.addEventListener('visibilitychange', onHide);
+  document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('pagehide', syncIfChanged);
 
   return () => {
     window.clearInterval(timer);
-    document.removeEventListener('visibilitychange', onHide);
+    document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pagehide', syncIfChanged);
   };
 }
