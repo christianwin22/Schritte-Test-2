@@ -1,4 +1,4 @@
--- Chris Personal App — Supabase setup
+-- DeutschMeister — Supabase setup
 -- Paste this whole file into Supabase → SQL Editor → New query → Run.
 -- It is safe to run again: every statement checks before it creates.
 
