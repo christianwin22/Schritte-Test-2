@@ -83,7 +83,7 @@ const SentenceWithWord: React.FC<{ sentence: string; word: WordEntry; className?
       )}
       {highlightWord(sentence, word).map((part, i) =>
         part.hit ? (
-          <strong key={i} className="font-black underline decoration-2 underline-offset-2 decoration-zinc-400 dark:decoration-zinc-500">
+          <strong key={i} className="font-black">
             {part.text}
           </strong>
         ) : (
@@ -2388,7 +2388,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           {learnDirection === 'DE_TO_EN' && isCardFlipped ? (
                             <>
                               <div className="flex items-center justify-center gap-2">
-                                <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 leading-snug">
+                                <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
                                   {currentFlashcard && (
                                     <SentenceWithWord sentence={example.german} word={currentFlashcard} />
                                   )}
@@ -2421,7 +2421,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           ) : (
                             <>
                               <div className="flex items-center justify-center gap-2">
-                                <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 leading-snug">
+                                <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
                                   {currentFlashcard && (
                                     <SentenceWithWord sentence={example.german} word={currentFlashcard} />
                                   )}
@@ -2751,20 +2751,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   </div>
 
                   {/* Question Box (Maintains full height on correct answers, shrinks only slightly for incorrect feedback to fill gap) */}
-                  <div
-                    className={`w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col items-center justify-center text-center transition-all duration-300 ${
-                      !practiceFeedback || practiceFeedback.correct
-                        ? 'flex-1 min-h-[88px] sm:min-h-[160px] p-4 sm:p-6'
-                        : 'flex-1 min-h-[76px] sm:min-h-[110px] p-4 py-3 sm:py-3.5'
-                    }`}
-                  >
-                    <h3
-                      className={`font-black text-zinc-900 dark:text-zinc-100 tracking-tight transition-all duration-300 ${
-                        !practiceFeedback || practiceFeedback.correct
-                          ? 'text-2xl sm:text-3xl'
-                          : 'text-xl sm:text-2xl'
-                      }`}
-                    >
+                  <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col items-center justify-center text-center flex-1 min-h-[88px] sm:min-h-[160px] p-4 sm:p-6">
+                    <h3 className="font-black text-zinc-900 dark:text-zinc-100 tracking-tight text-2xl sm:text-3xl">
                       {practiceDirection === 'EN_TO_DE'
                         ? currentPracticeWord && meaningLines(currentPracticeWord).length > 1
                           ? meaningLines(currentPracticeWord).map((line, i) => (
@@ -2868,6 +2856,29 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             </button>
                           </div>
 
+                          {/* The word in a sentence, as Learn shows it */}
+                          {currentPracticeWord && getExampleSentence(currentPracticeWord).german && (
+                            <div className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug text-left">
+                                <SentenceWithWord
+                                  sentence={getExampleSentence(currentPracticeWord).german}
+                                  word={currentPracticeWord}
+                                />
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  playSound('tap');
+                                  speakGerman(getExampleSentence(currentPracticeWord).german);
+                                }}
+                                title={appLanguage === 'en' ? 'Listen to sentence' : 'Satz anhören'}
+                                className="p-2 rounded-xl bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
+                              >
+                                <Volume2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+
                           {/* Continue Button (Green) */}
                           <button
                             type="button"
@@ -2910,6 +2921,29 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                               </button>
                             </div>
                           </div>
+
+                          {/* The word in a sentence, as Learn shows it */}
+                          {currentPracticeWord && getExampleSentence(currentPracticeWord).german && (
+                            <div className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 leading-snug text-left">
+                                <SentenceWithWord
+                                  sentence={getExampleSentence(currentPracticeWord).german}
+                                  word={currentPracticeWord}
+                                />
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  playSound('tap');
+                                  speakGerman(getExampleSentence(currentPracticeWord).german);
+                                }}
+                                title={appLanguage === 'en' ? 'Listen to sentence' : 'Satz anhören'}
+                                className="p-2 rounded-xl bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
+                              >
+                                <Volume2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
 
                           {/* Got It Button (Red) */}
                           <button
