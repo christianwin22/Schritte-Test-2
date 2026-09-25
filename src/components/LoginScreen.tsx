@@ -126,9 +126,6 @@ const AccountRow: React.FC<{
         <p className="text-xs font-bold text-zinc-700 dark:text-zinc-200">
           Remove <span className="font-black">{account.email}</span> from this device?
         </p>
-        <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-          Nothing is deleted — your progress stays in the account. You'd just type the address again next time.
-        </p>
         <div className="flex gap-2">
           <button
             type="button"
@@ -271,16 +268,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
   }
 
   // --- Log in (real, or the sandbox's practice copy) --------------------------
-  const continueWithGoogle = async (hint?: string) => {
+  const continueWithGoogle = async () => {
     if (isSandbox) return onOpenSandbox();
     if (!auth) return;
     setError(null);
     setBusy('google');
-    const { error } = await auth.signInWithOAuth({
-      provider: 'google',
-      // A remembered account goes straight to itself, instead of the chooser.
-      options: hint ? { redirectTo, queryParams: { login_hint: hint } } : { redirectTo },
-    });
+    // No login_hint. Pointing Google at one address skipped its chooser, and
+    // when that address had no Google session in this browser the flow stopped
+    // there and never came back — the auth log showed authorize with no
+    // callback. Google's own chooser is one extra tap and always returns.
+    const { error } = await auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
     // On success the browser is already leaving for Google; only failures come back here.
     if (error) {
       setError(friendlyAuthError(error.message));
@@ -290,7 +287,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
 
   /** Taps on a remembered account: the same way they came in last time. */
   const continueAs = async (account: KnownAccount) => {
-    if (account.via === 'google' || !EMAIL_SIGN_IN) return continueWithGoogle(account.email);
+    if (account.via === 'google' || !EMAIL_SIGN_IN) return continueWithGoogle();
     await sendLinkTo(account.email);
   };
 

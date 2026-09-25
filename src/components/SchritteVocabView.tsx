@@ -2946,8 +2946,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col">
-            {renderDrillModeSwitch()}
-            {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
+            {/* Der/Die/Das and Plural type too, so their bars also stand aside for the keyboard */}
+            <div className="kbd-hide">{renderDrillModeSwitch()}</div>
+            <div className="kbd-hide">
+              {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
+            </div>
             <form
               onSubmit={(e) => {
                 if (isArticle) e.preventDefault();
