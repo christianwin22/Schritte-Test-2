@@ -62,6 +62,27 @@ export function currentStreak(days: Set<string> = activeDays()): number {
   return count;
 }
 
+/**
+ * The calendar week you are in, Sunday to Saturday, the way a week strip is
+ * normally drawn: days still to come are not misses, they simply have not
+ * happened, so they are marked apart from days that were skipped.
+ */
+export function thisWeek(days: Set<string> = activeDays()): {
+  date: Date;
+  active: boolean;
+  isToday: boolean;
+  future: boolean;
+}[] {
+  const today = new Date();
+  const sunday = shiftDays(today, -today.getDay());
+  const todayKey = dayKey(today);
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = shiftDays(sunday, i);
+    const key = dayKey(date);
+    return { date, active: days.has(key), isToday: key === todayKey, future: date > today && key !== todayKey };
+  });
+}
+
 /** The last seven days, oldest first, for the little week strip. */
 export function lastSevenDays(days: Set<string> = activeDays()): { date: Date; active: boolean }[] {
   const today = new Date();

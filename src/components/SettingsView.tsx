@@ -23,6 +23,10 @@ import {
 import { playSound } from '../utils/audioEffects';
 import { runningBuild } from '../main';
 import { AccountDialog } from './AccountDialog';
+import { useAuth } from './AuthGate';
+import { seedDueForTesting } from '../utils/srsEngine';
+import { INITIAL_VOCABULARY } from '../data/vocabulary';
+import { FlaskConical } from 'lucide-react';
 import { testGermanVoice, type VoiceCheck } from '../utils/speech';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
@@ -58,6 +62,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const t = getTranslation(appLanguage);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [seeded, setSeeded] = useState(false);
+  const isSandbox = useAuth()?.isSandbox ?? false;
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   return (
@@ -83,6 +89,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </button>
 
       {accountOpen && <AccountDialog appLanguage={appLanguage} onClose={() => setAccountOpen(false)} />}
+
+      {/* Sandbox only: fills the review schedule so it can be tried out today */}
+      {isSandbox && (
+        <button
+          type="button"
+          onClick={() => {
+            playSound('tap');
+            seedDueForTesting(INITIAL_VOCABULARY.filter((w) => w.level === 'A1' && w.lektion === 1));
+            setSeeded(true);
+            window.setTimeout(() => window.location.reload(), 600);
+          }}
+          className="w-full bg-amber-50 dark:bg-amber-950/40 rounded-3xl p-6 border-2 border-amber-300 dark:border-amber-700 flex items-center justify-between gap-3 cursor-pointer"
+        >
+          <span className="text-base font-black text-amber-900 dark:text-amber-200">
+            {seeded ? 'Filling…' : 'Make 15 words due now'}
+          </span>
+          <FlaskConical className="w-5 h-5 text-amber-700 dark:text-amber-400 shrink-0" />
+        </button>
+      )}
 
       {/* Main Settings Sections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

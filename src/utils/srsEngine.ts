@@ -72,6 +72,31 @@ export function processFSRSReview(
   };
 }
 
+/**
+ * Sandbox only: makes a pile of words due now, so Review can be walked through
+ * without waiting days for a real schedule to ripen. Never called outside the
+ * sandbox — real progress is earned, not seeded.
+ */
+export function seedDueForTesting(words: WordEntry[], howMany = 15): Record<string, FSRSCardRecord> {
+  const records = loadAllFSRSRecords();
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  for (const word of words.slice(0, howMany)) {
+    records[word.id] = {
+      wordId: word.id,
+      status: 'review',
+      isUnlocked: true,
+      stability: 1 + Math.random() * 3,
+      difficulty: 4 + Math.random() * 3,
+      intervalDays: 1,
+      nextReviewDate: yesterday, // due now
+      lastReviewedAt: yesterday,
+      repetitionCount: 1 + Math.floor(Math.random() * 4),
+    };
+  }
+  saveAllFSRSRecords(records);
+  return records;
+}
+
 /** Load all FSRS card records from localStorage. A new account starts with none. */
 export function loadAllFSRSRecords(): Record<string, FSRSCardRecord> {
   try {

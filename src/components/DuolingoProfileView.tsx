@@ -2,7 +2,7 @@ import React from 'react';
 import { Flame, ShieldCheck, Settings } from 'lucide-react';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { playSound } from '../utils/audioEffects';
-import { currentStreak, lastSevenDays } from '../utils/streak';
+import { currentStreak, thisWeek } from '../utils/streak';
 import { learntWordCount } from '../utils/srsEngine';
 import { SwitchAccountButton } from './SwitchAccountButton';
 import { useAuth } from './AuthGate';
@@ -26,7 +26,7 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
   const name = nameFor(profile, auth?.email ?? null);
   const streak = currentStreak();
   const learnt = learntWordCount();
-  const week = lastSevenDays();
+  const week = thisWeek();
   const dayNames =
     appLanguage === 'en'
       ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -55,9 +55,17 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
 
         {/* Avatar */}
         <div className="relative shrink-0">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 border-4 border-zinc-100 dark:border-zinc-700 shadow-sm flex items-center justify-center font-black text-2xl sm:text-3xl tracking-tighter">
-            {initialsFor(name)}
-          </div>
+          {profile.photo ? (
+            <img
+              src={profile.photo}
+              alt=""
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-4 border-zinc-100 dark:border-zinc-700 shadow-sm"
+            />
+          ) : (
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 border-4 border-zinc-100 dark:border-zinc-700 shadow-sm flex items-center justify-center font-black text-2xl sm:text-3xl tracking-tighter">
+              {initialsFor(name)}
+            </div>
+          )}
           {workingLevel && (
             <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-lg bg-zinc-900 text-white font-black text-[10px] uppercase tracking-wider border-2 border-white dark:border-zinc-800 shadow-xs">
               {workingLevel}
@@ -101,24 +109,37 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
         </div>
       </div>
 
-      {/* The last seven days, as they happened */}
+      {/* This week, Duolingo-style: the calendar week, today ringed, the days
+          still to come left plain rather than looking like misses. */}
       <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-4">
-        <h3 className="font-black text-lg text-zinc-900 dark:text-zinc-100 tracking-tight">
-          {appLanguage === 'en' ? 'This week' : 'Diese Woche'}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-lg text-zinc-900 dark:text-zinc-100 tracking-tight">
+            {appLanguage === 'en' ? 'This week' : 'Diese Woche'}
+          </h3>
+          <span className="flex items-center gap-1 text-sm font-black text-zinc-900 dark:text-zinc-100">
+            <Flame className="w-4 h-4 fill-zinc-900 dark:fill-white" />
+            {streak}
+          </span>
+        </div>
 
-        <div className="grid grid-cols-7 gap-2">
-          {week.map(({ date, active }) => (
+        <div className="grid grid-cols-7 gap-1.5">
+          {week.map(({ date, active, isToday, future }) => (
             <div key={date.toISOString()} className="flex flex-col items-center gap-2">
-              <span className="text-xs font-bold text-zinc-400">{dayNames[date.getDay()]}</span>
+              <span className={`text-[11px] font-black ${isToday ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'}`}>
+                {dayNames[date.getDay()]}
+              </span>
               <div
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                   active
-                    ? 'bg-zinc-950 border-zinc-950 text-white dark:bg-white dark:border-white dark:text-zinc-950'
-                    : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-300 dark:text-zinc-600'
+                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
+                    : isToday
+                    ? 'border-2 border-dashed border-zinc-400 text-zinc-400'
+                    : future
+                    ? 'bg-zinc-50 dark:bg-zinc-800/50 text-zinc-300 dark:text-zinc-600'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-300 dark:text-zinc-600'
                 }`}
               >
-                {active ? <Flame className="w-4 h-4 fill-current text-current" /> : <span className="text-xs font-bold">•</span>}
+                {active ? <Flame className="w-4 h-4 fill-current" /> : <span className="text-[11px] font-black">{date.getDate()}</span>}
               </div>
             </div>
           ))}

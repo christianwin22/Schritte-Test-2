@@ -10,18 +10,50 @@
 const KEY = 'deutschmeister_profile_v1';
 
 /** What most apps ask for, and nothing more: a name, and two optional facts. */
-export type Gender = '' | 'female' | 'male' | 'other' | 'unsaid';
+export type Gender = '' | 'female' | 'male';
 
 export interface Profile {
   name: string;
   gender: Gender;
   /** ISO date, "1990-04-23". Optional. */
   birthday: string;
+  /**
+   * A small square photo as a data URL. Shrunk to 256px before it is kept —
+   * a full-size one would eat the browser's whole allowance.
+   */
+  photo?: string;
   /** Set once the welcome page has been answered. */
   setUp: boolean;
 }
 
 export const EMPTY_PROFILE: Profile = { name: '', gender: '', birthday: '', setUp: false };
+
+/** Shrinks a chosen picture to a square that is safe to store and sync. */
+export function shrinkPhoto(file: File, size = 256): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('not an image'));
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('no canvas'));
+        // cover: fill the square from the middle of the picture
+        const scale = Math.max(size / img.width, size / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export function loadProfile(): Profile {
   try {

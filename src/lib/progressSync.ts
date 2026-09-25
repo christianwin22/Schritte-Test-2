@@ -14,6 +14,41 @@ const APP_KEY_PREFIXES = ['deutschmeister_', 'schritte_'];
 
 // Bookkeeping keys: deliberately outside the prefixes above, so they are never synced.
 const OWNER_KEY = 'cpa_sync_owner'; // which user the progress in this browser belongs to
+const DEVICE_KEY = 'cpa_device_id'; // this browser's own name, never synced
+/**
+ * Which device is currently the one in charge. Inside the synced data, so
+ * every device sees it. Choosing "Keep this one" writes this device's id, and
+ * any other device signs itself out the next time it looks — otherwise the
+ * two keep taking turns telling each other about the conflict.
+ */
+const ACTIVE_DEVICE_KEY = 'deutschmeister_active_device_v1';
+
+export function deviceId(): string {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
+
+/** Marks this device as the one in charge, and saves that with the progress. */
+export async function claimAccount(userId: string): Promise<boolean> {
+  localStorage.setItem(ACTIVE_DEVICE_KEY, deviceId());
+  return pushSnapshot(userId, takeSnapshot());
+}
+
+/** True when another device has claimed the account since. */
+export async function wasTakenOver(userId: string): Promise<boolean> {
+  if (!client) return false;
+  try {
+    const { snapshot } = await pullRemote(userId);
+    const active = snapshot?.[ACTIVE_DEVICE_KEY];
+    return !!active && active !== deviceId();
+  } catch {
+    return false;
+  }
+}
 const DIRTY_KEY = 'cpa_sync_dirty'; // local changes that have not reached Supabase yet
 
 const TABLE = 'user_progress';

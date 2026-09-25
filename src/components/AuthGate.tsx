@@ -7,11 +7,13 @@ import {
   enterSandbox,
   exitSandbox,
   pushSnapshot,
+  claimAccount,
   clearAppData,
   restoreForUser,
   signOutAndClear,
   startAutoSync,
   takeSnapshot,
+  wasTakenOver,
   type OtherDeviceEvent,
 } from '../lib/progressSync';
 import { flushQueue } from '../lib/suggestions';
@@ -148,7 +150,15 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     if (phase !== 'ready' || !userId) return;
     // Ideas noted in the Sandbox or offline go up now that we're signed in.
     void flushQueue();
-    return startAutoSync(userId, 4000, setOtherDevice);
+    return startAutoSync(userId, 4000, async (event) => {
+      // Handed over to another device: leave quietly rather than argue.
+      if (await wasTakenOver(userId)) {
+        await signOutAndClear(userId);
+        window.location.reload();
+        return;
+      }
+      setOtherDevice(event);
+    });
   }, [phase, userId, syncRun]);
 
   if (phase === 'checking') return <Splash label="Loading…" />;
@@ -288,7 +298,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
             window.location.reload();
           }}
           onKeepThis={async () => {
-            await pushSnapshot(userId, takeSnapshot());
+            // Take the account over as well, so the other device stops asking
+            // and signs itself out when it next looks.
+            await claimAccount(userId);
             setOtherDevice(null);
             setSyncRun((n) => n + 1); // start saving again
           }}
@@ -301,7 +313,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 /**
  * Shown when the same account has been used somewhere else since this device
  * last saved. Saving stops until it is answered, so neither side is silently
- * written over.
+ * written over. Choosing this device also takes the account over: the other
+ * one signs itself out the next time it looks, instead of asking again.
  */
 const OtherDeviceNotice: React.FC<{
   hasLocalChanges: boolean;
@@ -310,18 +323,11 @@ const OtherDeviceNotice: React.FC<{
 }> = ({ hasLocalChanges, onTakeOther, onKeepThis }) => (
   <div className="fixed inset-x-0 bottom-0 z-[60] p-3 font-sans">
     <div className="mx-auto max-w-md bg-white dark:bg-zinc-900 border-2 border-amber-400 dark:border-amber-500 rounded-3xl shadow-xl p-4 space-y-3">
-      <div className="flex items-start gap-2.5">
-        <Smartphone className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-        <div className="min-w-0">
-          <p className="font-black text-sm text-zinc-900 dark:text-zinc-100">
-            You've been studying on another device
-          </p>
-          <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-0.5">
-            {hasLocalChanges
-              ? 'This device has work of its own that is not saved yet. Keep which one?'
-              : 'Catch this device up to your latest progress.'}
-          </p>
-        </div>
+      <div className="flex items-center gap-2.5">
+        <Smartphone className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+        <p className="font-black text-sm text-zinc-900 dark:text-zinc-100">
+          {hasLocalChanges ? 'Also studying on another device' : 'Newer progress on another device'}
+        </p>
       </div>
 
       {hasLocalChanges ? (
@@ -331,7 +337,7 @@ const OtherDeviceNotice: React.FC<{
             onClick={onTakeOther}
             className="flex-1 py-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs cursor-pointer"
           >
-            Use the other device
+            Use that one
           </button>
           <button
             type="button"
