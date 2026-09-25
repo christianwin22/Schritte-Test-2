@@ -1,36 +1,99 @@
 /**
- * Text-to-speech utility for German pronunciation using Web Speech API
+ * Saying German out loud, with the things iOS needs.
+ *
+ * Three of them, all learned the hard way:
+ *  - getVoices() is empty on the first call and fills in later, so the voice
+ *    is looked up when it is needed, not once at the start.
+ *  - cancel() immediately followed by speak() can leave the queue wedged and
+ *    the new utterance is silently dropped, so speaking is given its own tick.
+ *  - nothing will ever be said until the first utterance follows a real tap,
+ *    so the first tap anywhere primes it.
+ *
+ * What none of this can fix: with the ring/silent switch on Silent, an iPhone
+ * says nothing. That is the phone, not the app.
  */
+
+let primed = false;
+
+/** The first tap on the page wakes the speech engine up. */
+function prime(): void {
+  if (primed || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  primed = true;
+  try {
+    const silent = new SpeechSynthesisUtterance('');
+    silent.volume = 0;
+    window.speechSynthesis.speak(silent);
+  } catch {
+    // nothing to do; the real utterance may still work
+  }
+}
+
+if (typeof window !== 'undefined') {
+  const wake = () => {
+    prime();
+    window.removeEventListener('touchend', wake);
+    window.removeEventListener('pointerdown', wake);
+  };
+  window.addEventListener('touchend', wake, { once: true, passive: true });
+  window.addEventListener('pointerdown', wake, { once: true });
+}
+
+function germanVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null; // not loaded yet; lang alone still works
+  return (
+    voices.find((v) => v.lang.startsWith('de') && /Google|Natural|Premium|Enhanced/.test(v.name)) ??
+    voices.find((v) => v.lang.startsWith('de')) ??
+    null
+  );
+}
+
+export function isSpeechAvailable(): boolean {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+}
+
+/** Text-to-speech utility for German pronunciation using Web Speech API */
 export function speakGerman(text: string): void {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+  if (!isSpeechAvailable()) {
     console.warn('Web Speech API is not supported in this browser.');
     return;
   }
+  prime();
 
-  // Cancel ongoing speech
-  window.speechSynthesis.cancel();
-
+  const synth = window.speechSynthesis;
   // Strip cloze brackets if present
-  const cleanText = text.replace(/\{\{blank\}\}/g, '...').replace(/\{\{.*?\}\}/g, '');
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang = 'de-DE';
-  utterance.rate = 0.88; // Comfortable pace for language learners
-  utterance.pitch = 1.0;
+  const cleanText = text.replace(/\{\{blank\}\}/g, '...').replace(/\{\{.*?\}\}/g, '').trim();
+  if (!cleanText) return;
 
-  // Try to find a high quality German voice if available
-  const voices = window.speechSynthesis.getVoices();
-  const germanVoice =
-    voices.find(
-      (v) =>
-        v.lang.startsWith('de') &&
-        (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium'))
-    ) || voices.find((v) => v.lang.startsWith('de'));
+  const say = () => {
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    utterance.rate = 0.88; // Comfortable pace for language learners
+    utterance.pitch = 1.0;
+    const voice = germanVoice();
+    if (voice) utterance.voice = voice;
 
-  if (germanVoice) {
-    utterance.voice = germanVoice;
+    // iOS sometimes accepts the utterance and then says nothing. If it has not
+    // started shortly after, wake the queue and try once more.
+    let started = false;
+    utterance.onstart = () => {
+      started = true;
+    };
+    synth.speak(utterance);
+    window.setTimeout(() => {
+      if (started || synth.speaking) return;
+      synth.resume();
+      synth.speak(utterance);
+    }, 300);
+  };
+
+  if (synth.speaking || synth.pending) {
+    synth.cancel();
+    // A tick between cancel and speak; back to back, iOS drops the new one.
+    window.setTimeout(say, 60);
+    return;
   }
-
-  window.speechSynthesis.speak(utterance);
+  say();
 }
 
 /**

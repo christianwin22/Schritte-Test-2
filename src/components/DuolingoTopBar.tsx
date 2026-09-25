@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, User } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { AppLogo } from './AppLogo';
+import { useAuth } from './AuthGate';
 
 interface DuolingoTopBarProps {
   onOpenProfile: () => void;
@@ -16,6 +17,51 @@ interface DuolingoTopBarProps {
   /** Rendered on the right, before Back/Profile (the 'note an idea' button). */
   extraAction?: React.ReactNode;
 }
+
+/**
+ * In the sandbox, a way out that sits in the bar itself.
+ *
+ * The tag at the foot of the screen can end up under the home indicator on a
+ * phone, and the button on the Profile page is a scroll away. The bar is on
+ * every screen and never moves, so the way out belongs here too.
+ */
+const SandboxExit: React.FC = () => {
+  const auth = useAuth();
+  const [asking, setAsking] = useState(false);
+  if (!auth?.isSandbox) return null;
+
+  if (asking) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => void auth.leave()}
+          className="px-2.5 h-8 sm:h-9 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-[11px] cursor-pointer"
+        >
+          Exit
+        </button>
+        <button
+          type="button"
+          onClick={() => setAsking(false)}
+          className="px-2.5 h-8 sm:h-9 rounded-xl bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-100 font-black text-[11px] cursor-pointer"
+        >
+          Stay
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setAsking(true)}
+      title="Leave the sandbox"
+      className="px-2.5 h-8 sm:h-9 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-[11px] uppercase tracking-wider shadow-2xs active:scale-95 transition-all cursor-pointer"
+    >
+      Sandbox
+    </button>
+  );
+};
 
 export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
   onOpenProfile,
@@ -60,6 +106,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
 
         {/* Right: Profile on Main Home page; Back button inside any section */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-end">
+          <SandboxExit />
           {extraAction}
           {isInsideSection ? (
             <button
