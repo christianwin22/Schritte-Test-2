@@ -21,18 +21,15 @@ import {
 } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
 import { runningBuild } from '../main';
+import { LogOutButton } from './LogOutButton';
 import { testGermanVoice, type VoiceCheck } from '../utils/speech';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
 
 interface SettingsViewProps {
-  isDark: boolean;
-  themeMode: ThemeMode;
-  onSetThemeMode: (mode: ThemeMode) => void;
   soundEnabled: boolean;
   musicEnabled: boolean;
   notificationEnabled: boolean;
-  onToggleTheme: () => void;
   onToggleSound: () => void;
   onToggleMusic: () => void;
   onToggleNotification: () => void;
@@ -45,13 +42,9 @@ interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
-  isDark,
-  themeMode,
-  onSetThemeMode,
   soundEnabled,
   musicEnabled,
   notificationEnabled,
-  onToggleTheme,
   onToggleSound,
   onToggleMusic,
   onToggleNotification,
@@ -65,15 +58,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const t = getTranslation(appLanguage);
   const [voice, setVoice] = useState<VoiceCheck | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-
-  const handleThemeChange = (mode: ThemeMode) => {
-    playSound('tap');
-    if (onSetThemeMode) {
-      onSetThemeMode(mode);
-    } else {
-      onToggleTheme();
-    }
-  };
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12 animate-fadeIn">
@@ -136,74 +120,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Deutsch</span>
                 </div>
                 {appLanguage === 'de' && <Check className="w-4 h-4 stroke-[3]" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Card: Theme & Appearance */}
-          <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shrink-0">
-                {themeMode === 'system' ? (
-                  <Laptop className="w-5 h-5" />
-                ) : isDark ? (
-                  <Moon className="w-5 h-5" />
-                ) : (
-                  <Sun className="w-5 h-5" />
-                )}
-              </div>
-              <div>
-                <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
-                  {t.appearance}
-                </h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                  {themeMode === 'system'
-                    ? (appLanguage === 'en' ? 'Synchronized with OS theme' : 'Automatisch nach Betriebssystem')
-                    : isDark
-                    ? (appLanguage === 'en' ? 'Refined Slate Graphite Dark Mode' : 'Dunkelmodus aktiv')
-                    : t.lightMode}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 bg-zinc-100 dark:bg-zinc-800/90 p-1.5 rounded-2xl border border-zinc-200/80 dark:border-zinc-700">
-              <button
-                type="button"
-                onClick={() => handleThemeChange('light')}
-                className={`py-2.5 px-2 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  themeMode === 'light'
-                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                    : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
-                }`}
-              >
-                <Sun className="w-4 h-4" />
-                <span>{appLanguage === 'en' ? 'Light' : 'Hell'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleThemeChange('dark')}
-                className={`py-2.5 px-2 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  themeMode === 'dark'
-                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                    : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
-                }`}
-              >
-                <Moon className="w-4 h-4" />
-                <span>{appLanguage === 'en' ? 'Dark' : 'Dunkel'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleThemeChange('system')}
-                className={`py-2.5 px-2 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  themeMode === 'system'
-                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                    : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
-                }`}
-              >
-                <Laptop className="w-4 h-4" />
-                <span>{appLanguage === 'en' ? 'System (Auto)' : 'Auto'}</span>
               </button>
             </div>
           </div>
@@ -367,6 +283,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Log out, at the end. Switching between accounts is on Profile. */}
+      <LogOutButton appLanguage={appLanguage} />
 
       {/* Which build this is. Useful when a phone is holding an old copy. */}
       <p className="text-center text-[10px] font-bold text-zinc-400 pt-1">{runningBuild()}</p>

@@ -129,26 +129,10 @@ export default function App() {
     }
   });
 
-  // 3-Way Theme Mode: 'light' | 'dark' | 'system'
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
-    try {
-      const saved = localStorage.getItem(THEME_MODE_STORAGE_KEY);
-      if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
-    } catch {}
-    return 'system';
-  });
-
-  // Dark Mode active flag
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem(THEME_MODE_STORAGE_KEY);
-      if (saved === 'dark') return true;
-      if (saved === 'light') return false;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    } catch {
-      return false;
-    }
-  });
+  // The app is light only. Dark mode was taken out of Settings; the dark:
+  // classes stay in the markup, unused, so it is a small change to bring back.
+  const themeMode: ThemeMode = 'light';
+  const isDark = false;
 
   // Sound FX State
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -275,55 +259,11 @@ export default function App() {
     } catch {}
   }, [notificationEnabled]);
 
-  // Handle Theme Mode changes (Light / Dark / System)
+  // The dark class is never added; everything renders light.
   useEffect(() => {
-    const updateDarkState = () => {
-      if (themeMode === 'dark') {
-        setIsDark(true);
-      } else if (themeMode === 'light') {
-        setIsDark(false);
-      } else {
-        setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
-      }
-    };
-
-    updateDarkState();
-
-    if (themeMode === 'system') {
-      const media = window.matchMedia('(prefers-color-scheme: dark)');
-      const listener = (e: MediaQueryListEvent) => {
-        setIsDark(e.matches);
-      };
-      media.addEventListener('change', listener);
-      return () => media.removeEventListener('change', listener);
-    }
-  }, [themeMode]);
-
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
-    }
-
-    const themeHex = isDark ? '#2b303a' : '#f8f9fa';
-    document.documentElement.style.backgroundColor = themeHex;
-    document.body.style.backgroundColor = themeHex;
-
-    const themeMetas = document.querySelectorAll('meta[name="theme-color"]');
-    themeMetas.forEach((meta) => meta.setAttribute('content', themeHex));
-
-    const appleStatusMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-    if (appleStatusMeta) {
-      appleStatusMeta.setAttribute('content', isDark ? 'black-translucent' : 'default');
-    }
-  }, [isDark]);
-
-  useEffect(() => {
-    setGlobalSoundEnabled(soundEnabled);
-  }, [soundEnabled]);
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+  }, []);
 
   // Gamification Handlers
   // Any answered card counts as having practised today, right or wrong.
@@ -662,16 +602,9 @@ export default function App() {
           {/* SETTINGS TAB (FULL PAGE) */}
           {currentTab === 'settings' && (
             <SettingsView
-              isDark={isDark}
-              themeMode={themeMode}
-              onSetThemeMode={setThemeMode}
               soundEnabled={soundEnabled}
               musicEnabled={musicEnabled}
               notificationEnabled={notificationEnabled}
-              onToggleTheme={() => {
-                const nextMode = themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'system' : 'light';
-                setThemeMode(nextMode);
-              }}
               onToggleSound={() => setSoundEnabled(!soundEnabled)}
               onToggleMusic={() => setMusicEnabled(!musicEnabled)}
               onToggleNotification={() => setNotificationEnabled(!notificationEnabled)}

@@ -4,7 +4,7 @@ import { AppLanguage, getTranslation } from '../utils/translations';
 import { playSound } from '../utils/audioEffects';
 import { currentStreak, lastSevenDays } from '../utils/streak';
 import { learntWordCount } from '../utils/srsEngine';
-import { LogOutButton } from './LogOutButton';
+import { SwitchAccountButton } from './SwitchAccountButton';
 
 interface DuolingoProfileViewProps {
   /** The lowest level you are actually working in, e.g. "A1". */
@@ -120,8 +120,8 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Log out — back to the login home page */}
-      <LogOutButton appLanguage={appLanguage} />
+      {/* Moving between accounts. Logging out for good lives in Settings. */}
+      <SwitchAccountButton appLanguage={appLanguage} />
     </div>
   );
 };

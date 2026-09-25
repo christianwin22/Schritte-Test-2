@@ -256,6 +256,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    * them. Learn is where you choose, and the back arrow returns here.
    */
   const [flashcardSubMode, setFlashcardSubMode] = useState<FlashcardSubMode>('learn');
+  /**
+   * Whether the cards are showing yet.
+   *
+   * Practice and Review open on a short screen saying what is waiting, with a
+   * Start button. Nothing begins until it is tapped, so picking a mode by
+   * accident costs nothing, and the level and lesson can still be changed
+   * first — once the cards are up, those controls are gone.
+   */
+  const [sessionStarted, setSessionStarted] = useState(false);
 
   // FSRS Records State
   const [fsrsRecords, setFsrsRecords] = useState<Record<string, FSRSCardRecord>>(() => loadAllFSRSRecords());
@@ -1064,6 +1073,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     const doSwitch = () => {
       playSound('tap');
       setFlashcardSubMode(mode);
+      setSessionStarted(false); // Practice and Review wait on their Start screen
       setIsPracticeComplete(false);
       setIsLearnComplete(false);
       setPracticeQueueIndex(0);
@@ -1968,7 +1978,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           {/* Both bars belong to Learn. Practice and Review are the card, the
               keyboard and the header — there is no room for anything else, and
               nothing here needs changing mid-session. Back arrow to come out. */}
-          {flashcardSubMode === 'learn' && (
+          {/* The bars belong to Learn and to the Start screen. Once the cards
+              are up it is the header, the card and the keyboard. */}
+          {(flashcardSubMode === 'learn' || !sessionStarted) && (
             <>
               {renderModeBanner()}
               {renderFilterBanner()}
@@ -1976,7 +1988,37 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           )}
 
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
-            {flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
+            {flashcardSubMode !== 'learn' && !sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 py-6">
+                <div className="space-y-1">
+                  <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">
+                    {flashcardSubMode === 'practice'
+                      ? appLanguage === 'en' ? 'Practice' : 'Üben'
+                      : appLanguage === 'en' ? 'Review' : 'Wiederholen'}
+                  </p>
+                  <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
+                    {flashcardSubMode === 'practice'
+                      ? `${filteredWords.length} ${appLanguage === 'en' ? 'words' : 'Wörter'}`
+                      : `${practiceQueue.length} ${appLanguage === 'en' ? 'words due' : 'Wörter fällig'}`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('tap');
+                    setSessionStarted(true);
+                  }}
+                  className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
+                >
+                  {appLanguage === 'en' ? 'Start' : 'Starten'}
+                </button>
+                <p className="text-[11px] font-semibold text-zinc-400 max-w-xs">
+                  {appLanguage === 'en'
+                    ? 'Change the level or lesson above before you start — the card screen has no room for them.'
+                    : 'Stufe oder Lektion oben ändern – auf der Kartenseite ist dafür kein Platz.'}
+                </p>
+              </div>
+            ) : flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
               /* Review with nothing unlocked: say so, instead of showing words you have not met */
               <div className="py-6 text-center">
                 <p className="font-black text-zinc-900 dark:text-zinc-100">
