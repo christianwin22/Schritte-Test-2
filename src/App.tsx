@@ -534,7 +534,9 @@ export default function App() {
       {/* Main Content View Container */}
       <div
         className={`flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 flex flex-col ${
-          isScrollableTab ? 'py-5 sm:py-6 overflow-visible' : 'py-2 sm:py-4 justify-center overflow-hidden'
+          isScrollableTab
+            ? 'pt-5 sm:pt-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))] overflow-visible'
+            : 'py-2 sm:py-4 justify-center overflow-hidden'
         }`}
       >
         <main

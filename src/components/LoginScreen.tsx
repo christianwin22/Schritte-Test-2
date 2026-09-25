@@ -74,11 +74,61 @@ const AuthCard: React.FC<{ children: React.ReactNode; onBack?: () => void }> = (
 };
 
 /** The yellow "Sandbox · test" tag — same place on every page, the app's and the login's. */
-export const SandboxTag = () => (
-  <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-3 py-1 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black uppercase tracking-wider shadow-sm">
-    Sandbox · test
-  </div>
-);
+/**
+ * The sandbox marker. Given onExit it becomes the way out as well.
+ *
+ * Inside the app installed on a home screen there is no address bar to fall
+ * back on, and the Exit button lives at the foot of Profile, which can sit
+ * under the home indicator. This tag is on every screen, so it is the one
+ * place the way out can always be found. It sits above the home indicator.
+ */
+export const SandboxTag: React.FC<{ onExit?: () => void }> = ({ onExit }) => {
+  const [asking, setAsking] = useState(false);
+  const bottom = 'bottom-[max(0.75rem,env(safe-area-inset-bottom))]';
+
+  if (!onExit) {
+    return (
+      <div className={`fixed ${bottom} left-1/2 -translate-x-1/2 z-50 pointer-events-none px-3 py-1 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black uppercase tracking-wider shadow-sm`}>
+        Sandbox · test
+      </div>
+    );
+  }
+
+  if (asking) {
+    return (
+      <div className={`fixed ${bottom} left-1/2 -translate-x-1/2 z-50 w-[min(20rem,calc(100vw-1.5rem))] bg-white dark:bg-zinc-900 border-2 border-amber-400 rounded-2xl shadow-xl p-3 space-y-2.5`}>
+        <p className="text-xs font-bold text-center text-zinc-800 dark:text-zinc-100">Leave the sandbox?</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setAsking(false)}
+            className="flex-1 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 font-black text-xs cursor-pointer"
+          >
+            Stay
+          </button>
+          <button
+            type="button"
+            onClick={onExit}
+            className="flex-1 py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-xs cursor-pointer"
+          >
+            Exit sandbox
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setAsking(true)}
+      title="Tap to leave the sandbox"
+      className={`fixed ${bottom} left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-full bg-amber-400 hover:bg-amber-300 active:scale-95 text-amber-950 text-[11px] font-black uppercase tracking-wider shadow-sm cursor-pointer transition-all`}
+    >
+      Sandbox · test
+    </button>
+  );
+};
 
 /** Small heading that splits the Log in page into its two parts. */
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
