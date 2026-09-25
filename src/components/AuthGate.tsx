@@ -146,7 +146,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     return (
       <AuthContext.Provider value={sandbox}>
         {children}
-        <SandboxTag onExit={() => void sandbox.leave()} />
+        <SandboxTag />
       </AuthContext.Provider>
     );
   }

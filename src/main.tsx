@@ -50,6 +50,13 @@ export function runningBuild(): string {
 async function updateIfStale(): Promise<void> {
   const current = runningBuild();
   if (current === 'dev') return;
+  // Never in the middle of signing in. Google comes back with a one-time code
+  // in the address; reloading then asks to swap a code that has already been
+  // spent, and the sign-in is lost — which looks exactly like being unable to
+  // log in. Any update can wait for the next quiet moment.
+  if (/[?&]code=|[?&]error=/.test(window.location.search) || window.location.hash.includes('access_token')) {
+    return;
+  }
   try {
     const html = await fetch('/', { cache: 'no-store' }).then((r) => r.text());
     const latest = html.match(/index-[A-Za-z0-9_-]+\.js/)?.[0];
