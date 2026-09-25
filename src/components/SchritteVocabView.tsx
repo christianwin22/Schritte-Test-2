@@ -132,7 +132,7 @@ interface SchritteVocabViewProps {
   activeExerciseMode: string | null;
   onSelectExerciseMode: (mode: string | null) => void;
   onRequestAbandon: (onConfirmLeave: () => void) => void;
-  onQuizActiveChange?: (isActive: boolean) => void;
+  onQuizActiveChange?: (isActive: boolean, progressIsSaved?: boolean) => void;
   appLanguage?: AppLanguage;
 }
 
@@ -1027,9 +1027,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   useEffect(() => {
     if (onQuizActiveChange) {
-      onQuizActiveChange(isPracticeInProgress);
+      // In Review each answer is scheduled as it is given, so leaving loses
+      // nothing — the question asked on the way out says so.
+      onQuizActiveChange(isPracticeInProgress, flashcardSubMode === 'review');
     }
-  }, [isPracticeInProgress, onQuizActiveChange]);
+  }, [isPracticeInProgress, flashcardSubMode, onQuizActiveChange]);
 
   // Protected Filter and Submode Handlers with Abandon Confirmation
   const handleFilterChange = (newLevel?: CEFRLevel, newLektion?: number | 'ALL' | 'PART_1' | 'PART_2') => {
@@ -2661,12 +2663,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold text-zinc-400">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-bold text-zinc-400">
                     {/* Left: which way this card goes — same pill as Learn, but only a label: picked at
                         random per card, and it ignores taps entirely. */}
                     <div
                       aria-label={practiceDirection === 'EN_TO_DE' ? 'English to German' : 'German to English'}
-                      className="pointer-events-none select-none px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1"
+                      className="pointer-events-none select-none justify-self-start px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 shadow-2xs inline-flex items-center gap-1"
                     >
                       <span>{practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}</span>
                     </div>
@@ -2677,7 +2679,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       </span>
                     )}
                     {/* Review draws from every lesson, so each card says where it
-                        is from. That used to be a bar of its own. */}
+                        is from, in the middle. That used to be a bar of its own. */}
+                    <span className="text-center">
                     {flashcardSubMode === 'review' && currentPracticeWord && (
                       <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                         {currentPracticeWord.level}
@@ -2686,8 +2689,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           : ''}
                       </span>
                     )}
+                    </span>
                     {/* Right: card counter & redo-round indicator, as in Learn */}
-                    <span>
+                    <span className="text-right">
                     {roundNumber > 1 ? (
                       <div className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs flex items-center space-x-2.5">
                         <span>{appLanguage === 'en' ? `Redo ${roundNumber - 1}` : `Wiederholung ${roundNumber - 1}`}</span>
@@ -3043,23 +3047,31 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               }}
               className="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm"
             >
-              {status ?? (!drillStarted && !emptyPractice && drillSubMode === 'practice' ? (
+              {status ?? (!drillStarted && !emptyPractice ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8 text-center">
                   <div className="space-y-3 max-w-xs">
-                    <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
-                      {selectedLevel}
-                      {typeof selectedLektion === 'number'
-                        ? ` · ${selectedLektion === 0 ? 'Intro' : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}`
-                        : ''}
-                    </p>
+                    {/* Review draws from every lesson, so there is none to name */}
+                    {!isDrillReview && (
+                      <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                        {selectedLevel}
+                        {typeof selectedLektion === 'number'
+                          ? ` · ${selectedLektion === 0 ? 'Intro' : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}`
+                          : ''}
+                      </p>
+                    )}
                     <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
-                      {lessonTopics(drillQueue) ||
-                        (isArticle
-                          ? appLanguage === 'en' ? 'Der, die or das' : 'Der, die oder das'
-                          : appLanguage === 'en' ? 'Plurals' : 'Pluralformen')}
+                      {isDrillReview
+                        ? appLanguage === 'en' ? 'Review' : 'Wiederholen'
+                        : lessonTopics(drillQueue) ||
+                          (isArticle
+                            ? appLanguage === 'en' ? 'Der, die or das' : 'Der, die oder das'
+                            : appLanguage === 'en' ? 'Plurals' : 'Pluralformen')}
                     </p>
                     <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
-                      {drillQueue.length} {appLanguage === 'en' ? 'nouns' : 'Nomen'}
+                      {drillQueue.length}{' '}
+                      {isDrillReview
+                        ? appLanguage === 'en' ? 'nouns due' : 'Nomen fällig'
+                        : appLanguage === 'en' ? 'nouns' : 'Nomen'}
                     </p>
                   </div>
                   <button

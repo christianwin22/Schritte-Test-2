@@ -8,6 +8,12 @@ interface AbandonExerciseModalProps {
   onStay: () => void;
   onLeave: () => void;
   appLanguage?: AppLanguage;
+  /**
+   * True in Review, where every answer has already been scheduled the moment
+   * it was given. Nothing is at stake in leaving, so the question should not
+   * pretend otherwise.
+   */
+  progressIsSaved?: boolean;
 }
 
 export const AbandonExerciseModal: React.FC<AbandonExerciseModalProps> = ({
@@ -15,6 +21,7 @@ export const AbandonExerciseModal: React.FC<AbandonExerciseModalProps> = ({
   onStay,
   onLeave,
   appLanguage = 'en',
+  progressIsSaved = false,
 }) => {
   const t = getTranslation(appLanguage);
 
@@ -43,7 +50,11 @@ export const AbandonExerciseModal: React.FC<AbandonExerciseModalProps> = ({
           id="abandon-dialog-title"
           className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight"
         >
-          {t.abandonTitle}
+          {progressIsSaved
+            ? appLanguage === 'en'
+              ? 'Leave this review?'
+              : 'Wiederholung verlassen?'
+            : t.abandonTitle}
         </h3>
 
         <div className="space-y-2 pt-2">
@@ -63,7 +74,11 @@ export const AbandonExerciseModal: React.FC<AbandonExerciseModalProps> = ({
             }}
             className="w-full py-2.5 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-98 text-zinc-600 dark:text-zinc-300 font-bold text-xs rounded-2xl transition-all cursor-pointer border border-zinc-200 dark:border-zinc-700"
           >
-            {t.leaveExercise}
+            {progressIsSaved
+              ? appLanguage === 'en'
+                ? 'Saved — leave'
+                : 'Gespeichert – verlassen'
+              : t.leaveExercise}
           </button>
         </div>
       </div>

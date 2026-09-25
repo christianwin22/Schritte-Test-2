@@ -75,6 +75,7 @@ export default function App() {
   const [previousTab, setPreviousTab] = useState<'home' | DuolingoTab>('home');
   const [activeExerciseMode, setActiveExerciseMode] = useState<string | null>(null);
   const [isQuizActive, setIsQuizActive] = useState(false);
+  const [quizProgressSaved, setQuizProgressSaved] = useState(false);
 
   // Abandon Confirmation Modal State
   const [isAbandonModalOpen, setIsAbandonModalOpen] = useState(false);
@@ -501,7 +502,10 @@ export default function App() {
               activeExerciseMode={activeExerciseMode}
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
-              onQuizActiveChange={setIsQuizActive}
+              onQuizActiveChange={(active, saved) => {
+                setIsQuizActive(active);
+                setQuizProgressSaved(!!saved);
+              }}
               appLanguage={appLanguage}
             />
           )}
@@ -514,7 +518,10 @@ export default function App() {
               activeExerciseMode={activeExerciseMode}
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
-              onQuizActiveChange={setIsQuizActive}
+              onQuizActiveChange={(active) => {
+                setIsQuizActive(active);
+                setQuizProgressSaved(false);
+              }}
               appLanguage={appLanguage}
             />
           )}
@@ -665,6 +672,7 @@ export default function App() {
         onStay={handleStayInExercise}
         onLeave={handleConfirmAbandon}
         appLanguage={appLanguage}
+        progressIsSaved={quizProgressSaved}
       />
     </div>
   );
