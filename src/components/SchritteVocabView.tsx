@@ -94,6 +94,24 @@ const SentenceWithWord: React.FC<{ sentence: string; word: WordEntry; className?
   );
 };
 
+/**
+ * What a lesson is about, in its own words: the group headings the word list
+ * gives it, most-used first. The "— picture labels (LWS 4)" tails are the
+ * book's own cross-references and mean nothing here, so they are cut.
+ */
+const lessonTopics = (words: WordEntry[], limit = 2): string => {
+  const counts = new Map<string, number>();
+  for (const word of words) {
+    const group = word.category?.split('—')[0].trim();
+    if (group) counts.set(group, (counts.get(group) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([group]) => group)
+    .join(' · ');
+};
+
 const getExampleSentence = (word: WordEntry): { german: string; english: string } => {
   if (word.exampleSentences && word.exampleSentences.length > 0) {
     const ex = word.exampleSentences[0];
@@ -478,6 +496,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   // Der/Die/Das and Plural: Practice (the chosen lesson, as before) or Review
   // (nouns from lessons finished in Flashcard Practice, scheduled like Flashcard Review).
+  /** Drill practice waits on its Start screen too, like Flashcard's. */
+  const [drillStarted, setDrillStarted] = useState(false);
   const [drillSubMode, setDrillSubMode] = useState<'practice' | 'review'>(() => {
     try {
       return localStorage.getItem('schritte_saved_drill_submode') === 'review' ? 'review' : 'practice';
@@ -549,6 +569,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const practiceListKey = activeDrillSkill ? drillPracticeList(activeDrillSkill).map((w) => w.id).join(',') : '';
   useEffect(() => {
     if (activeDrillSkill) startDrillSession(activeDrillSkill, drillSubMode);
+    setDrillStarted(false); // back to the Start screen whenever the session is rebuilt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDrillSkill, drillSubMode, practiceListKey]);
 
@@ -1990,12 +2011,24 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
             {flashcardSubMode !== 'learn' && !sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 py-6">
-                <div className="space-y-1">
-                  <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">
-                    {flashcardSubMode === 'practice'
-                      ? appLanguage === 'en' ? 'Practice' : 'Üben'
-                      : appLanguage === 'en' ? 'Review' : 'Wiederholen'}
-                  </p>
+                <div className="space-y-1.5 max-w-xs">
+                  {flashcardSubMode === 'practice' ? (
+                    <>
+                      <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                        {selectedLevel}
+                        {typeof selectedLektion === 'number'
+                          ? ` · ${selectedLektion === 0 ? 'Intro' : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}`
+                          : ''}
+                      </p>
+                      <p className="font-black text-lg text-zinc-900 dark:text-zinc-100 leading-snug">
+                        {lessonTopics(filteredWords) || (appLanguage === 'en' ? 'Practice' : 'Üben')}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">
+                      {appLanguage === 'en' ? 'Review' : 'Wiederholen'}
+                    </p>
+                  )}
                   <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
                     {flashcardSubMode === 'practice'
                       ? `${filteredWords.length} ${appLanguage === 'en' ? 'words' : 'Wörter'}`
@@ -2012,11 +2045,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 >
                   {appLanguage === 'en' ? 'Start' : 'Starten'}
                 </button>
-                <p className="text-[11px] font-semibold text-zinc-400 max-w-xs">
-                  {appLanguage === 'en'
-                    ? 'Change the level or lesson above before you start — the card screen has no room for them.'
-                    : 'Stufe oder Lektion oben ändern – auf der Kartenseite ist dafür kein Platz.'}
-                </p>
               </div>
             ) : flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
               /* Review with nothing unlocked: say so, instead of showing words you have not met */
@@ -3007,7 +3035,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 switch stays, or there would be no way between them. The filter
                 goes while a card is up, and comes back on the finished screen. */}
             {renderDrillModeSwitch()}
-            {(status || emptyPractice) && drillSubMode === 'practice' && renderVocabFilterBar()}
+            {(status || emptyPractice || !drillStarted) && drillSubMode === 'practice' && renderVocabFilterBar()}
             <form
               onSubmit={(e) => {
                 if (isArticle) e.preventDefault();
@@ -3015,7 +3043,37 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               }}
               className="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm"
             >
-              {status ?? (emptyPractice ? (
+              {status ?? (!drillStarted && !emptyPractice && drillSubMode === 'practice' ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-4 py-6 text-center">
+                  <div className="space-y-1.5 max-w-xs">
+                    <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                      {selectedLevel}
+                      {typeof selectedLektion === 'number'
+                        ? ` · ${selectedLektion === 0 ? 'Intro' : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}`
+                        : ''}
+                    </p>
+                    <p className="font-black text-lg text-zinc-900 dark:text-zinc-100 leading-snug">
+                      {lessonTopics(drillQueue) ||
+                        (isArticle
+                          ? appLanguage === 'en' ? 'Der, die or das' : 'Der, die oder das'
+                          : appLanguage === 'en' ? 'Plurals' : 'Pluralformen')}
+                    </p>
+                    <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
+                      {drillQueue.length} {appLanguage === 'en' ? 'nouns' : 'Nomen'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('tap');
+                      setDrillStarted(true);
+                    }}
+                    className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
+                  >
+                    {appLanguage === 'en' ? 'Start' : 'Starten'}
+                  </button>
+                </div>
+              ) : emptyPractice ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3">
                   <p className="font-bold text-zinc-500">
                     {appLanguage === 'en' ? 'No nouns found in this selection.' : 'Keine Nomen in dieser Auswahl gefunden.'}

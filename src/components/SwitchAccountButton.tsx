@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Loader2, Users } from 'lucide-react';
 import { useAuth } from './AuthGate';
 import { AppLanguage } from '../utils/translations';
+import { LogOutButton } from './LogOutButton';
 
 /**
  * Moving between the accounts signed in on this device, without Google.
@@ -17,19 +18,26 @@ export const SwitchAccountButton: React.FC<{ appLanguage: AppLanguage }> = ({ ap
   const others = auth?.otherAccounts ?? [];
   const en = appLanguage === 'en';
 
-  if (!auth || auth.isSandbox || others.length === 0) return null;
+  // No second account: just the way out, on its own.
+  if (!auth) return null;
+  if (auth.isSandbox || others.length === 0) return <LogOutButton appLanguage={appLanguage} />;
 
   return (
     <div className="space-y-2">
       {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="w-full py-3.5 bg-white dark:bg-[#252a35] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700/80 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-all"
-        >
-          <Users className="w-4 h-4" />
-          <span>{en ? 'Switch account' : 'Konto wechseln'}</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="flex-1 py-3.5 bg-white dark:bg-[#252a35] hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700/80 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-all"
+          >
+            <Users className="w-4 h-4" />
+            <span>{en ? 'Switch' : 'Wechseln'}</span>
+          </button>
+          <div className="flex-1">
+            <LogOutButton appLanguage={appLanguage} />
+          </div>
+        </div>
       ) : (
         <div className="space-y-2">
           {others.map((account) => (

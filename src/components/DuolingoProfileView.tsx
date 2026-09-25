@@ -5,6 +5,8 @@ import { playSound } from '../utils/audioEffects';
 import { currentStreak, lastSevenDays } from '../utils/streak';
 import { learntWordCount } from '../utils/srsEngine';
 import { SwitchAccountButton } from './SwitchAccountButton';
+import { useAuth } from './AuthGate';
+import { initialsFor, loadProfile, nameFor } from '../lib/profile';
 
 interface DuolingoProfileViewProps {
   /** The lowest level you are actually working in, e.g. "A1". */
@@ -19,6 +21,9 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
   onNavigateToSettings,
 }) => {
   const t = getTranslation(appLanguage);
+  const auth = useAuth();
+  const profile = loadProfile();
+  const name = nameFor(profile, auth?.email ?? null);
   const streak = currentStreak();
   const learnt = learntWordCount();
   const week = lastSevenDays();
@@ -51,7 +56,7 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
         {/* Avatar */}
         <div className="relative shrink-0">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 border-4 border-zinc-100 dark:border-zinc-700 shadow-sm flex items-center justify-center font-black text-2xl sm:text-3xl tracking-tighter">
-            AS
+            {initialsFor(name)}
           </div>
           {workingLevel && (
             <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-lg bg-zinc-900 text-white font-black text-[10px] uppercase tracking-wider border-2 border-white dark:border-zinc-800 shadow-xs">
@@ -65,8 +70,11 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Alex Schneider
+                {name}
               </h2>
+              {profile.about && (
+                <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{profile.about}</p>
+              )}
             </div>
 
           </div>

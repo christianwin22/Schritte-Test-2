@@ -24,6 +24,8 @@ import {
   type KnownAccount,
 } from '../lib/knownAccounts';
 import { LoginScreen, SandboxTag, friendlyAuthError } from './LoginScreen';
+import { WelcomeSetup } from './WelcomeSetup';
+import { loadProfile } from '../lib/profile';
 
 interface AuthContextValue {
   email: string | null;
@@ -88,6 +90,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [otherDevice, setOtherDevice] = useState<OtherDeviceEvent | null>(null);
   const [syncRun, setSyncRun] = useState(0); // bumping this restarts the sync
   const [accounts, setAccounts] = useState<KnownAccount[]>([]);
+  const [profileReady, setProfileReady] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -117,7 +120,10 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         setAccounts(switchableAccounts(next.user.email));
         setPhase('restoring');
         restoreForUser(next.user.id)
-          .then(() => setPhase('ready'))
+          .then(() => {
+            setProfileReady(loadProfile().setUp); // their answer travels with their progress
+            setPhase('ready');
+          })
           .catch((err) => {
             console.error('Could not load saved progress', err);
             restoredFor.current = null;
@@ -236,6 +242,15 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       return true;
     },
   };
+
+  // First time in on this account: ask what to call them, once.
+  if (!profileReady) {
+    return (
+      <AuthContext.Provider value={value}>
+        <WelcomeSetup email={email} onDone={() => setProfileReady(true)} />
+      </AuthContext.Provider>
+    );
+  }
 
   return (
     <AuthContext.Provider value={value}>

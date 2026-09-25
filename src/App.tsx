@@ -300,8 +300,9 @@ export default function App() {
     } catch {
       // no progress saved yet
     }
-    const lowestTouched = order.find((level) => touched.includes(level));
-    return lowestTouched ?? order.find((level) => levels.includes(level));
+    // Nothing touched yet means nothing to claim: the badge stays off until
+    // a lesson has actually been worked on.
+    return order.find((level) => touched.includes(level));
   }, [levels]);
 
   const handleResetProgress = () => {

@@ -38,6 +38,11 @@
 }
 
 html, body, #root {
+  /* The app is light only. Without these, a phone set to dark mode paints its
+     own canvas behind and around the app — which is what made the Log in page
+     look dark even though its own colours were light. */
+  background-color: #fafafa;
+  color-scheme: light;
   height: 100%;
   height: var(--app-height);
   margin: 0;
