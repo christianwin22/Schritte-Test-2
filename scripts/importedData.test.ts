@@ -49,7 +49,22 @@ check('plural sentences contain exactly one blank', plural.every((w) => pluralSe
 const withReal = article.filter((w) => w.articleSentenceBlank);
 console.log(`   real sentences: ${withReal.length} of ${article.length} article, ${plural.filter((w) => w.pluralSentenceBlank).length} of ${plural.length} plural`);
 const tisch = words.find((w) => w.display === 'der Tisch')!;
-check('filling the blank reads correctly', fillBlank(articleSentence(tisch), 'der').startsWith('Der Tisch'));
+const filled = fillBlank(articleSentence(tisch), 'der');
+check(`filling the blank reads correctly (${filled})`, /\b[Dd]er Tisch\b/.test(filled) && !filled.includes(BLANK));
+// A sentence-initial article is capitalised; one in the middle is not.
+check('no article is capitalised mid-sentence', article.every((w) => {
+  const gender = w.nounDetails!.gender!;
+  const text = fillBlank(articleSentence(w), gender);
+  const capitalised = text.charAt(0).toUpperCase() + text.slice(1);
+  return text === capitalised;
+}));
+// The article being asked for must not be visible elsewhere in the sentence.
+const givesItAway = article.filter((w) => {
+  const gender = w.nounDetails!.gender!.toLowerCase();
+  const shown = articleSentence(w).replace(BLANK, '').toLowerCase();
+  return new RegExp(`(?<!\\w)${gender}(?!\\w)`).test(shown);
+});
+check(`no sentence shows the article it asks for (${givesItAway.length})`, givesItAway.length === 0);
 check('bare plural drops the article', barePlural(tisch) === 'Tische');
 const ski = words.find((w) => w.display?.includes('Ski /') || w.nounDetails?.pluralAlternatives?.length === 2);
 check('both plural spellings are accepted', !ski || acceptedPlurals(ski).length >= 2);

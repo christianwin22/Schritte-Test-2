@@ -58,7 +58,14 @@ const isTheStockSentence = (sentence: string) => /\b(ist|sind) wichtig\.?$/.test
 export function articleSentence(word: WordEntry): string {
   const given = word.articleSentenceBlank;
   if (given && !isTheStockSentence(given)) return given;
-  return frameFor(ARTICLE_FRAMES, word.id).replace('{noun}', word.lemma);
+  // Never a frame whose own words include the article being asked for:
+  // "Das ist ___ Ei." would print the answer as its first word.
+  const gender = (word.nounDetails?.gender ?? '').toLowerCase();
+  const clash = new RegExp(`(?<!\\p{L})${gender}(?!\\p{L})`, 'iu');
+  const usable = gender
+    ? ARTICLE_FRAMES.filter((f) => !clash.test(f.replace(BLANK, '')))
+    : ARTICLE_FRAMES;
+  return frameFor(usable.length ? usable : ARTICLE_FRAMES, word.id).replace('{noun}', word.lemma);
 }
 
 export function pluralSentence(word: WordEntry): string {

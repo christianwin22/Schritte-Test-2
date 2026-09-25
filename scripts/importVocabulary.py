@@ -120,6 +120,20 @@ def german_forms(display: str, pos: str):
 BLANK = "{{blank}}"
 
 
+def blank_out_article(sentence: str, article: str, noun: str) -> str:
+    """Blank the article that belongs to this noun, wherever it sits."""
+    if not sentence or not article or not noun:
+        return ""
+    pattern = re.compile(
+        rf"(?<!\w){re.escape(article)}(?=\s+{re.escape(noun)}(?!\w))", re.IGNORECASE
+    )
+    blanked, count = pattern.subn(BLANK, sentence, count=1)
+    if count:
+        return blanked
+    # No noun directly after it (a compound, a bracketed form): fall back.
+    return blank_out(sentence, article)
+
+
 def blank_out(sentence: str, target: str) -> str:
     """Replace the first standalone `target` in `sentence` with the blank marker."""
     if not sentence or not target:
@@ -190,9 +204,12 @@ def main():
             if singular_example:
                 entry["articleSentence"] = singular_example
                 # the article becomes the blank: "Der Tisch ist aus Holz." → "___ Tisch ist aus Holz."
+                # The article in front of the noun, not the first article in
+                # the sentence: "Das ist das Ei." must blank the second "das",
+                # or the drill shows the answer it is asking for.
                 blanked = ""
                 for g in genders:
-                    blanked = blank_out(singular_example, g)
+                    blanked = blank_out_article(singular_example, g, lemma)
                     if blanked:
                         break
                 if blanked:

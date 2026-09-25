@@ -2053,7 +2053,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           {(flashcardSubMode === 'learn' || !sessionStarted) && (
             <>
               {renderModeBanner()}
-              {renderFilterBanner()}
+              {/* Review draws from every lesson, so there is nothing to filter */}
+              {flashcardSubMode !== 'review' && renderFilterBanner()}
             </>
           )}
 
@@ -2713,12 +2714,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-bold text-zinc-400">
                     {/* Left: which way this card goes — same pill as Learn, but only a label: picked at
                         random per card, and it ignores taps entirely. */}
-                    <div
-                      aria-label={practiceDirection === 'EN_TO_DE' ? 'English to German' : 'German to English'}
-                      className="pointer-events-none select-none justify-self-start px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 shadow-2xs inline-flex items-center gap-1"
-                    >
-                      <span>{practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}</span>
-                    </div>
+                    {/* Which lesson this came from, as in the drills */}
+                    <span className="justify-self-start text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                      {currentPracticeWord
+                        ? `${currentPracticeWord.level}${
+                            typeof currentPracticeWord.lektion === 'number'
+                              ? ` · ${currentPracticeWord.lektion === 0 ? 'Intro' : `L${currentPracticeWord.lektion}`}`
+                              : ''
+                          }`
+                        : ''}
+                    </span>
                     {/* Picked up where you left off */}
                     {resumedSession && flashcardSubMode === 'review' && (
                       <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
@@ -2727,15 +2732,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     )}
                     {/* Review draws from every lesson, so each card says where it
                         is from, in the middle. That used to be a bar of its own. */}
-                    <span className="text-center">
-                    {flashcardSubMode === 'review' && currentPracticeWord && (
-                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                        {currentPracticeWord.level}
-                        {typeof currentPracticeWord.lektion === 'number'
-                          ? ` · ${currentPracticeWord.lektion === 0 ? 'Intro' : `L${currentPracticeWord.lektion}`}`
-                          : ''}
-                      </span>
-                    )}
+                    <span
+                      aria-label={practiceDirection === 'EN_TO_DE' ? 'English to German' : 'German to English'}
+                      className="pointer-events-none select-none justify-self-center px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 shadow-2xs"
+                    >
+                      {practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}
                     </span>
                     {/* Right: card counter & redo-round indicator, as in Learn */}
                     <span className="text-right">
@@ -2772,8 +2773,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {/* Once answered, the word in a sentence — where Learn puts
                         it, and inside the same box rather than below it. */}
                     {practiceFeedback && currentPracticeWord && getExampleSentence(currentPracticeWord).german && (
-                      <div className="mt-4 pt-3 border-t border-zinc-200/80 dark:border-zinc-700/80 w-full max-w-sm mx-auto flex items-center justify-center gap-2">
-                        <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
+                      <div className="mt-auto pt-4 border-t border-zinc-200/80 dark:border-zinc-700/80 w-full flex items-center justify-between gap-3">
+                        <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug text-left">
                           <SentenceWithWord
                             sentence={getExampleSentence(currentPracticeWord).german}
                             word={currentPracticeWord}
@@ -2786,9 +2787,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             speakGerman(getExampleSentence(currentPracticeWord).german);
                           }}
                           title={appLanguage === 'en' ? 'Listen to sentence' : 'Satz anhören'}
-                          className="p-1.5 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
+                          className="p-2 rounded-xl bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
                         >
-                          <Volume2 className="w-3.5 h-3.5" />
+                          <Volume2 className="w-4 h-4" />
                         </button>
                       </div>
                     )}
@@ -3173,13 +3174,19 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       say which one it came from. */}
                   <div className="flex items-center justify-between text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
                     <span className="text-[10px] uppercase">
-                      {isDrillReview && noun
-                        ? `${noun.level}${
-                            typeof noun.lektion === 'number'
-                              ? ` · ${noun.lektion === 0 ? 'Intro' : `L${noun.lektion}`}`
+                      {isDrillReview
+                        ? noun
+                          ? `${noun.level}${
+                              typeof noun.lektion === 'number'
+                                ? ` · ${noun.lektion === 0 ? 'Intro' : `L${noun.lektion}`}`
+                                : ''
+                            }`
+                          : ''
+                        : `${selectedLevel}${
+                            typeof selectedLektion === 'number'
+                              ? ` · ${selectedLektion === 0 ? 'Intro' : `L${selectedLektion}`}`
                               : ''
-                          }`
-                        : ''}
+                          }`}
                     </span>
                     {drillRound > 1 ? (
                       <span className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80">
