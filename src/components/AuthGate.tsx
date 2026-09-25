@@ -136,6 +136,14 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         window.location.reload();
         return;
       }
+      // Only worth saying when both devices have been worked on. Merely being
+      // signed in somewhere else is not something to interrupt anyone about;
+      // in that case the newer progress is taken quietly.
+      if (!event.hasLocalChanges) {
+        await adoptRemote(userId);
+        setSyncRun((n) => n + 1);
+        return;
+      }
       setOtherDevice(event);
     });
   }, [phase, userId, syncRun]);
@@ -223,9 +231,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   return (
     <AuthContext.Provider value={value}>
       {children}
-      {otherDevice && (
+      {otherDevice?.hasLocalChanges && (
         <OtherDeviceNotice
-          hasLocalChanges={otherDevice.hasLocalChanges}
+          hasLocalChanges
           onTakeOther={async () => {
             await adoptRemote(userId);
             window.location.reload();
