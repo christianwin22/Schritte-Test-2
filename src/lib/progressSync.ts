@@ -278,12 +278,25 @@ function readStash(key: string): ProgressSnapshot {
 }
 
 export function enterSandbox(): void {
+  // Your real progress must survive the sandbox, so if it cannot be stashed,
+  // the sandbox does not open. Better to refuse than to lose it.
   localStorage.setItem(PRE_SANDBOX_KEY, JSON.stringify(takeSnapshot()));
   applySnapshot(readStash(SANDBOX_DATA_KEY));
 }
 
 export function exitSandbox(): void {
-  localStorage.setItem(SANDBOX_DATA_KEY, JSON.stringify(takeSnapshot()));
-  applySnapshot(readStash(PRE_SANDBOX_KEY));
-  localStorage.removeItem(PRE_SANDBOX_KEY);
+  // Order matters when the browser is nearly full, which on a phone it can be.
+  // Read the sandbox's data into memory, give its space back, put your own
+  // progress in, and only then try to keep the sandbox copy. Saving that copy
+  // is a convenience; getting out is not, and a failed write here used to trap
+  // you inside with no way out.
+  const sandboxData = takeSnapshot();
+  const yours = readStash(PRE_SANDBOX_KEY);
+  localStorage.removeItem(PRE_SANDBOX_KEY); // give its room back before writing
+  applySnapshot(yours);
+  try {
+    localStorage.setItem(SANDBOX_DATA_KEY, JSON.stringify(sandboxData));
+  } catch {
+    localStorage.removeItem(SANDBOX_DATA_KEY);
+  }
 }

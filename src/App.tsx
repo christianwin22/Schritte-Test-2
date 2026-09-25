@@ -202,6 +202,14 @@ export default function App() {
   // Persist State Changes
   useEffect(() => {
     try {
+      // The word list ships inside the app. Saving a second 1.6 MB copy of it
+      // per browser filled Safari's 5 MB allowance, and then any write could
+      // fail — which is how leaving the sandbox became impossible. Only a list
+      // that differs from the built-in one is worth keeping.
+      if (vocabulary === INITIAL_VOCABULARY || vocabulary.length === INITIAL_VOCABULARY.length) {
+        localStorage.removeItem(VOCAB_STORAGE_KEY);
+        return;
+      }
       localStorage.setItem(VOCAB_STORAGE_KEY, JSON.stringify(vocabulary));
     } catch (e) {
       console.warn('Failed to save vocabulary', e);

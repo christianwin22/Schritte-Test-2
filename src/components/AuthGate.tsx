@@ -132,7 +132,12 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       email: null,
       isSandbox: true,
       leave: async () => {
-        exitSandbox();
+        // Whatever happens while tidying up, you still leave.
+        try {
+          exitSandbox();
+        } catch (err) {
+          console.warn('Could not keep the sandbox data', err);
+        }
         localStorage.removeItem(SANDBOX_KEY);
         setIsSandbox(false);
         return true;

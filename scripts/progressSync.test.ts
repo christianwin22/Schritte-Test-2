@@ -11,10 +11,22 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // --- an in-memory localStorage ------------------------------------------------
 class MemoryStorage {
   private map = new Map<string, string>();
+  /** Characters allowed in total, the way a browser caps its storage. */
+  quota = Infinity;
+  private used(skip: string) {
+    let n = 0;
+    for (const [k, v] of this.map) if (k !== skip) n += k.length + v.length;
+    return n;
+  }
   get length() { return this.map.size; }
   key(i: number) { return [...this.map.keys()][i] ?? null; }
   getItem(k: string) { return this.map.has(k) ? this.map.get(k)! : null; }
-  setItem(k: string, v: string) { this.map.set(k, String(v)); }
+  setItem(k: string, v: string) {
+    if (this.used(k) + k.length + String(v).length > this.quota) {
+      throw new DOMException('exceeded the quota', 'QuotaExceededError');
+    }
+    this.map.set(k, String(v));
+  }
   removeItem(k: string) { this.map.delete(k); }
   clear() { this.map.clear(); }
 }
@@ -175,6 +187,28 @@ check('the other device is noticed again', (await sync.otherDeviceHasSaved('chri
 await sync.pushSnapshot('chris', sync.takeSnapshot());
 check('this device wins once it is asked to', tableData('chris')?.[STREAK] === '4');
 check('and the alarm clears', (await sync.otherDeviceHasSaved('chris')) === false);
+
+console.log('12. A nearly full browser cannot trap you in the sandbox');
+reset();
+storage.quota = Infinity;
+const BIG = 'x'.repeat(1200);
+storage.setItem(STREAK, '7');
+storage.setItem(REVIEW, BIG);            // your real progress, and plenty of it
+sync.enterSandbox();                      // stashes a copy: about half the room gone
+storage.setItem(STREAK, '1');             // sandbox progress
+storage.setItem(REVIEW, BIG);
+storage.quota = 2000;                     // room for your progress, not for a copy of it too
+let threw = false;
+try {
+  sync.exitSandbox();
+} catch {
+  threw = true;
+}
+storage.quota = Infinity;
+check('leaving does not throw', !threw);
+check('your real progress is back', storage.getItem(STREAK) === '7');
+check('...all of it', storage.getItem(REVIEW) === BIG);
+check('the sandbox copy is the thing dropped', storage.getItem('cpa_sandbox_data') === null);
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
