@@ -30,6 +30,44 @@ function trackVisibleHeight(): void {
 
 trackVisibleHeight();
 
+/** The built file this page is running, e.g. "index-qMRVgsDu.js". */
+export function runningBuild(): string {
+  const src = [...document.querySelectorAll('script[src]')]
+    .map((s) => (s as HTMLScriptElement).src)
+    .find((s) => s.includes('/assets/'));
+  return src ? src.split('/').pop() ?? 'dev' : 'dev';
+}
+
+/**
+ * Picks up a new version by itself.
+ *
+ * Installed on a home screen there is no address bar and no reload button, and
+ * iOS can keep serving the page it first loaded long after a new one is out —
+ * which is how a fixed bug can look unfixed for days. So on every start, and
+ * whenever you come back to the app, it asks the server which build is current
+ * and reloads once if it is not the one running.
+ */
+async function updateIfStale(): Promise<void> {
+  const current = runningBuild();
+  if (current === 'dev') return;
+  try {
+    const html = await fetch('/', { cache: 'no-store' }).then((r) => r.text());
+    const latest = html.match(/index-[A-Za-z0-9_-]+\.js/)?.[0];
+    if (!latest || latest === current) return;
+    // Once per new build, so a mismatch we cannot resolve can't loop.
+    if (sessionStorage.getItem('cpa_reloaded_for') === latest) return;
+    sessionStorage.setItem('cpa_reloaded_for', latest);
+    window.location.reload();
+  } catch {
+    // offline: carry on with what is already here
+  }
+}
+
+void updateIfStale();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void updateIfStale();
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthGate>

@@ -20,6 +20,7 @@ import {
   UserCircle2,
 } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
+import { runningBuild } from '../main';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { ThemeMode } from './SettingsModal';
 
@@ -316,6 +317,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         </div>
       </div>
+
+      {/* Which build this is. Useful when a phone is holding an old copy. */}
+      <p className="text-center text-[10px] font-bold text-zinc-400 pt-1">{runningBuild()}</p>
     </div>
   );
 };
