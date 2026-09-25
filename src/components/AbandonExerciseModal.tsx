@@ -39,17 +39,12 @@ export const AbandonExerciseModal: React.FC<AbandonExerciseModalProps> = ({
           <AlertTriangle className="w-7 h-7 stroke-[2.5]" />
         </div>
 
-        <div className="space-y-1">
-          <h3
-            id="abandon-dialog-title"
-            className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight"
-          >
-            {t.abandonTitle}
-          </h3>
-          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-            {t.abandonDesc}
-          </p>
-        </div>
+        <h3
+          id="abandon-dialog-title"
+          className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight"
+        >
+          {t.abandonTitle}
+        </h3>
 
         <div className="space-y-2 pt-2">
           <button
