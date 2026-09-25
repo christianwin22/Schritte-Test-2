@@ -1018,6 +1018,22 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           transition: cardDragStart.current ? 'none' : `transform ${SLIDE_MS}ms ease-out, opacity ${SLIDE_MS}ms ease-out`,
         };
 
+  /**
+   * Coming out of an exercise leaves it where it started.
+   *
+   * Without this, walking out of a Review and back in dropped you straight
+   * into Review again — the mode lives on this component, which stays mounted
+   * while the exercise list is showing. Flashcard opens on Learn, the drills
+   * on Practice, and both wait on their Start screen.
+   */
+  useEffect(() => {
+    if (activeExerciseMode) return;
+    setFlashcardSubMode('learn');
+    setSessionStarted(false);
+    setDrillSubMode('practice');
+    setDrillStarted(false);
+  }, [activeExerciseMode]);
+
   // Check if practice or review is actively in progress (not completed, and user has made progress)
   const isPracticeInProgress =
     activeExerciseMode === 'explorer' &&
@@ -3105,8 +3121,19 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
               ) : (
                 <>
-                  {/* Counter, top middle */}
-                  <div className="flex justify-center text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
+                  {/* Where this noun is from on the left, how far through on the
+                      right — Review pulls from every lesson, so the card has to
+                      say which one it came from. */}
+                  <div className="flex items-center justify-between text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
+                    <span className="text-[10px] uppercase">
+                      {isDrillReview && noun
+                        ? `${noun.level}${
+                            typeof noun.lektion === 'number'
+                              ? ` · ${noun.lektion === 0 ? 'Intro' : `L${noun.lektion}`}`
+                              : ''
+                          }`
+                        : ''}
+                    </span>
                     {drillRound > 1 ? (
                       <span className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80">
                         {appLanguage === 'en' ? `Redo ${drillRound - 1}` : `Wiederholung ${drillRound - 1}`} • {position} / {total}

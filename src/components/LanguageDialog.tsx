@@ -26,7 +26,7 @@ export function loadLocale(appLanguage: AppLanguage): Locale {
   } catch {
     // nothing saved
   }
-  return appLanguage === 'de' ? 'de' : 'en-GB';
+  return appLanguage === 'de' ? 'de' : 'en-US';
 }
 
 export function saveLocale(locale: Locale): void {
