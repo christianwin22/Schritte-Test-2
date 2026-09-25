@@ -1961,9 +1961,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {activeExerciseMode === 'explorer' && (
         <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
           {/* Banner 1: Learn, Practice, Review Modes */}
-          {renderModeBanner()}
+          <div className="kbd-hide">{renderModeBanner()}</div>
           {/* Banner 2: Level & Lesson Filters (in Review: the current word's, read-only) */}
-          {flashcardSubMode === 'review' ? renderReviewWordBanner(currentPracticeWord) : renderFilterBanner()}
+          <div className="kbd-hide">
+            {flashcardSubMode === 'review' ? renderReviewWordBanner(currentPracticeWord) : renderFilterBanner()}
+          </div>
 
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
             {flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
@@ -2618,8 +2620,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   <div
                     className={`w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col items-center justify-center text-center transition-all duration-300 ${
                       !practiceFeedback || practiceFeedback.correct
-                        ? 'flex-1 min-h-[140px] sm:min-h-[160px] p-5 sm:p-6'
-                        : 'flex-1 min-h-[100px] sm:min-h-[110px] p-4 py-3 sm:py-3.5'
+                        ? 'flex-1 min-h-[88px] sm:min-h-[160px] p-4 sm:p-6'
+                        : 'flex-1 min-h-[76px] sm:min-h-[110px] p-4 py-3 sm:py-3.5'
                     }`}
                   >
                     <h3

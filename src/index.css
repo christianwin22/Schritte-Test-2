@@ -6,9 +6,24 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * --app-height follows the part of the screen you can actually see. On a phone
+ * the keyboard covers the bottom of the page without making the page any
+ * shorter, so the top — the direction pill, the counter — scrolls out of reach
+ * while typing. main.tsx keeps this in step with the visual viewport.
+ */
+:root {
+  --app-height: 100dvh;
+}
+
+/* While the keyboard is up, these give their room to the card. */
+:root[data-kbd='up'] .kbd-hide {
+  display: none;
+}
+
 html, body, #root {
   height: 100%;
-  height: 100dvh;
+  height: var(--app-height);
   margin: 0;
   padding: 0;
   overflow: hidden;

@@ -89,7 +89,7 @@ const Brand = () => (
   <div className="flex flex-col items-center text-center gap-2">
     <AppLogo size="xl" />
     <h1 className="text-xl font-black tracking-tight">DeutschMeister</h1>
-    <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 -mt-1.5">Chris Personal App</p>
+    <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 -mt-1.5">Chris Family App</p>
   </div>
 );
 
@@ -104,6 +104,51 @@ interface LoginScreenProps {
   onOpenSandbox: () => void;
 }
 
+/** One remembered account, offered on the first page. */
+const AccountRow: React.FC<{
+  account: KnownAccount;
+  busy: boolean;
+  onPick: () => void;
+  onForget: () => void;
+}> = ({ account, busy, onPick, onForget }) => (
+  <div className="w-full p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 flex items-center gap-2">
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onPick}
+      className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer disabled:opacity-60"
+    >
+      {account.picture ? (
+        <img src={account.picture} alt="" className="w-9 h-9 rounded-full shrink-0 object-cover" />
+      ) : (
+        <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
+          {account.name.charAt(0).toUpperCase()}
+        </span>
+      )}
+      <span className="min-w-0">
+        <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">{account.name}</span>
+        <span className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate">{account.email}</span>
+      </span>
+    </button>
+    <button
+      type="button"
+      aria-label={`Forget ${account.email}`}
+      title="Remove from this device"
+      onClick={onForget}
+      className="p-2 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer shrink-0"
+    >
+      <X className="w-4 h-4" />
+    </button>
+  </div>
+);
+
+const ErrorNote: React.FC<{ message: string }> = ({ message }) => (
+  <div className="flex items-start gap-2 p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800 text-xs font-bold text-red-800 dark:text-red-200">
+    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+    <span>{message}</span>
+  </div>
+);
+
 /** The pretend account shown on the sandbox's practice Log in page. */
 const SANDBOX_ACCOUNT = { email: 'test.user@sandbox.test', name: 'Test User' };
 
@@ -112,7 +157,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
   // choice just opens the sandbox and nothing is sent anywhere.
   const [step, setStep] = useState<'welcome' | 'login' | 'sandbox-login'>(initialError ? 'login' : 'welcome');
   const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false);
+  // Which button is working. One shared flag made Google's click spin the email one.
+  const [busy, setBusy] = useState<null | 'google' | 'email'>(null);
   const [error, setError] = useState<string | null>(initialError);
   const [sentTo, setSentTo] = useState<string | null>(null);
   // Anyone who has signed in on this device before, offered back by name.
@@ -154,15 +200,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     return (
       <AuthCard>
         <Brand />
+        {accounts.length > 0 && (
+          <div className="space-y-2">
+            {accounts.map((account) => (
+              <AccountRow
+                key={account.email}
+                account={account}
+                busy={!!busy}
+                onPick={() => continueAs(account)}
+                onForget={() => {
+                  forgetAccount(account.email);
+                  setAccounts(knownAccounts());
+                }}
+              />
+            ))}
+          </div>
+        )}
         <div className="space-y-2">
-          <button type="button" onClick={() => openLoginPage('login')} className={mainBtn}>
-            Log in
+          <button type="button" onClick={() => openLoginPage('login')} className={accounts.length > 0 ? sandboxBtn : mainBtn}>
+            {accounts.length > 0 ? 'Use another account' : 'Log in'}
           </button>
           <button type="button" onClick={() => openLoginPage('sandbox-login')} className={sandboxBtn}>
             <FlaskConical className="w-4 h-4" />
             <span>Sandbox</span>
           </button>
         </div>
+        {error && <ErrorNote message={error} />}
       </AuthCard>
     );
   }
@@ -172,7 +235,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     if (isSandbox) return onOpenSandbox();
     if (!auth) return;
     setError(null);
-    setBusy(true);
+    setBusy('google');
     const { error } = await auth.signInWithOAuth({
       provider: 'google',
       // A remembered account goes straight to itself, instead of the chooser.
@@ -181,7 +244,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     // On success the browser is already leaving for Google; only failures come back here.
     if (error) {
       setError(friendlyAuthError(error.message));
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -198,10 +261,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     }
     if (!auth) return;
     setError(null);
-    setBusy(true);
+    setBusy('email');
     // The first link creates the account; every later one just signs in.
     const { error } = await auth.signInWithOtp({ email: address, options: { emailRedirectTo: redirectTo } });
-    setBusy(false);
+    setBusy(null);
     if (error) setError(friendlyAuthError(error.message));
     else setSentTo(address);
   };
@@ -249,7 +312,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
           </button>
         </div>
       ) : (
-        <div className={isSandbox || accounts.length > 0 ? 'space-y-6' : 'space-y-4'}>
+        <div className={isSandbox ? 'space-y-6' : 'space-y-4'}>
           {/* Sandbox only: a pretend account, so the page can be practised in two parts */}
           {isSandbox && (
             <div className="space-y-2">
@@ -274,63 +337,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
             </div>
           )}
 
-          {/* Anyone who has signed in here before — one tap to come back */}
-          {!isSandbox && accounts.length > 0 && (
-            <div className="space-y-2">
-              <SectionTitle>Accounts on this device</SectionTitle>
-              {accounts.map((account) => (
-                <div
-                  key={account.email}
-                  className="w-full p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 flex items-center gap-2 transition-all"
-                >
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => continueAs(account)}
-                    className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer disabled:opacity-60"
-                  >
-                    {account.picture ? (
-                      <img src={account.picture} alt="" className="w-9 h-9 rounded-full shrink-0 object-cover" />
-                    ) : (
-                      <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
-                        {account.name.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                    <span className="min-w-0">
-                      <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">
-                        {account.name}
-                      </span>
-                      <span className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate">
-                        {account.email}
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Forget ${account.email}`}
-                    title="Remove from this device"
-                    onClick={() => {
-                      forgetAccount(account.email);
-                      setAccounts(knownAccounts());
-                    }}
-                    className="p-2 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer shrink-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-              <p className="text-[11px] font-semibold text-zinc-400 px-1">
-                {accounts.some((a) => a.via === 'email')
-                  ? 'Tapping one signs you in the same way as last time.'
-                  : 'Tapping one takes you straight to Google.'}
-              </p>
-            </div>
-          )}
-
           {/* Part 2: Google or email */}
           <div className="space-y-2.5">
-            {(isSandbox || accounts.length > 0) && <SectionTitle>Another account</SectionTitle>}
-            <button type="button" onClick={() => continueWithGoogle()} disabled={busy} className={googleBtn}>
+            {isSandbox && <SectionTitle>Another account</SectionTitle>}
+            <button type="button" onClick={() => continueWithGoogle()} disabled={!!busy} className={googleBtn}>
+              {busy === 'google' && <Loader2 className="w-4 h-4 animate-spin" />}
               <GoogleMark />
               <span>Continue with Google</span>
             </button>
@@ -352,8 +363,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
                 onChange={(e) => setEmail(e.target.value)}
                 className={inputClass}
               />
-              <button type="submit" disabled={busy || !email.trim()} className={mainBtn}>
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              <button type="submit" disabled={!!busy || !email.trim()} className={mainBtn}>
+                {busy === 'email' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                 <span>Email me a sign-in link</span>
               </button>
             </form>
@@ -361,12 +372,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
         </div>
       )}
 
-      {error && (
-        <div className="flex items-start gap-2 p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800 text-xs font-bold text-red-800 dark:text-red-200">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorNote message={error} />}
       {isSandbox && <SandboxTag />}
     </AuthCard>
   );
