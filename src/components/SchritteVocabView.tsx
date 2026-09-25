@@ -1965,9 +1965,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {activeExerciseMode === 'explorer' && (
         <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
           {/* Banner 1: Learn, Practice, Review Modes */}
-          <div className="kbd-hide">{renderModeBanner()}</div>
+          <div className="hide-when-tight">{renderModeBanner()}</div>
           {/* Banner 2: Level & Lesson Filters (in Review: the current word's, read-only) */}
-          <div className="kbd-hide">
+          <div className="hide-when-tight">
             {flashcardSubMode === 'review' ? renderReviewWordBanner(currentPracticeWord) : renderFilterBanner()}
           </div>
 
@@ -2946,9 +2946,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           <div className="max-w-md mx-auto w-full flex-1 min-h-0 flex flex-col">
-            {/* Der/Die/Das and Plural type too, so their bars also stand aside for the keyboard */}
-            <div className="kbd-hide">{renderDrillModeSwitch()}</div>
-            <div className="kbd-hide">
+            {/* Der/Die/Das and Plural type too, so their bars give way on a small screen as well */}
+            <div className="hide-when-tight">{renderDrillModeSwitch()}</div>
+            <div className="hide-when-tight">
               {drillSubMode === 'practice' ? renderVocabFilterBar() : renderReviewWordBanner(drillReviewNoun)}
             </div>
             <form

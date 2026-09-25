@@ -16,8 +16,8 @@
   --app-height: 100dvh;
 }
 
-/* While the keyboard is up, these give their room to the card. */
-:root[data-kbd='up'] .kbd-hide {
+/* When the visible screen is too small for everything, these give way first. */
+:root[data-tight='1'] .hide-when-tight {
   display: none;
 }
 

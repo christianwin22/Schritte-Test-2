@@ -237,41 +237,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     );
   }
 
-  // --- First page -----------------------------------------------------------
-  if (step === 'welcome') {
-    return (
-      <AuthCard>
-        <Brand />
-        {accounts.length > 0 && (
-          <div className="space-y-2">
-            {accounts.map((account) => (
-              <AccountRow
-                key={account.email}
-                account={account}
-                busy={!!busy}
-                onPick={() => continueAs(account)}
-                onForget={() => {
-                  forgetAccount(account.email);
-                  setAccounts(knownAccounts());
-                }}
-              />
-            ))}
-          </div>
-        )}
-        <div className="space-y-2">
-          <button type="button" onClick={() => openLoginPage('login')} className={accounts.length > 0 ? sandboxBtn : mainBtn}>
-            {accounts.length > 0 ? 'Use another account' : 'Log in'}
-          </button>
-          <button type="button" onClick={() => openLoginPage('sandbox-login')} className={sandboxBtn}>
-            <FlaskConical className="w-4 h-4" />
-            <span>Sandbox</span>
-          </button>
-        </div>
-        {error && <ErrorNote message={error} />}
-      </AuthCard>
-    );
-  }
-
   // --- Log in (real, or the sandbox's practice copy) --------------------------
   const continueWithGoogle = async () => {
     if (isSandbox) return onOpenSandbox();
@@ -317,6 +282,42 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     if (!address) return;
     await sendLinkTo(address);
   };
+
+
+  // --- First page -----------------------------------------------------------
+  if (step === 'welcome') {
+    return (
+      <AuthCard>
+        <Brand />
+        {accounts.length > 0 && (
+          <div className="space-y-2">
+            {accounts.map((account) => (
+              <AccountRow
+                key={account.email}
+                account={account}
+                busy={!!busy}
+                onPick={() => continueAs(account)}
+                onForget={() => {
+                  forgetAccount(account.email);
+                  setAccounts(knownAccounts());
+                }}
+              />
+            ))}
+          </div>
+        )}
+        <div className="space-y-2">
+          <button type="button" onClick={() => openLoginPage('login')} className={accounts.length > 0 ? sandboxBtn : mainBtn}>
+            {accounts.length > 0 ? 'Use another account' : 'Log in'}
+          </button>
+          <button type="button" onClick={() => openLoginPage('sandbox-login')} className={sandboxBtn}>
+            <FlaskConical className="w-4 h-4" />
+            <span>Sandbox</span>
+          </button>
+        </div>
+        {error && <ErrorNote message={error} />}
+      </AuthCard>
+    );
+  }
 
   return (
     <AuthCard

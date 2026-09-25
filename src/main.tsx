@@ -17,10 +17,16 @@ function trackVisibleHeight(): void {
   const apply = () => {
     const height = vv?.height ?? window.innerHeight;
     document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
-    // A big bite out of the screen means the keyboard is up. Rows marked
-    // kbd-hide step aside so the card and its buttons still fit.
-    const keyboardUp = height < window.innerHeight * 0.75;
-    document.documentElement.dataset.kbd = keyboardUp ? 'up' : 'down';
+    /*
+     * Rows marked hide-when-tight step aside only when there is genuinely no
+     * room for them. With a keyboard up on a normal phone there still is — the
+     * whole card ends around 480px — so the mode and filter bars stay. On a
+     * small phone they go, because the Check button matters more.
+     */
+    document.documentElement.dataset.tight = height < 490 ? '1' : '0';
+    // iOS may scroll the page to chase the focused box. The layout already
+    // fits the space, so any scrolling just hides the top of the card.
+    if (window.scrollY !== 0) window.scrollTo(0, 0);
   };
   apply();
   vv?.addEventListener('resize', apply);
