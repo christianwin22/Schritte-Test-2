@@ -14,6 +14,7 @@ import {
   type OtherDeviceEvent,
 } from '../lib/progressSync';
 import { flushQueue } from '../lib/suggestions';
+import { displayName, rememberAccount } from '../lib/knownAccounts';
 import { LoginScreen, SandboxTag, friendlyAuthError } from './LoginScreen';
 
 interface AuthContextValue {
@@ -92,6 +93,14 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         }
         if (restoredFor.current === next.user.id) return; // token refresh, same person
         restoredFor.current = next.user.id;
+        // Offer this account back on the Log in page after a sign-out.
+        const meta = (next.user.user_metadata ?? {}) as Record<string, unknown>;
+        rememberAccount({
+          email: next.user.email ?? '',
+          name: displayName(next.user),
+          via: next.user.app_metadata?.provider === 'google' ? 'google' : 'email',
+          picture: typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined,
+        });
         setPhase('restoring');
         restoreForUser(next.user.id)
           .then(() => setPhase('ready'))

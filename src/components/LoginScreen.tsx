@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, MailCheck, Mail, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, MailCheck, Mail, FlaskConical, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AppLogo } from './AppLogo';
+import { forgetAccount, knownAccounts, type KnownAccount } from '../lib/knownAccounts';
 
 /** Turns Supabase's error text into something a learner can act on. */
 export function friendlyAuthError(message: string): string {
@@ -114,6 +115,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // Anyone who has signed in on this device before, offered back by name.
+  const [accounts, setAccounts] = useState<KnownAccount[]>(() => knownAccounts());
 
   const isSandbox = step === 'sandbox-login';
   const auth = supabase?.auth ?? null;
@@ -165,12 +168,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
   }
 
   // --- Log in (real, or the sandbox's practice copy) --------------------------
-  const continueWithGoogle = async () => {
+  const continueWithGoogle = async (hint?: string) => {
     if (isSandbox) return onOpenSandbox();
     if (!auth) return;
     setError(null);
     setBusy(true);
-    const { error } = await auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+    const { error } = await auth.signInWithOAuth({
+      provider: 'google',
+      // A remembered account goes straight to itself, instead of the chooser.
+      options: hint ? { redirectTo, queryParams: { login_hint: hint } } : { redirectTo },
+    });
     // On success the browser is already leaving for Google; only failures come back here.
     if (error) {
       setError(friendlyAuthError(error.message));
@@ -178,10 +185,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     }
   };
 
-  const sendLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const address = email.trim();
-    if (!address) return;
+  /** Taps on a remembered account: the same way they came in last time. */
+  const continueAs = async (account: KnownAccount) => {
+    if (account.via === 'google') return continueWithGoogle(account.email);
+    await sendLinkTo(account.email);
+  };
+
+  const sendLinkTo = async (address: string) => {
     if (isSandbox) {
       setSentTo(address); // pretend: nothing is sent
       return;
@@ -194,6 +204,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
     setBusy(false);
     if (error) setError(friendlyAuthError(error.message));
     else setSentTo(address);
+  };
+
+  const sendLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const address = email.trim();
+    if (!address) return;
+    await sendLinkTo(address);
   };
 
   return (
@@ -232,7 +249,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
           </button>
         </div>
       ) : (
-        <div className={isSandbox ? 'space-y-6' : 'space-y-4'}>
+        <div className={isSandbox || accounts.length > 0 ? 'space-y-6' : 'space-y-4'}>
           {/* Sandbox only: a pretend account, so the page can be practised in two parts */}
           {isSandbox && (
             <div className="space-y-2">
@@ -257,10 +274,63 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
             </div>
           )}
 
+          {/* Anyone who has signed in here before — one tap to come back */}
+          {!isSandbox && accounts.length > 0 && (
+            <div className="space-y-2">
+              <SectionTitle>Accounts on this device</SectionTitle>
+              {accounts.map((account) => (
+                <div
+                  key={account.email}
+                  className="w-full p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 flex items-center gap-2 transition-all"
+                >
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => continueAs(account)}
+                    className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer disabled:opacity-60"
+                  >
+                    {account.picture ? (
+                      <img src={account.picture} alt="" className="w-9 h-9 rounded-full shrink-0 object-cover" />
+                    ) : (
+                      <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 flex items-center justify-center font-black text-sm shrink-0">
+                        {account.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="min-w-0">
+                      <span className="block text-sm font-black text-zinc-900 dark:text-zinc-100 truncate">
+                        {account.name}
+                      </span>
+                      <span className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 truncate">
+                        {account.email}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Forget ${account.email}`}
+                    title="Remove from this device"
+                    onClick={() => {
+                      forgetAccount(account.email);
+                      setAccounts(knownAccounts());
+                    }}
+                    className="p-2 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              <p className="text-[11px] font-semibold text-zinc-400 px-1">
+                {accounts.some((a) => a.via === 'email')
+                  ? 'Tapping one signs you in the same way as last time.'
+                  : 'Tapping one takes you straight to Google.'}
+              </p>
+            </div>
+          )}
+
           {/* Part 2: Google or email */}
           <div className="space-y-2.5">
-            {isSandbox && <SectionTitle>Another account</SectionTitle>}
-            <button type="button" onClick={continueWithGoogle} disabled={busy} className={googleBtn}>
+            {(isSandbox || accounts.length > 0) && <SectionTitle>Another account</SectionTitle>}
+            <button type="button" onClick={() => continueWithGoogle()} disabled={busy} className={googleBtn}>
               <GoogleMark />
               <span>Continue with Google</span>
             </button>
