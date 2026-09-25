@@ -112,6 +112,16 @@ const lessonTopics = (words: WordEntry[], limit = 2): string => {
     .join(' · ');
 };
 
+/** A fresh order every time a session begins. */
+const shuffled = <T,>(items: T[]): T[] => {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
 const getExampleSentence = (word: WordEntry): { german: string; english: string } => {
   if (word.exampleSentences && word.exampleSentences.length > 0) {
     const ex = word.exampleSentences[0];
@@ -469,10 +479,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           return;
         }
         const targetQueue = globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords;
-        setPracticeQueue([...targetQueue]);
+        setPracticeQueue(shuffled(targetQueue));
         setSessionInitialCount(targetQueue.length);
       } else if (filteredWords.length > 0) {
-        setPracticeQueue([...filteredWords]);
+        // A new order each time, so a second run through a lesson is not the
+        // first one from memory.
+        setPracticeQueue(shuffled(filteredWords));
         setSessionInitialCount(filteredWords.length);
       }
     }
@@ -896,7 +908,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     if (flashcardSubMode === 'review') {
       freshQueue = globalDueWords.length > 0 ? [...globalDueWords] : [...globalUnlockedWords];
     } else {
-      freshQueue = filteredWords.length > 0 ? [...filteredWords] : [];
+      freshQueue = shuffled(filteredWords);
     }
 
     setPracticeQueue(freshQueue);
@@ -1032,6 +1044,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setSessionStarted(false);
     setDrillSubMode('practice');
     setDrillStarted(false);
+    // Practice keeps nothing when you walk out, so none of it should be
+    // waiting when you come back. The next run starts from the top, shuffled.
+    setPracticeQueue([]);
+    setPracticeQueueIndex(0);
+    setPracticeFeedback(null);
+    setPracticeTypeInput('');
+    setPracticeTypeInput2('');
+    setIsPracticeComplete(false);
+    setPracticeScore(0);
+    setRoundNumber(1);
+    setMistakeWords([]);
+    setMistakeCounts({});
+    setInitialMistakeWordIds([]);
+    setCurrentRedoBatch([]);
   }, [activeExerciseMode]);
 
   // Check if practice or review is actively in progress (not completed, and user has made progress)
@@ -1071,11 +1097,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       setFlashcardIndex(0);
 
       if (flashcardSubMode === 'review') {
-        const q = globalDueWords.length > 0 ? [...globalDueWords] : [...globalUnlockedWords];
+        const q = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
         setPracticeQueue(q);
         setSessionInitialCount(q.length);
       } else {
-        setPracticeQueue(list);
+        setPracticeQueue(shuffled(list));
         setSessionInitialCount(list.length);
       }
 
@@ -1130,11 +1156,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       if (mode === 'learn') {
         setIsCardFlipped(false);
       } else if (mode === 'practice') {
-        setPracticeQueue([...filteredWords]);
+        setPracticeQueue(shuffled(filteredWords));
         setSessionInitialCount(filteredWords.length);
         setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
       } else if (mode === 'review') {
-        const q = globalDueWords.length > 0 ? [...globalDueWords] : [...globalUnlockedWords];
+        const q = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
         setPracticeQueue(q);
         setSessionInitialCount(q.length);
         setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
