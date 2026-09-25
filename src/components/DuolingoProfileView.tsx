@@ -4,7 +4,7 @@ import { AppLanguage, getTranslation } from '../utils/translations';
 import { playSound } from '../utils/audioEffects';
 import { currentStreak, thisWeek } from '../utils/streak';
 import { learntWordCount } from '../utils/srsEngine';
-import { SwitchAccountButton } from './SwitchAccountButton';
+import { LogOutButton } from './LogOutButton';
 import { useAuth } from './AuthGate';
 import { initialsFor, loadProfile, nameFor, saveProfile, shrinkPhoto } from '../lib/profile';
 
@@ -181,8 +181,8 @@ export const DuolingoProfileView: React.FC<DuolingoProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Moving between accounts. Logging out for good lives in Settings. */}
-      <SwitchAccountButton appLanguage={appLanguage} />
+      {/* Log out — back to the login home page */}
+      <LogOutButton appLanguage={appLanguage} />
     </div>
   );
 };

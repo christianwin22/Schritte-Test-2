@@ -23,7 +23,8 @@ import {
 import { playSound } from '../utils/audioEffects';
 import { AccountDialog } from './AccountDialog';
 import { useAuth } from './AuthGate';
-import { seedDueForTesting } from '../utils/srsEngine';
+import { seedEverythingForTesting } from '../utils/srsEngine';
+import { markLessonReadyForDrills, loadDrillPracticeState, saveDrillPracticeState } from '../utils/srsEngine';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import { FlaskConical } from 'lucide-react';
 import { testGermanVoice, type VoiceCheck } from '../utils/speech';
@@ -96,14 +97,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           type="button"
           onClick={() => {
             playSound('tap');
-            seedDueForTesting(INITIAL_VOCABULARY.filter((w) => w.level === 'A1' && w.lektion === 1));
+            const lesson1 = INITIAL_VOCABULARY.filter((w) => w.level === 'A1' && w.lektion === 1);
+            seedEverythingForTesting(lesson1);
+            // ...and the drills' Practice has a lesson waiting, with its amber mark
+            saveDrillPracticeState(markLessonReadyForDrills(loadDrillPracticeState(), 'A1', 1, lesson1));
             setSeeded(true);
             window.setTimeout(() => window.location.reload(), 600);
           }}
           className="w-full bg-amber-50 dark:bg-amber-950/40 rounded-3xl p-6 border-2 border-amber-300 dark:border-amber-700 flex items-center justify-between gap-3 cursor-pointer"
         >
           <span className="text-base font-black text-amber-900 dark:text-amber-200">
-            {seeded ? 'Filling…' : 'Make 15 words due now'}
+            {seeded ? 'Filling…' : 'Fill every exercise with 10'}
           </span>
           <FlaskConical className="w-5 h-5 text-amber-700 dark:text-amber-400 shrink-0" />
         </button>
@@ -132,11 +136,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </span>
                 <span className="text-base font-black text-zinc-900 dark:text-zinc-100">{t.appLanguage}</span>
               </span>
-              <span className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 flex items-center gap-2 shrink-0">
-                <span className="text-base leading-none">{appLanguage === 'en' ? '🇬🇧' : '🇩🇪'}</span>
-                <span className="font-black text-xs text-zinc-900 dark:text-zinc-100">
-                  {appLanguage === 'en' ? 'English' : 'Deutsch'}
-                </span>
+              {/* The flag alone: the name beside it was saying the same thing twice */}
+              <span className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-lg leading-none shrink-0">
+                {appLanguage === 'en' ? '🇬🇧' : '🇩🇪'}
               </span>
             </button>
 

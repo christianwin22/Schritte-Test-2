@@ -1,14 +1,11 @@
 /**
  * Who has signed in on this device before.
  *
- * A name, an email, and which button they used — and, for the accounts that
- * are still signed in, the session itself, so switching between them needs no
- * trip to Google. That is what lets Switch account work the way it does in
- * other apps.
- *
- * The trade is plain: a kept session is a way back into that account from this
- * device without signing in again. So Log out does not keep one. Switching
- * keeps both; logging out of an account forgets its session for good.
+ * Only enough to offer them back on the Log in page — a name, an email, and
+ * which button they used. No token, nothing that signs anyone in on its own:
+ * tapping a remembered account still goes through Google. Account switching
+ * was tried and taken out, and its stored sessions went with it; keeping a way
+ * back into an account is not worth it for a feature nobody uses.
  *
  * Kept under a "cpa_" key so that signing out, which clears the progress keys,
  * leaves this list alone. That is the whole point of it.
@@ -25,36 +22,6 @@ export interface KnownAccount {
   /** Their Google picture, when there is one. */
   picture?: string;
   lastSeen: string;
-  /**
-   * The tokens that can put this account back without signing in again.
-   * Present only while the account is switched away from, never after Log out.
-   */
-  session?: { access_token: string; refresh_token: string };
-}
-
-/** Accounts that can be returned to with one tap. */
-export function switchableAccounts(exceptEmail?: string | null): KnownAccount[] {
-  return knownAccounts().filter(
-    (a) => a.session?.refresh_token && a.email.toLowerCase() !== (exceptEmail ?? '').toLowerCase()
-  );
-}
-
-/** Puts a session away so the account can be returned to. */
-export function keepSession(email: string, session: { access_token: string; refresh_token: string }): void {
-  const list = knownAccounts();
-  const found = list.find((a) => a.email.toLowerCase() === email.toLowerCase());
-  if (!found) return;
-  found.session = session;
-  write(list);
-}
-
-/** Drops the stored session; the account stays listed but needs a real sign-in. */
-export function dropSession(email: string): void {
-  const list = knownAccounts();
-  const found = list.find((a) => a.email.toLowerCase() === email.toLowerCase());
-  if (!found) return;
-  delete found.session;
-  write(list);
 }
 
 export function knownAccounts(): KnownAccount[] {
@@ -77,12 +44,20 @@ function write(list: KnownAccount[]): void {
   }
 }
 
-export function rememberAccount(account: Omit<KnownAccount, 'lastSeen' | 'session'>): void {
+export function rememberAccount(account: Omit<KnownAccount, 'lastSeen'>): void {
   if (!account.email) return;
-  const all = knownAccounts();
-  const previous = all.find((a) => a.email.toLowerCase() === account.email.toLowerCase());
-  const rest = all.filter((a) => a.email.toLowerCase() !== account.email.toLowerCase());
-  write([{ ...account, session: previous?.session, lastSeen: new Date().toISOString() }, ...rest]);
+  const rest = knownAccounts().filter((a) => a.email.toLowerCase() !== account.email.toLowerCase());
+  write([{ ...account, lastSeen: new Date().toISOString() }, ...rest]);
+}
+
+/** Clears any session left behind by the switching that used to be here. */
+export function forgetStoredSessions(): void {
+  const list = knownAccounts().map((a) => {
+    const { ...rest } = a as KnownAccount & { session?: unknown };
+    delete (rest as { session?: unknown }).session;
+    return rest as KnownAccount;
+  });
+  write(list);
 }
 
 export function forgetAccount(email: string): void {

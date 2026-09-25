@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Camera, ChevronRight, Trash2, X } from 'lucide-react';
-import { loadProfile, saveProfile, shrinkPhoto, type Gender, type Profile } from '../lib/profile';
-import { initialsFor, nameFor } from '../lib/profile';
+import { ChevronRight, X } from 'lucide-react';
+import { loadProfile, saveProfile, type Gender, type Profile } from '../lib/profile';
+
 import { useAuth } from './AuthGate';
 import { AppLanguage } from '../utils/translations';
 
@@ -25,7 +25,6 @@ export const AccountDialog: React.FC<{ appLanguage: AppLanguage; onClose: () => 
   const auth = useAuth();
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [editing, setEditing] = useState<Editing>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const en = appLanguage === 'en';
 
   useEffect(() => {
@@ -69,53 +68,6 @@ export const AccountDialog: React.FC<{ appLanguage: AppLanguage; onClose: () => 
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
-
-        {/* Picture */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="relative">
-            {profile.photo ? (
-              <img src={profile.photo} alt="" className="w-20 h-20 rounded-3xl object-cover border-2 border-zinc-200 dark:border-zinc-700" />
-            ) : (
-              <div className="w-20 h-20 rounded-3xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 flex items-center justify-center font-black text-xl">
-                {initialsFor(nameFor(profile, auth?.email ?? null))}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              aria-label={en ? 'Change picture' : 'Bild ändern'}
-              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center shadow-2xs cursor-pointer"
-            >
-              <Camera className="w-4 h-4" />
-            </button>
-          </div>
-          {profile.photo && (
-            <button
-              type="button"
-              onClick={() => commit({ ...profile, photo: undefined })}
-              className="flex items-center gap-1 text-[11px] font-black text-zinc-400 hover:text-rose-600 cursor-pointer"
-            >
-              <Trash2 className="w-3 h-3" />
-              {en ? 'Remove' : 'Entfernen'}
-            </button>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              e.target.value = '';
-              if (!file) return;
-              try {
-                commit({ ...profile, photo: await shrinkPhoto(file) });
-              } catch {
-                // not a picture we can read; leave what was there
-              }
-            }}
-          />
         </div>
 
         {/* The rows */}

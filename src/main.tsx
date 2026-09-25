@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AuthGate } from './components/AuthGate';
 import './index.css';
+import { forgetStoredSessions } from './lib/knownAccounts';
 
 /**
  * Keeps the app as tall as the part of the screen you can see.
@@ -36,6 +37,8 @@ function trackVisibleHeight(): void {
 }
 
 trackVisibleHeight();
+// Account switching was removed; any session it kept is cleared on next start.
+forgetStoredSessions();
 
 /** The built file this page is running, e.g. "index-qMRVgsDu.js". */
 export function runningBuild(): string {

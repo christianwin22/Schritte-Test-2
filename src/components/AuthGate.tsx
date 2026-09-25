@@ -8,7 +8,6 @@ import {
   exitSandbox,
   pushSnapshot,
   claimAccount,
-  clearAppData,
   restoreForUser,
   signOutAndClear,
   startAutoSync,
@@ -17,14 +16,7 @@ import {
   type OtherDeviceEvent,
 } from '../lib/progressSync';
 import { flushQueue } from '../lib/suggestions';
-import {
-  displayName,
-  dropSession,
-  keepSession,
-  rememberAccount,
-  switchableAccounts,
-  type KnownAccount,
-} from '../lib/knownAccounts';
+import { displayName, rememberAccount } from '../lib/knownAccounts';
 import { LoginScreen, SandboxTag, friendlyAuthError } from './LoginScreen';
 import { WelcomeSetup } from './WelcomeSetup';
 import { loadProfile } from '../lib/profile';
@@ -35,17 +27,6 @@ interface AuthContextValue {
   isSandbox: boolean;
   /** Logs out, or leaves the sandbox; either way back to the login home page. Resolves false if logging out couldn't save. */
   leave: () => Promise<boolean>;
-  /** Other accounts on this device that can be returned to without signing in. */
-  otherAccounts?: KnownAccount[];
-  /** Saves up, puts this account's session away, and opens another one. */
-  switchTo?: (account: KnownAccount) => Promise<boolean>;
-  /**
-   * Saves up, keeps this account's session, and goes to the Log in page so a
-   * second account can be added. Without this there would be no way to end up
-   * with two accounts to switch between: sessions are only kept when you step
-   * away from one, and Log out deliberately throws its session away.
-   */
-  addAccount?: () => Promise<boolean>;
 }
 
 // Remembers being in the sandbox, so reopening the app returns there.
@@ -98,7 +79,6 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   /** Set when the saved progress has moved on under us, on another device. */
   const [otherDevice, setOtherDevice] = useState<OtherDeviceEvent | null>(null);
   const [syncRun, setSyncRun] = useState(0); // bumping this restarts the sync
-  const [accounts, setAccounts] = useState<KnownAccount[]>([]);
   const [profileReady, setProfileReady] = useState(false);
 
   useEffect(() => {
@@ -126,7 +106,6 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           via: next.user.app_metadata?.provider === 'google' ? 'google' : 'email',
           picture: typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined,
         });
-        setAccounts(switchableAccounts(next.user.email));
         setPhase('restoring');
         restoreForUser(next.user.id)
           .then(() => {
@@ -226,55 +205,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     email,
     isSandbox: false,
     leave: async () => {
-      // Logging out really logs out: the way back in has to be a real sign-in.
-      if (email) dropSession(email);
       const ok = await signOutAndClear(userId);
       if (ok) window.location.reload();
       return ok;
-    },
-    otherAccounts: accounts,
-    /**
-     * Swaps accounts without a trip to Google. This account's progress goes up
-     * first and its session is put away, then the other one's session is put
-     * back. Nothing is thrown away on either side.
-     */
-    switchTo: async (account) => {
-      if (!supabase || !account.session) return false;
-      const saved = await pushSnapshot(userId, takeSnapshot());
-      if (!saved) return false; // offline: don't move while work is unsaved
-      const current = (await supabase.auth.getSession()).data.session;
-      if (email && current) {
-        keepSession(email, {
-          access_token: current.access_token,
-          refresh_token: current.refresh_token,
-        });
-      }
-      clearAppData(); // the next account's own progress arrives on restore
-      const { error } = await supabase.auth.setSession(account.session);
-      if (error) {
-        console.warn('Could not switch account', error.message);
-        return false;
-      }
-      window.location.reload();
-      return true;
-    },
-    addAccount: async () => {
-      if (!supabase) return false;
-      const saved = await pushSnapshot(userId, takeSnapshot());
-      if (!saved) return false;
-      const current = (await supabase.auth.getSession()).data.session;
-      if (email && current) {
-        keepSession(email, {
-          access_token: current.access_token,
-          refresh_token: current.refresh_token,
-        });
-      }
-      clearAppData();
-      // Local only: the kept session must stay usable, and a global sign-out
-      // would revoke the very token we just put away.
-      await supabase.auth.signOut({ scope: 'local' });
-      window.location.reload();
-      return true;
     },
   };
 

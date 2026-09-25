@@ -73,28 +73,37 @@ export function processFSRSReview(
 }
 
 /**
- * Sandbox only: makes a pile of words due now, so Review can be walked through
- * without waiting days for a real schedule to ripen. Never called outside the
- * sandbox — real progress is earned, not seeded.
+ * Sandbox only: fills every exercise so all of them can be walked through
+ * today, instead of waiting days for a real schedule to ripen.
+ *
+ * Ten words due in Flashcard Review, ten nouns due in each drill's Review, and
+ * Lesson 1 marked as practised so the drills' Practice has something waiting.
+ * Never called outside the sandbox — real progress is earned, not seeded.
  */
-export function seedDueForTesting(words: WordEntry[], howMany = 15): Record<string, FSRSCardRecord> {
+export function seedEverythingForTesting(words: WordEntry[], howMany = 10): void {
   const records = loadAllFSRSRecords();
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  for (const word of words.slice(0, howMany)) {
-    records[word.id] = {
-      wordId: word.id,
-      status: 'review',
-      isUnlocked: true,
-      stability: 1 + Math.random() * 3,
-      difficulty: 4 + Math.random() * 3,
-      intervalDays: 1,
-      nextReviewDate: yesterday, // due now
-      lastReviewedAt: yesterday,
-      repetitionCount: 1 + Math.floor(Math.random() * 4),
-    };
+  const due = (wordId: string): FSRSCardRecord => ({
+    wordId,
+    status: 'review',
+    isUnlocked: true,
+    stability: 1 + Math.random() * 3,
+    difficulty: 4 + Math.random() * 3,
+    intervalDays: 1,
+    nextReviewDate: yesterday, // due now
+    lastReviewedAt: yesterday,
+    repetitionCount: 1 + Math.floor(Math.random() * 4),
+  });
+
+  for (const word of words.slice(0, howMany)) records[word.id] = due(word.id);
+  for (const skill of ['article', 'plural'] as DrillSkill[]) {
+    const nouns = words.filter((w) => isDrillable(skill, w)).slice(0, howMany);
+    for (const noun of nouns) {
+      const id = drillCardId(skill, noun.id);
+      records[id] = due(id);
+    }
   }
   saveAllFSRSRecords(records);
-  return records;
 }
 
 /** Load all FSRS card records from localStorage. A new account starts with none. */
