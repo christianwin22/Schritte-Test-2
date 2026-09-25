@@ -713,6 +713,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
     if (!currentPracticeWord || practiceFeedback) return;
     playSound('tap');
+    // You are talking, not typing: the keyboard can go.
+    practiceTypeInputRef.current?.blur();
     setIsListening(true);
 
     const lang = practiceDirection === 'EN_TO_DE' ? 'de-DE' : 'en-US';
@@ -801,6 +803,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   const handleNextPractice = () => {
     playSound('tap');
+    // Inside the tap, so iOS keeps the keyboard up for the next card.
+    practiceTypeInputRef.current?.focus();
     const activeQueue = practiceQueue.length > 0 ? practiceQueue : filteredWords;
 
     if (practiceQueueIndex + 1 < activeQueue.length) {

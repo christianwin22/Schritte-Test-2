@@ -104,13 +104,52 @@ interface LoginScreenProps {
   onOpenSandbox: () => void;
 }
 
+/**
+ * Sign-in links by email are switched off: they open in Safari, so they can
+ * never sign you into the app installed on a home screen. Google comes back
+ * into the same window. Flip this to true to bring the email form back.
+ */
+const EMAIL_SIGN_IN = false;
+
 /** One remembered account, offered on the first page. */
 const AccountRow: React.FC<{
   account: KnownAccount;
   busy: boolean;
   onPick: () => void;
   onForget: () => void;
-}> = ({ account, busy, onPick, onForget }) => (
+}> = ({ account, busy, onPick, onForget }) => {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="w-full p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-300 dark:border-zinc-600 space-y-2.5">
+        <p className="text-xs font-bold text-zinc-700 dark:text-zinc-200">
+          Remove <span className="font-black">{account.email}</span> from this device?
+        </p>
+        <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+          Nothing is deleted — your progress stays in the account. You'd just type the address again next time.
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            className="flex-1 py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-xs cursor-pointer"
+          >
+            Keep
+          </button>
+          <button
+            type="button"
+            onClick={onForget}
+            className="flex-1 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 font-black text-xs cursor-pointer"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
   <div className="w-full p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 flex items-center gap-2">
     <button
       type="button"
@@ -134,13 +173,14 @@ const AccountRow: React.FC<{
       type="button"
       aria-label={`Forget ${account.email}`}
       title="Remove from this device"
-      onClick={onForget}
+      onClick={() => setConfirming(true)}
       className="p-2 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer shrink-0"
     >
       <X className="w-4 h-4" />
     </button>
   </div>
-);
+  );
+};
 
 const ErrorNote: React.FC<{ message: string }> = ({ message }) => (
   <div className="flex items-start gap-2 p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800 text-xs font-bold text-red-800 dark:text-red-200">
@@ -250,7 +290,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
 
   /** Taps on a remembered account: the same way they came in last time. */
   const continueAs = async (account: KnownAccount) => {
-    if (account.via === 'google') return continueWithGoogle(account.email);
+    if (account.via === 'google' || !EMAIL_SIGN_IN) return continueWithGoogle(account.email);
     await sendLinkTo(account.email);
   };
 
@@ -316,7 +356,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
           {/* Sandbox only: a pretend account, so the page can be practised in two parts */}
           {isSandbox && (
             <div className="space-y-2">
-              <SectionTitle>Accounts on this device</SectionTitle>
               <button
                 type="button"
                 onClick={onOpenSandbox}
@@ -339,19 +378,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
 
           {/* Part 2: Google or email */}
           <div className="space-y-2.5">
-            {isSandbox && <SectionTitle>Another account</SectionTitle>}
+            {isSandbox && <SectionTitle>Use another account</SectionTitle>}
             <button type="button" onClick={() => continueWithGoogle()} disabled={!!busy} className={googleBtn}>
               {busy === 'google' && <Loader2 className="w-4 h-4 animate-spin" />}
               <GoogleMark />
               <span>Continue with Google</span>
             </button>
-            {!isSandbox && (
+            {EMAIL_SIGN_IN && !isSandbox && (
               <div className="flex items-center gap-3 py-1 text-[11px] font-black uppercase tracking-wider text-zinc-400">
                 <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
                 or
                 <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
               </div>
             )}
+            {EMAIL_SIGN_IN && (
             <form onSubmit={sendLink} className="space-y-2.5">
               <input
                 type="email"
@@ -368,6 +408,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ initialError = null, o
                 <span>Email me a sign-in link</span>
               </button>
             </form>
+            )}
           </div>
         </div>
       )}
