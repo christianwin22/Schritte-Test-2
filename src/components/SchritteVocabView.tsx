@@ -57,6 +57,8 @@ import {
   markLessonsDoneForDrill,
   readyLessons,
   DrillPracticeState,
+  loadSpecialLearned,
+  markSpecialLearned,
 } from '../utils/srsEngine';
 
 export interface FlashcardHotkeys {
@@ -563,8 +565,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       ? 'weak'
       : null;
   const isDrillReview = activeDrillSkill !== null && drillSubMode === 'review';
-  // Only Special Case has Learn (the nouns that change); the plain article drills are Practice | Review.
+  // Only Special Case has Learn (the nouns that change) — and it is Learn only.
   const drillHasLearn = activeDrillSkill === 'weak';
+  // Special Case nouns learned once: Accusative then asks them typed ("den Kollegen").
+  const [specialLearned, setSpecialLearned] = useState(() => new Set(loadSpecialLearned().accusative));
+  const isWeakDrill = activeDrillSkill === 'weak';
+  /** A card asked typed, article and noun together: Special Case itself, or a learned Special Case noun in Accusative. */
+  const isWeakCard = (word?: WordEntry | null) =>
+    !!word && (isWeakDrill || (activeDrillSkill === 'accusative' && !!weakForm(word) && specialLearned.has(word.id)));
   useEffect(() => {
     if (drillHasLearn) setDrillSubMode('learn');
     else setDrillSubMode((m) => (m === 'learn' ? 'practice' : m));
@@ -645,7 +653,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // Plural: the answer box is focused whenever a new card appears, so you can just type.
   const pluralInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if ((activeExerciseMode === 'plural_drill' || activeExerciseMode === 'weak_nouns') && !pluralFeedback)
+    const typedCard =
+      activeExerciseMode === 'plural_drill' ||
+      activeExerciseMode === 'weak_nouns' ||
+      (activeExerciseMode === 'accusative_drill' && isWeakCard(activePluralNoun));
+    if (typedCard && !pluralFeedback)
       pluralInputRef.current?.focus();
   }, [activeExerciseMode, activePluralNoun?.id, pluralFeedback, drillSubMode]);
 
@@ -1313,7 +1325,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   // Plural and Special Case: the singular plays when a noun comes up ("der Name").
   const drillAudioKey =
-    (activeDrillSkill === 'plural' || activeDrillSkill === 'weak') &&
+    (activeDrillSkill === 'plural' || activeDrillSkill === 'weak' || (activeDrillSkill === 'accusative' && isWeakCard(drillSessionNoun))) &&
     drillSubMode !== 'learn' &&
     drillStarted &&
     !drillSessionDone &&
@@ -1637,20 +1649,19 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   // Handlers for Plural Drill
   /** Either the full 'die Häuser' or just 'Häuser' counts. Trailing punctuation (from speech) is ignored. */
-  // Plural and Weak Nouns both take a typed (or spoken) word.
-  //   Plural:     "die Häuser" or "Häuser"
-  //   Weak Nouns: "den Kollegen" or "Kollegen"
-  const isWeakDrill = activeDrillSkill === 'weak';
-  // Special Case asks for article and noun together ("den Kollegen"): both change.
-  const typedExpected = (word: WordEntry) => (isWeakDrill ? weakAnswer(word) : word.nounDetails?.plural || '');
-  const typedBlankAnswer = (word: WordEntry) => (isWeakDrill ? weakAnswer(word) : barePlural(word));
-  const typedSentence = (word: WordEntry) => (isWeakDrill ? weakSentence(word) : pluralSentence(word));
+  // Typed answers:
+  //   Plural:                      "die Häuser" or "Häuser"
+  //   a Special Case noun, once
+  //   learned, in Accusative:      "den Kollegen" — article and noun, since both change
+  const typedExpected = (word: WordEntry) => (isWeakCard(word) ? weakAnswer(word) : word.nounDetails?.plural || '');
+  const typedBlankAnswer = (word: WordEntry) => (isWeakCard(word) ? weakAnswer(word) : barePlural(word));
+  const typedSentence = (word: WordEntry) => (isWeakCard(word) ? weakSentence(word) : pluralSentence(word));
 
   const isPluralCorrect = (answer: string, word: WordEntry) => {
     const cleanUser = answer.trim().replace(/[.!?,]+$/, '').toLowerCase();
     const cleanExpected = typedExpected(word).toLowerCase().replace(/\s+/g, ' ');
     const given = cleanUser.replace(/\s+/g, ' ');
-    if (isWeakDrill) return given === cleanExpected; // the article is part of the answer here
+    if (isWeakCard(word)) return given === cleanExpected; // the article is part of the answer here
     return given === cleanExpected || given === cleanExpected.replace(/^die\s+/, '');
   };
 
@@ -1672,7 +1683,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       onWrongAnswer();
     }
     speakGerman(fillBlank(typedSentence(noun), typedBlankAnswer(noun)));
-    recordDrillAnswer(isWeakDrill ? 'weak' : 'plural', noun, isCorrect);
+    recordDrillAnswer(activeDrillSkill === 'accusative' ? 'accusative' : isWeakDrill ? 'weak' : 'plural', noun, isCorrect);
     setPluralFeedback({
       correct: isCorrect,
       expected,
@@ -2158,6 +2169,27 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         <span className="px-2.5 sm:px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 shrink-0">
           {appLanguage === 'en' ? 'Lesson' : 'Lektion'} {word?.lektion ?? '–'}
         </span>
+      </div>
+    </div>
+  );
+
+  /** Special Case: Accusative | Dative | Genitive, styled like the mode switch. Only Accusative has its nouns yet. */
+  const renderSpecialCaseBar = () => (
+    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
+      <div className="grid grid-cols-3 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
+        <span className="py-1.5 px-2 rounded-lg text-xs font-black flex items-center justify-center bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs">
+          {appLanguage === 'en' ? 'Accusative' : 'Akkusativ'}
+        </span>
+        {[appLanguage === 'en' ? 'Dative' : 'Dativ', appLanguage === 'en' ? 'Genitive' : 'Genitiv'].map((name) => (
+          <span
+            key={name}
+            aria-disabled="true"
+            title={appLanguage === 'en' ? 'Soon' : 'Bald'}
+            className="py-1.5 px-2 rounded-lg text-xs font-black flex items-center justify-center text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+          >
+            {name}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -3409,8 +3441,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       {/* SUB-MODE 2 & 3: DER/DIE/DAS and PLURAL — a sentence with one blank, answers at the bottom */}
       {activeDrillSkill && (() => {
         // "Article" = pick the article with buttons: Der/Die/Das (Nominative) and Accusative.
-        const isArticle = activeDrillSkill === 'article' || activeDrillSkill === 'accusative';
-        const noun = isArticle ? activeBlitzNoun : activePluralNoun;
+        const noun = drillSessionNoun;
+        // Buttons for der/die/das (and den/die/das) — except a Special Case noun already
+        // learned, which Accusative asks typed, article and noun together.
+        const isArticle = (activeDrillSkill === 'article' || activeDrillSkill === 'accusative') && !isWeakCard(noun);
         const practiceList = drillPracticeList(activeDrillSkill);
         const position = drillQueueIndex + 1;
         const total = drillQueue.length;
@@ -3421,7 +3455,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         const [before, after = ''] = sentence.split(BLANK);
         const rightAnswer = noun ? (isArticle ? choiceAnswer(noun) : typedBlankAnswer(noun)) : '';
         // The noun as the sentence has it: Accusative can change it ("den Kollegen").
-        const nounAsWritten = (isAccusative && after.trim().match(/^[\p{L}-]+/u)?.[0]) || noun?.lemma || '';
+        const nounAsWritten = (isAccusative && isArticle && after.trim().match(/^[\p{L}-]+/u)?.[0]) || noun?.lemma || '';
         const shown = (text: string) => (before === '' ? text.charAt(0).toUpperCase() + text.slice(1) : text);
 
         const status = renderDrillReviewStatus();
@@ -3435,7 +3469,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 nothing to review never starts, so it keeps its bars. */}
             {(drillSubMode === 'learn' || !drillStarted || emptyPractice || (isDrillReview && drillQueue.length === 0)) && (
               <>
-                {renderDrillModeSwitch()}
+                {/* Special Case: the bar picks the case, not the mode — it is Learn only */}
+                {activeDrillSkill === 'weak' ? renderSpecialCaseBar() : renderDrillModeSwitch()}
                 {drillSubMode !== 'review' && renderVocabFilterBar()}
               </>
             )}
@@ -3443,8 +3478,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm">
                 <NounChangeLearn
                   nouns={weakNouns}
-                  where={`${selectedLevel}${typeof selectedLektion === 'number' ? ` · ${selectedLektion === 0 ? 'Intro' : `L${selectedLektion}`}` : ''}`}
-                  onGoToPractice={() => setDrillSubMode('practice')}
+                  where=""
+                  onLearned={(nouns) => setSpecialLearned(new Set(markSpecialLearned('accusative', nouns.map((n) => n.id)).accusative))}
                   appLanguage={appLanguage}
                 />
               </div>

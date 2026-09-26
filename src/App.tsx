@@ -36,9 +36,7 @@ const GRAMMAR_ARTICLE_DRILLS: Record<string, string> = {
 };
 
 /** Pages inside pages: back (and the middle of the title) goes to the one above. */
-const EXERCISE_PARENT: Record<string, string> = {
-  article_special_acc: 'article_special',
-};
+const EXERCISE_PARENT: Record<string, string> = {};
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
 const STREAK_STORAGE_KEY = 'deutschmeister_streak_v2';
@@ -503,8 +501,7 @@ export default function App() {
         if (activeExerciseMode === 'sentence_stem') return 'Grammar • Sentence';
         if (activeExerciseMode === 'article_nominative') return 'Grammar • Nominative';
         if (activeExerciseMode === 'article_accusative') return 'Grammar • Accusative';
-        if (activeExerciseMode === 'article_special') return 'Grammar • Special Case';
-        if (activeExerciseMode === 'article_special_acc') return 'Grammar • Special Case • Accusative';
+        if (activeExerciseMode === 'article_special_acc') return 'Grammar • Special Case';
         return 'Grammar';
       }
       if (currentTab === 'listening') return 'Listening • Audio Practice';

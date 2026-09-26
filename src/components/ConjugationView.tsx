@@ -14,6 +14,7 @@ import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
 import { lessonTopics } from './SchritteVocabView';
 import { LearnPager } from './LearnPager';
+import { useAuth } from './AuthGate';
 
 /**
  * Grammar · Conjugation — Learn | Practice | Review, lesson by lesson, like Flashcard.
@@ -55,6 +56,15 @@ const TYPING_ORDER = [0, 1, 2, 3, 4, 5]; // ich, du, er — then wir, ihr, sie (
 export const conjCardId = (wordId: string) => `conj:${wordId}`;
 
 const VERBS = INITIAL_VOCABULARY.filter((w) => w.presentTense?.length === 6);
+
+/**
+ * Sandbox only: a test "lesson" of the ten verbs with the longest forms, A1–B1
+ * (sich gefallen lassen, sich verabschieden, …), to see every layout at its worst.
+ */
+const TEST_LESSON = -1;
+const LONGEST_TEN = [...VERBS]
+  .sort((a, b) => Math.max(...b.presentTense!.map((f) => f.length)) - Math.max(...a.presentTense!.map((f) => f.length)))
+  .slice(0, 10);
 
 /**
  * The six forms: Singular | Plural across, 1st / 2nd / 3rd down the side. The
@@ -156,6 +166,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   appLanguage = 'en',
 }) => {
   const en = appLanguage === 'en';
+  const isSandbox = useAuth()?.isSandbox ?? false;
 
   // --- Filter: level and lesson, kept for next time ---------------------------------
   const [level, setLevel] = useState<CEFRLevel>(() =>
@@ -168,7 +179,12 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   const [lesson, setLesson] = useState<number>(() =>
     readStored<number>('schritte_conj_lesson', 1, (v) => (Number.isFinite(Number(v)) ? Number(v) : null))
   );
-  const activeLesson = lessonsOfLevel.includes(lesson) ? lesson : lessonsOfLevel.find((l) => l > 0) ?? lessonsOfLevel[0] ?? 1;
+  const activeLesson =
+    isSandbox && lesson === TEST_LESSON
+      ? TEST_LESSON
+      : lessonsOfLevel.includes(lesson)
+      ? lesson
+      : lessonsOfLevel.find((l) => l > 0) ?? lessonsOfLevel[0] ?? 1;
   useEffect(() => {
     try {
       localStorage.setItem('schritte_conj_level', level);
@@ -180,7 +196,10 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   const [isLessonOpen, setIsLessonOpen] = useState(false);
 
   const lessonVerbs = useMemo(
-    () => VERBS.filter((v) => v.level === level && (v.lektion ?? 0) === activeLesson),
+    () =>
+      activeLesson === TEST_LESSON
+        ? LONGEST_TEN
+        : VERBS.filter((v) => v.level === level && (v.lektion ?? 0) === activeLesson),
     [level, activeLesson]
   );
 
@@ -409,7 +428,8 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   }, [autoplayVerb]);
 
   // --- Pieces ------------------------------------------------------------------------
-  const lessonLabel = (l: number) => (l === 0 ? 'Intro' : `${en ? 'Lesson' : 'Lektion'} ${l}`);
+  const lessonLabel = (l: number) =>
+    l === TEST_LESSON ? (en ? 'Test · 10 longest' : 'Test · 10 längste') : l === 0 ? 'Intro' : `${en ? 'Lesson' : 'Lektion'} ${l}`;
   const pill = (active: boolean) =>
     `py-1.5 px-2 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
       active
@@ -480,6 +500,23 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
             <>
               <div className="fixed inset-0 z-20" onClick={() => setIsLessonOpen(false)} />
               <div className="absolute right-0 mt-1.5 z-30 w-72 bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 animate-fadeIn">
+                {isSandbox && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('tap');
+                      setLesson(TEST_LESSON);
+                      setIsLessonOpen(false);
+                    }}
+                    className={`w-full mb-2 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer border border-dashed ${
+                      activeLesson === TEST_LESSON
+                        ? 'bg-amber-400 text-amber-950 border-amber-500'
+                        : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                    }`}
+                  >
+                    {lessonLabel(TEST_LESSON)}
+                  </button>
+                )}
                 <div className="grid grid-cols-7 gap-1.5">
                   {lessonsOfLevel.map((l) => (
                     <button

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowRight, Volume2 } from 'lucide-react';
 import { WordEntry } from '../types';
 import { BLANK, fillBlank, weakAnswer, weakForm, weakSentence } from '../data/nounDrillSentences';
-import { speakGerman } from '../utils/speech';
+import { speakGerman, speakGermanSequence } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
 import { LearnPager } from './LearnPager';
@@ -15,11 +15,13 @@ import { LearnPager } from './LearnPager';
 interface NounChangeLearnProps {
   nouns: WordEntry[];
   where: string; // "A1 · L1"
-  onGoToPractice: () => void;
+  onGoToPractice?: () => void;
+  /** Called once the last page has been seen: the round counts as learned. */
+  onLearned?: (nouns: WordEntry[]) => void;
   appLanguage?: AppLanguage;
 }
 
-export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, where, onGoToPractice, appLanguage = 'en' }) => {
+export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, onGoToPractice, onLearned, appLanguage = 'en' }) => {
   const en = appLanguage === 'en';
   const [index, setIndex] = useState(0);
   const [done, setDone] = useState(false);
@@ -28,6 +30,24 @@ export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, where, 
     setIndex(0);
     setDone(false);
   }, [idsKey]);
+
+  // Each page reads itself out: der Herr … den Herrn … Kennst du den Herrn?
+  const current = !done && nouns.length ? nouns[Math.min(index, nouns.length - 1)] : undefined;
+  useEffect(() => {
+    if (!current) return;
+    const form = weakForm(current) ?? current.lemma;
+    return speakGermanSequence([`der ${current.lemma}`, `den ${form}`, fillBlank(weakSentence(current), weakAnswer(current))]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id]);
+
+  const learnedOnce = useRef<string>('');
+  const finish = () => {
+    setDone(true);
+    if (learnedOnce.current !== idsKey) {
+      learnedOnce.current = idsKey;
+      onLearned?.(nouns);
+    }
+  };
 
   if (nouns.length === 0) {
     return (
@@ -52,10 +72,12 @@ export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, where, 
               setIndex(0);
               setDone(false);
             }}
+            style={onGoToPractice ? undefined : { flex: 1 }}
             className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95"
           >
             {en ? 'Again' : 'Nochmal'}
           </button>
+          {onGoToPractice && (
           <button
             type="button"
             onClick={() => {
@@ -66,6 +88,7 @@ export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, where, 
           >
             {en ? 'Go to Practice' : 'Zu den Übungen'} <ArrowRight className="w-4 h-4" />
           </button>
+          )}
         </div>
       </div>
     );
@@ -94,31 +117,40 @@ export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, where, 
   );
 
   return (
-    <LearnPager index={index} count={nouns.length} onChange={setIndex} onFinish={() => setDone(true)} className="flex-1 flex flex-col cursor-pointer">
+    <LearnPager index={index} count={nouns.length} onChange={setIndex} onFinish={finish} className="flex-1 flex flex-col cursor-pointer">
       {/* The lesson bar above already says which lesson; the counter sits in the middle */}
       <div className="text-center text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider mb-2">
         {index + 1} / {nouns.length}
       </div>
-      <div key={noun.id} className="flex-1 flex flex-col items-center justify-center gap-4 text-center animate-fadeIn">
+      <div key={noun.id} className="flex-1 flex flex-col items-center justify-center text-center animate-fadeIn">
+        {/* Nominative: nothing has changed yet, so all normal weight */}
         <div className="flex items-center gap-2">
-          <span className="text-2xl sm:text-3xl tracking-tight">
-            <span className="font-normal text-blue-600 dark:text-blue-400">der</span>{' '}
-            <span className="font-black text-zinc-900 dark:text-zinc-100">{noun.lemma}</span>
+          <span className="text-2xl sm:text-3xl tracking-tight font-normal">
+            <span className="text-blue-600 dark:text-blue-400">der</span>{' '}
+            <span className="text-zinc-900 dark:text-zinc-100">{noun.lemma}</span>
           </span>
           {speaker(`der ${noun.lemma}`, true)}
         </div>
-        <ArrowDown className="w-5 h-5 text-zinc-300 dark:text-zinc-600" />
+
+        {/* A clear arrow down */}
+        <div className="flex flex-col items-center my-3 text-zinc-400 dark:text-zinc-500" aria-hidden>
+          <span className="block w-0.5 h-8 rounded-full bg-current" />
+          <ArrowDown className="w-6 h-6 -mt-2.5 stroke-[2.5]" />
+        </div>
+
+        {/* Accusative: only what changed is bold — "den" (still masculine blue) and the ending */}
         <div className="flex items-center gap-2">
-          <span className="text-2xl sm:text-3xl tracking-tight">
-            <span className="font-black text-emerald-600 dark:text-emerald-400">den</span>{' '}
-            <span className="font-black text-zinc-900 dark:text-zinc-100">
+          <span className="text-2xl sm:text-3xl tracking-tight font-normal">
+            <span className="font-black text-blue-600 dark:text-blue-400">den</span>{' '}
+            <span className="text-zinc-900 dark:text-zinc-100">
               {stem}
-              <span className="text-emerald-600 dark:text-emerald-400">{ending}</span>
+              <span className="font-black">{ending}</span>
             </span>
           </span>
           {speaker(`den ${form}`, true)}
         </div>
-        <div className="mt-2 pt-3 border-t border-zinc-200/80 dark:border-zinc-700/80 w-full max-w-sm flex items-center justify-center gap-2">
+
+        <div className="mt-8 pt-5 border-t border-zinc-200/80 dark:border-zinc-700/80 w-full max-w-sm flex items-center justify-center gap-2">
           <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
             {before}
             <strong>den {form}</strong>

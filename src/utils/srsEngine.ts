@@ -521,3 +521,35 @@ export function readyLessons(state: DrillPracticeState, skill: DrillSkill): { le
     })
     .sort((a, b) => a.level.localeCompare(b.level) || a.lektion - b.lektion);
 }
+
+// ---------------------------------------------------------------------------
+// Special Case: which changing nouns have been learned (Grammar · Article · Special Case)
+// ---------------------------------------------------------------------------
+//
+// Going through a lesson's Special Case Learn once marks its nouns learned.
+// From then on Accusative Practice and Review ask them typed — article and
+// noun together ("den Kollegen") — instead of with den / die / das buttons.
+// Synced with the rest of the progress ("schritte_" key).
+
+const SPECIAL_LEARNED_KEY = 'schritte_special_learned_v1';
+export type SpecialCase = 'accusative';
+
+export function loadSpecialLearned(): Record<SpecialCase, string[]> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SPECIAL_LEARNED_KEY) || '{}');
+    return { accusative: Array.isArray(parsed.accusative) ? parsed.accusative : [] };
+  } catch {
+    return { accusative: [] };
+  }
+}
+
+export function markSpecialLearned(kind: SpecialCase, wordIds: string[]): Record<SpecialCase, string[]> {
+  const current = loadSpecialLearned();
+  const next = { ...current, [kind]: [...new Set([...current[kind], ...wordIds])] };
+  try {
+    localStorage.setItem(SPECIAL_LEARNED_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+  return next;
+}

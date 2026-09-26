@@ -301,12 +301,13 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   // Der/Die/Das exercise itself (App opens that same screen), so any change there
   // shows up here too. Accusative is its twin with den / die / das. Dative and Genitive have no exercise yet.
   const articleExercises: { id: string; title: string; drill?: GrammarDrill; soon?: boolean }[] = [
+    // First: the nouns that change as well as their article (den Kollegen). Learn only;
+    // once learned, Accusative asks them typed.
+    { id: 'article_special_acc', title: en ? 'Special Case' : 'Sonderfall' },
     { id: 'article_nominative', title: en ? 'Nominative (Subject)' : 'Nominativ (Subjekt)', drill: 'article' },
     { id: 'article_accusative', title: en ? 'Accusative (Direct object)' : 'Akkusativ (direktes Objekt)', drill: 'accusative' },
     { id: 'article_dative', title: en ? 'Dative (Indirect object)' : 'Dativ (indirektes Objekt)', soon: true },
     { id: 'article_genitive', title: en ? 'Genitive (Possession)' : 'Genitiv (Besitz)', soon: true },
-    // The nouns that change as well as their article (den Kollegen), one case at a time
-    { id: 'article_special', title: en ? 'Special Case' : 'Sonderfall', drill: 'weak' },
   ];
 
   // VIEW 1: GRAMMAR AREA HUB — the parts, each folding open to its exercises.
