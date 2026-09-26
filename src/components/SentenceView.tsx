@@ -338,15 +338,18 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
         }}
         className="flex-1 min-h-0 flex flex-col"
       >
-        {/* Lesson on the left (the lesson bar is hidden during a session), counter in the middle */}
+        {/* Lesson on the left, the tense in the middle (every sentence here is Present), counter top right */}
         <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
           <span className="text-[10px] uppercase">A1 · L{ex.lektion}</span>
+          <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+            {en ? 'Present' : 'Präsens'}
+          </span>
           {round > 1 ? (
-            <span className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80">
+            <span className="justify-self-end px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80">
               {en ? `Redo ${round - 1}` : `Wiederholung ${round - 1}`} • {index + 1} / {queue.length}
             </span>
           ) : (
-            <span>
+            <span className="justify-self-end">
               {index + 1} / {queue.length}
             </span>
           )}

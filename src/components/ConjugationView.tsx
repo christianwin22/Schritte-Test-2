@@ -110,7 +110,11 @@ const ConjTable: React.FC<{
         <div
           key={slot}
           style={{ gridRow: i + 1, gridColumn: plural ? 2 : 1 }}
-          className={`${pad} min-w-0 text-left ${LINE} ${tint(slot)} ${plural ? 'border-l' : ''} ${i > 0 ? 'border-t' : ''}`}
+          className={`${pad} min-w-0 text-left ${LINE} ${tint(slot)} ${plural ? 'border-l' : ''} ${i > 0 ? 'border-t' : ''} ${
+            // the corner cells round with the box (16px outside, 14px inside the 2px border),
+            // so the black line of the box being typed in follows the curve
+            ['rounded-tl-[14px]', '', 'rounded-bl-[14px]', 'rounded-tr-[14px]', '', 'rounded-br-[14px]'][slot]
+          }`}
         >
           {cell(slot)}
         </div>
@@ -688,8 +692,8 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
         onFinish={() => setLearnDone(true)}
         className="flex-1 flex flex-col cursor-pointer"
       >
-        {/* The lesson bar above already says which lesson; the counter sits top right */}
-        <div className="flex justify-end mb-2">
+        {/* The lesson bar above already says which lesson; the counter sits in the middle */}
+        <div className="flex justify-center mb-2">
           <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
             {learnIndex + 1} / {lessonVerbs.length}
           </span>
