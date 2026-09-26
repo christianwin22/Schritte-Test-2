@@ -213,8 +213,8 @@ export default function App() {
       accusative: { due: due('accusative'), waiting: readyLessons(drillPractice, 'accusative').length },
       conj: { due: due('conj'), waiting: readyLessonKeys(exerciseReady, 'conj').length },
       sentence: { due: due('sentence'), waiting: readyLessonKeys(exerciseReady, 'sentence').length },
-      aux: { due: due('aux'), waiting: 0 },
-      modal: { due: due('modal'), waiting: 0 },
+      past: { due: due('past'), waiting: readyLessonKeys(exerciseReady, 'past').length },
+      perfect: { due: due('perf'), waiting: readyLessonKeys(exerciseReady, 'perfect').length },
       weak: { due: due('weak'), waiting: readyLessons(drillPractice, 'weak').length },
     };
   }, [fsrsRecords, drillPractice, exerciseReady]);
@@ -224,8 +224,8 @@ export default function App() {
     grammarDrillBadges.conj.due +
     grammarDrillBadges.sentence.due +
     grammarDrillBadges.weak.due +
-    grammarDrillBadges.aux.due +
-    grammarDrillBadges.modal.due;
+    grammarDrillBadges.past.due +
+    grammarDrillBadges.perfect.due;
 
   // Persist State Changes
   useEffect(() => {
@@ -504,9 +504,9 @@ export default function App() {
         return 'Vocabulary';
       }
       if (currentTab === 'grammar') {
-        if (activeExerciseMode === 'table') return 'Grammar • Präsens';
-        if (activeExerciseMode === 'verb_auxiliary') return 'Grammar • Hilfsverben';
-        if (activeExerciseMode === 'verb_modal') return 'Grammar • Modalverben';
+        if (activeExerciseMode === 'table') return 'Grammar • Present';
+        if (activeExerciseMode === 'verb_past') return 'Grammar • Simple Past';
+        if (activeExerciseMode === 'verb_perfect') return 'Grammar • Present Perfect';
         if (activeExerciseMode === 'single_pronoun') return 'Grammar • Single Conjugation';
         if (activeExerciseMode === 'sentence_stem') return 'Grammar • Sentence';
         if (activeExerciseMode === 'article_nominative') return 'Grammar • Nominative';
@@ -603,6 +603,8 @@ export default function App() {
                 grammarDrillBadges.accusative.waiting +
                 grammarDrillBadges.weak.waiting +
                 grammarDrillBadges.conj.waiting +
+                grammarDrillBadges.past.waiting +
+                grammarDrillBadges.perfect.waiting +
                 grammarDrillBadges.sentence.waiting
               }
               appLanguage={appLanguage}

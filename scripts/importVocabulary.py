@@ -199,6 +199,12 @@ def main():
             forms = [f.strip() for f in present.split("·")]
             if len(forms) == 6:
                 entry["presentTense"] = forms
+        for column, field in (("simple past", "simplePast"), ("present perfect", "presentPerfect")):
+            value = cell(row, column)
+            if value:
+                forms = [f.strip() for f in value.split("·")]
+                if len(forms) == 6 and any(f != "-" for f in forms):
+                    entry[field] = forms
         if genders:
             entry["nounDetails"] = {
                 "gender": genders[0],

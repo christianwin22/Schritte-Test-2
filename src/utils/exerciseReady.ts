@@ -5,7 +5,8 @@ import { SCHRITTE_SENTENCE_STEM_DRILLS } from '../data/schritteVerbs';
  * Lessons waiting in the verb exercises, the way the noun drills already work:
  *
  *   finish a lesson's Words Practice  → that lesson is "ready" (amber) in
- *                                        Präsens and Sentence, if they have it
+ *                                        Present, Simple Past, Present Perfect
+ *                                        and Sentence, where they have it
  *   finish it there                   → "done", and the notice goes
  *
  * Kept apart from the noun drills' state (srsEngine), in a synced "schritte_" key.
@@ -13,7 +14,7 @@ import { SCHRITTE_SENTENCE_STEM_DRILLS } from '../data/schritteVerbs';
 
 const KEY = 'schritte_exercise_ready_v1';
 
-export type ReadyExercise = 'conj' | 'sentence';
+export type ReadyExercise = 'conj' | 'past' | 'perfect' | 'sentence';
 export type ReadyState = Record<ReadyExercise, Record<string, 'ready' | 'done'>>;
 
 export const readyKey = (level: string, lektion: number) => `${level}-${lektion}`;
@@ -21,9 +22,9 @@ export const readyKey = (level: string, lektion: number) => `${level}-${lektion}
 export function loadExerciseReady(): ReadyState {
   try {
     const parsed = JSON.parse(localStorage.getItem(KEY) || '{}');
-    return { conj: parsed.conj ?? {}, sentence: parsed.sentence ?? {} };
+    return { conj: parsed.conj ?? {}, past: parsed.past ?? {}, perfect: parsed.perfect ?? {}, sentence: parsed.sentence ?? {} };
   } catch {
-    return { conj: {}, sentence: {} };
+    return { conj: {}, past: {}, perfect: {}, sentence: {} };
   }
 }
 
@@ -39,6 +40,8 @@ function save(state: ReadyState): ReadyState {
 /** Does this exercise have anything for that lesson? */
 export function exerciseHasLesson(exercise: ReadyExercise, level: string, lektion: number, lessonWords: WordEntry[]): boolean {
   if (exercise === 'conj') return lessonWords.some((w) => w.presentTense?.length === 6);
+  if (exercise === 'past') return lessonWords.some((w) => w.simplePast?.length === 6);
+  if (exercise === 'perfect') return lessonWords.some((w) => w.presentPerfect?.length === 6);
   return level === 'A1' && SCHRITTE_SENTENCE_STEM_DRILLS.some((s) => s.lektion === lektion);
 }
 
@@ -46,7 +49,7 @@ export function exerciseHasLesson(exercise: ReadyExercise, level: string, lektio
 export function markReadyAfterWords(level: string, lektion: number, lessonWords: WordEntry[]): ReadyState {
   const state = loadExerciseReady();
   const key = readyKey(level, lektion);
-  for (const ex of ['conj', 'sentence'] as ReadyExercise[]) {
+  for (const ex of ['conj', 'past', 'perfect', 'sentence'] as ReadyExercise[]) {
     if (state[ex][key] === 'done') continue;
     if (exerciseHasLesson(ex, level, lektion, lessonWords)) state[ex] = { ...state[ex], [key]: 'ready' };
   }

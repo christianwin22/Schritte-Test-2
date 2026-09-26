@@ -66,6 +66,9 @@ export interface WordEntry {
   articleSentenceEnglish?: string;
   /** Verbs: ich, du, er/sie/es, wir, ihr, sie/Sie — "-" where a form is not used (es regnet). */
   presentTense?: string[];
+  /** Präteritum and Perfekt, in the same order ("kam", "bin gekommen"). */
+  simplePast?: string[];
+  presentPerfect?: string[];
   /** Accusative drill: the sentence, and the same with {{blank}} in place of den / die / das. */
   accusativeSentence?: string;
   accusativeSentenceBlank?: string;

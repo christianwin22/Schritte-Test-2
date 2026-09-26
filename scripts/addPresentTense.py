@@ -274,4 +274,5 @@ def main(write=False):
         print(f"written: {SOURCE.name}")
 
 
-main(write="--write" in sys.argv)
+if __name__ == "__main__":
+    main(write="--write" in sys.argv)

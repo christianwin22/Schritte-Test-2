@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, ChevronDown, LayoutGrid, Volume2, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Volume2, X } from 'lucide-react';
 import { CEFRLevel, FSRSCardRecord, WordEntry } from '../types';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import {
@@ -31,8 +31,6 @@ import { loadExerciseReady, markExerciseDone, readyKey, readyLessonKeys } from '
  */
 
 type Mode = 'learn' | 'practice' | 'review';
-type LearnView = 'table' | 'rows' | 'cards' | 'simple';
-const LEARN_VIEWS: LearnView[] = ['table', 'rows', 'cards', 'simple'];
 
 interface ConjugationViewProps {
   onCorrectAnswer: (xpEarned?: number) => void;
@@ -45,6 +43,8 @@ interface ConjugationViewProps {
    * and their review cards under their own prefix, apart from Präsens.
    */
   fixed?: { ids: string[]; cardPrefix: string; title: string };
+  /** Which tense this is (default Present). Each has its own review cards and lesson notices. */
+  tense?: Tense;
   appLanguage?: AppLanguage;
 }
 
@@ -61,16 +61,30 @@ const TYPING_ORDER = [0, 1, 2, 3, 4, 5]; // ich, du, er — then wir, ihr, sie (
 
 export const conjCardId = (wordId: string) => `conj:${wordId}`;
 
+/** Present, Simple Past (Präteritum) and Present Perfect (Perfekt): each from its own word-list column. */
+export type Tense = 'present' | 'past' | 'perfect';
+export const formsFor = (verb: WordEntry, tense: Tense): string[] =>
+  (tense === 'past' ? verb.simplePast : tense === 'perfect' ? verb.presentPerfect : verb.presentTense) ?? [];
+const hasForms = (verb: WordEntry, tense: Tense) => {
+  const f = formsFor(verb, tense);
+  return f.length === 6 && f.some((x) => x !== '-');
+};
+const TENSE_CARD: Record<Tense, string> = { present: 'conj', past: 'past', perfect: 'perf' };
+
 const VERBS = INITIAL_VOCABULARY.filter((w) => w.presentTense?.length === 6);
 
 /**
  * Sandbox only: a test "lesson" of the ten verbs with the longest forms, A1–B1
- * (sich gefallen lassen, sich verabschieden, …), to see every layout at its worst.
+ * (sich gefallen lassen, sich verabschieden, …), to see the page at its worst.
  */
 const TEST_LESSON = -1;
-const LONGEST_TEN = [...VERBS]
-  .sort((a, b) => Math.max(...b.presentTense!.map((f) => f.length)) - Math.max(...a.presentTense!.map((f) => f.length)))
-  .slice(0, 10);
+const longestTen = (tense: Tense) =>
+  VERBS.filter((v) => hasForms(v, tense))
+    .sort(
+      (a, b) =>
+        Math.max(...formsFor(b, tense).map((f) => f.length)) - Math.max(...formsFor(a, tense).map((f) => f.length))
+    )
+    .slice(0, 10);
 
 /**
  * The six forms: Singular | Plural across, 1st / 2nd / 3rd down the side. The
@@ -170,13 +184,17 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   onQuizActiveChange,
   backHandlerRef,
   fixed,
+  tense = 'present',
   appLanguage = 'en',
 }) => {
+  const formsOf = (verb: WordEntry) => formsFor(verb, tense);
+  const readyExercise = tense === 'present' ? 'conj' : tense;
+  const TENSE_VERBS = useMemo(() => VERBS.filter((v) => hasForms(v, tense)), [tense]);
   const en = appLanguage === 'en';
   const isSandbox = useAuth()?.isSandbox ?? false;
-  const cardId = (wordId: string) => (fixed ? `${fixed.cardPrefix}:${wordId}` : conjCardId(wordId));
+  const cardId = (wordId: string) => `${fixed ? fixed.cardPrefix : TENSE_CARD[tense]}:${wordId}`;
   const fixedVerbs = useMemo(
-    () => (fixed ? fixed.ids.map((id) => VERBS.find((v) => v.id === id)).filter((v): v is WordEntry => !!v) : null),
+    () => (fixed ? fixed.ids.map((id) => TENSE_VERBS.find((v) => v.id === id)).filter((v): v is WordEntry => !!v) : null),
     [fixed]
   );
 
@@ -190,12 +208,12 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     [level]
   );
   const lessonsOfLevel = useMemo(
-    () => [...new Set(VERBS.filter((v) => v.level === level).map((v) => v.lektion ?? 0))].sort((a, b) => a - b),
-    [level]
+    () => [...new Set(TENSE_VERBS.filter((v) => v.level === level).map((v) => v.lektion ?? 0))].sort((a, b) => a - b),
+    [level, TENSE_VERBS]
   );
   // Lessons waiting here since their Words Practice (amber)
   const [ready, setReady] = useState(() => loadExerciseReady());
-  const readyKeys = useMemo(() => new Set(readyLessonKeys(ready, 'conj')), [ready]);
+  const readyKeys = useMemo(() => new Set(readyLessonKeys(ready, readyExercise)), [ready, readyExercise]);
   const [lesson, setLesson] = useState<number>(() =>
     readStored<number>('schritte_conj_lesson', 1, (v) => (Number.isFinite(Number(v)) ? Number(v) : null))
   );
@@ -220,9 +238,9 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
       fixedVerbs
         ? fixedVerbs
         : activeLesson === TEST_LESSON
-        ? LONGEST_TEN
-        : VERBS.filter((v) => v.level === level && (v.lektion ?? 0) === activeLesson),
-    [fixedVerbs, level, activeLesson]
+        ? longestTen(tense)
+        : TENSE_VERBS.filter((v) => v.level === level && (v.lektion ?? 0) === activeLesson),
+    [fixedVerbs, level, activeLesson, TENSE_VERBS, tense]
   );
 
   // --- Review records ----------------------------------------------------------------
@@ -236,7 +254,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     });
   const unlocked = useMemo(
     () =>
-      (fixedVerbs ?? VERBS).filter((v) => {
+      (fixedVerbs ?? TENSE_VERBS).filter((v) => {
         const r = records[cardId(v.id)];
         return !!r?.isUnlocked && r.status === 'review';
       }),
@@ -248,13 +266,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   const [mode, setMode] = useState<Mode>('learn');
   const [started, setStarted] = useState(false);
 
-  // Learn — three layouts to choose from, remembered for next time
-  const [learnView, setLearnView] = useState<LearnView>(() =>
-    readStored<LearnView>('schritte_conj_learn_view', 'table', (v) => ((LEARN_VIEWS as string[]).includes(v) ? (v as LearnView) : null))
-  );
-  const learnViewLabel: Record<LearnView, string> = en
-    ? { table: 'Table', rows: 'Rows', cards: 'Cards', simple: 'Simple' }
-    : { table: 'Tabelle', rows: 'Zeilen', cards: 'Karten', simple: 'Einfach' };
+  // Learn
   const [learnIndex, setLearnIndex] = useState(0);
   const [learnDone, setLearnDone] = useState(false);
 
@@ -339,7 +351,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   };
 
   // --- Typing ------------------------------------------------------------------------
-  const expected = current?.presentTense ?? [];
+  const expected = current ? formsOf(current) : [];
   const asked = (slot: number) => expected[slot] && expected[slot] !== '-';
 
   // The first box is ready for typing whenever a new verb comes up.
@@ -395,7 +407,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
       const ids = sessionVerbs.map((v) => cardId(v.id));
       updateRecords((prev) => unlockWordsAfterPractice(ids, prev));
       // A lesson practised here is done: its amber notice goes.
-      if (!fixed && activeLesson !== TEST_LESSON) setReady(markExerciseDone('conj', [readyKey(level, activeLesson)]));
+      if (!fixed && activeLesson !== TEST_LESSON) setReady(markExerciseDone(readyExercise, [readyKey(level, activeLesson)]));
     }
   };
 
@@ -431,7 +443,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   });
 
   const speakAll = (verb: WordEntry) => {
-    const forms = verb.presentTense ?? [];
+    const forms = formsOf(verb);
     const lines = forms
       .map((f, i) => (f === '-' ? '' : i === 2 && forms[0] === '-' ? `es ${f}` : `${SPOKEN_PRONOUNS[i]} ${f}`))
       .filter(Boolean);
@@ -443,7 +455,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   const autoplayVerb = mode === 'learn' && !learnDone ? lessonVerbs[learnIndex] : undefined;
   useEffect(() => {
     if (!autoplayVerb) return;
-    const forms = autoplayVerb.presentTense ?? [];
+    const forms = formsOf(autoplayVerb);
     const lines = [
       autoplayVerb.lemma,
       ...forms.map((f, i) => (f === '-' ? '' : i === 2 && forms[0] === '-' ? `es ${f}` : `${SPOKEN_PRONOUNS[i]} ${f}`)),
@@ -600,7 +612,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
           {[row.singular, row.plural].map((slot) => (
             <span key={slot} className="text-sm sm:text-base leading-snug">
               <span className="block text-[11px] font-bold text-zinc-400">{PRONOUNS[slot]}</span>
-              <span className="font-black text-zinc-900 dark:text-zinc-100">{verb.presentTense?.[slot] === '-' ? '–' : verb.presentTense?.[slot]}</span>
+              <span className="font-black text-zinc-900 dark:text-zinc-100">{formsOf(verb)[slot] === '-' ? '–' : formsOf(verb)[slot]}</span>
             </span>
           ))}
         </React.Fragment>
@@ -677,41 +689,22 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
           <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
             {learnIndex + 1} / {lessonVerbs.length}
           </span>
-          <span className="justify-self-end">
-            <button
-              type="button"
-              onClick={() => {
-                playSound('tap');
-                const next = LEARN_VIEWS[(LEARN_VIEWS.indexOf(learnView) + 1) % LEARN_VIEWS.length];
-                setLearnView(next);
-                try {
-                  localStorage.setItem('schritte_conj_learn_view', next);
-                } catch {
-                  // ignore
-                }
-              }}
-              title={en ? 'Change the layout' : 'Ansicht wechseln'}
-              className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer active:scale-95 transition-all"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              {learnViewLabel[learnView]}
-            </button>
-          </span>
+          <span />
         </div>
         <div key={verb.id} className="flex-1 flex flex-col justify-center gap-4 animate-fadeIn">
-          {/* The verb, in its own box */}
-          <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 px-4 py-4 flex items-center justify-between gap-3">
-            <div className="min-w-0 text-left">
+          {/* The verb, no box: the word and its speaker, the English under it */}
+          <div className="text-center space-y-1">
+            <div className="flex items-center justify-center gap-2">
               <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{verb.lemma}</h3>
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">({verb.translation.replace(/<br>/g, ' · ')})</p>
+              {speaker(verb.lemma, verb.lemma, true)}
             </div>
-            {speaker(verb.lemma, verb.lemma, true)}
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">({verb.translation.replace(/<br>/g, ' · ')})</p>
           </div>
 
           {(() => {
-            const formOf = (slot: number) => verb.presentTense?.[slot] ?? '-';
+            const formOf = (slot: number) => formsOf(verb)[slot] ?? '-';
             const spokenOf = (slot: number) =>
-              `${slot === 2 && verb.presentTense?.[0] === '-' ? 'es' : SPOKEN_PRONOUNS[slot]} ${formOf(slot)}`;
+              `${slot === 2 && formsOf(verb)[0] === '-' ? 'es' : SPOKEN_PRONOUNS[slot]} ${formOf(slot)}`;
             /** "ich" in plain black, "heiße" in bold black — with room between them. */
             /**
              * "ich" and its speaker on the top line, "heiße" under it across the whole box.
@@ -745,36 +738,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
             const say = (slot: number) => formOf(slot) !== '-' && speaker(spokenOf(slot), spokenOf(slot));
             const person = (i: number) => (en ? ['1st', '2nd', '3rd'][i] : ['1.', '2.', '3.'][i]);
 
-            if (learnView === 'rows') {
-              // Same places for the words as the table, but each person on a card of its own
-              return (
-                <div className="space-y-2.5">
-                  <div className="grid grid-cols-[3rem_1fr_1fr] text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                    <span />
-                    <span className="text-center">Singular</span>
-                    <span className="text-center">Plural</span>
-                  </div>
-                  {ROWS.map((row, i) => (
-                    <div key={row.person} className="grid grid-cols-[3rem_1fr] items-center">
-                      {/* The person label sits outside the box, like Singular / Plural above */}
-                      <span className="text-center text-[10px] font-black uppercase tracking-wider text-zinc-400">{person(i)}</span>
-                      <div className="grid grid-cols-2 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden">
-                        {[row.singular, row.plural].map((slot, k) => (
-                          <div
-                            key={slot}
-                            className={`px-3 py-4 flex items-center justify-between gap-2 min-w-0 ${k > 0 ? 'border-l border-zinc-200 dark:border-zinc-700' : ''}`}
-                          >
-                            {pair(slot)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            }
-
-            if (learnView === 'simple') {
+            {
               // The table's words in the same places, without the Singular / Plural and
               // 1st / 2nd / 3rd labels — all the width goes to the words.
               return (
@@ -795,62 +759,6 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
               );
             }
 
-            if (learnView === 'cards') {
-              // Two cards side by side: Singular | Plural
-              return (
-                <div className="grid grid-cols-2 gap-3">
-                  {(['singular', 'plural'] as const).map((side) => (
-                    <div key={side} className="rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden">
-                      <div className="py-2 text-center bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                        {side === 'singular' ? 'Singular' : 'Plural'}
-                      </div>
-                      {ROWS.map((row, i) => {
-                        const slot = side === 'singular' ? row.singular : row.plural;
-                        return (
-                          <div
-                            key={slot}
-                            className={`px-2.5 sm:px-3 py-3.5 flex items-center justify-between gap-1.5 ${i > 0 ? 'border-t border-zinc-200 dark:border-zinc-700' : ''}`}
-                          >
-                            {/* "1st ich 🔊" on one line, the form under it across the whole card */}
-                            <span className="block w-full min-w-0 text-left space-y-1" style={{ containerType: 'inline-size' }}>
-                              <span className="flex items-center justify-between gap-1.5">
-                                <span className="flex items-center gap-1.5 min-w-0">
-                                  <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black text-zinc-500 dark:text-zinc-400 shrink-0">
-                                    {person(i)}
-                                  </span>
-                                  <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{PRONOUNS[slot]}</span>
-                                </span>
-                                {say(slot)}
-                              </span>
-                              <span
-                                lang="de"
-                                className="block font-black text-zinc-900 dark:text-zinc-100 break-normal"
-                                style={formStyle(slot)}
-                              >
-                                {formOf(slot) === '-' ? '–' : formOf(slot)}
-                              </span>
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              );
-            }
-
-            // Table: 1st / 2nd / 3rd down the side, Singular | Plural across
-            return (
-              <ConjTable
-                en={en}
-                pad="px-3 py-4"
-                cell={(slot) => (
-                  <div className="flex items-center justify-between gap-2">
-                    {pair(slot)}
-                  </div>
-                )}
-              />
-            );
           })()}
         </div>
       </LearnPager>
@@ -939,29 +847,29 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
         </div>
 
         {/* The verb */}
-        {/* The verb, as on the Learn page: the word and its speaker. Its English only
-            after checking, so it can't prompt the answer. Slim when a screen keyboard is up. */}
-        <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 px-4 py-4 kb:py-2 flex items-center justify-between gap-3">
-          <div className="min-w-0 text-left">
+        {/* The verb, as on the Learn page and with no box: the word and its speaker, the
+            English under it once checked (before, it would give the answer away). */}
+        <div className="text-center space-y-0.5 py-2 kb:py-0">
+          <div className="flex items-center justify-center gap-2">
             <h3 className="text-2xl sm:text-3xl kb:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{current.lemma}</h3>
-            {results && (
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 animate-fadeIn">
-                ({current.translation.replace(/<br>/g, ' · ')})
-              </p>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                playSound('tap');
+                speakGerman(current.lemma);
+              }}
+              title={en ? 'Listen' : 'Anhören'}
+              aria-label={en ? `Listen: ${current.lemma}` : `Anhören: ${current.lemma}`}
+              className="p-2.5 kb:p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95 transition-all shrink-0"
+            >
+              <Volume2 className="w-5 h-5 kb:w-4 kb:h-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              playSound('tap');
-              speakGerman(current.lemma);
-            }}
-            title={en ? 'Listen' : 'Anhören'}
-            aria-label={en ? `Listen: ${current.lemma}` : `Anhören: ${current.lemma}`}
-            className="p-2.5 kb:p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95 transition-all shrink-0"
-          >
-            <Volume2 className="w-5 h-5 kb:w-4 kb:h-4" />
-          </button>
+          {results && (
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 animate-fadeIn">
+              ({current.translation.replace(/<br>/g, ' · ')})
+            </p>
+          )}
         </div>
 
         {(() => {

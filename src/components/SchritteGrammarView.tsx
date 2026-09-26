@@ -37,14 +37,7 @@ interface SchritteGrammarViewProps {
 
 type GrammarSection = 'verb' | 'article' | 'preposition';
 
-/** The verbs of Auxiliary and Modal Verbs, by their id in the word list. */
-const AUXILIARY = { ids: ['a11_l1_sein', 'a11_l2_haben', 'a12_l14_werden'], cardPrefix: 'aux', title: 'Hilfsverben' };
-const MODAL = {
-  ids: ['a11_l7_koennen', 'a12_l9_muessen', 'a12_l9_duerfen', 'a11_l7_wollen', 'a12_l10_sollen', 'a12_l13_moegen', 'a11_l6_moechten'],
-  cardPrefix: 'modal',
-  title: 'Modalverben',
-};
-type GrammarDrill = 'article' | 'accusative' | 'conj' | 'sentence' | 'weak' | 'aux' | 'modal';
+type GrammarDrill = 'article' | 'accusative' | 'conj' | 'past' | 'perfect' | 'sentence' | 'weak';
 
 type PronounKey = 'ich' | 'du' | 'er_sie_es' | 'wir' | 'ihr' | 'sie_Sie';
 
@@ -292,13 +285,11 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  // Verb, one tense or group at a time. Präsens is ready; Präteritum and Perfekt come next.
+  // Verb: three tenses, lesson by lesson from the Wortschatz, and Sentence.
   const verbExercises: { id: string; title: string; drill?: GrammarDrill; soon?: boolean }[] = [
-    { id: 'table', title: en ? 'Präsens (Present)' : 'Präsens (Gegenwart)', drill: 'conj' },
-    { id: 'verb_praeteritum', title: en ? 'Präteritum (Simple Past)' : 'Präteritum', soon: true },
-    { id: 'verb_perfekt', title: en ? 'Perfekt (Present Perfect)' : 'Perfekt', soon: true },
-    { id: 'verb_auxiliary', title: en ? 'Auxiliary Verbs (Hilfsverben)' : 'Hilfsverben', drill: 'aux' },
-    { id: 'verb_modal', title: en ? 'Modal Verbs (Modalverben)' : 'Modalverben', drill: 'modal' },
+    { id: 'table', title: en ? 'Present' : 'Präsens', drill: 'conj' },
+    { id: 'verb_past', title: en ? 'Simple Past' : 'Präteritum', drill: 'past' },
+    { id: 'verb_perfect', title: en ? 'Present Perfect' : 'Perfekt', drill: 'perfect' },
     { id: 'sentence_stem', title: en ? 'Sentence' : 'Satz', drill: 'sentence' },
   ];
 
@@ -495,27 +486,12 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     );
   }
 
-  // Auxiliary and Modal Verbs: the same Learn | Practice | Review, over a fixed set of verbs
-  if (activeExerciseMode === 'verb_auxiliary' || activeExerciseMode === 'verb_modal') {
-    const auxiliary = activeExerciseMode === 'verb_auxiliary';
+  // Present, Simple Past, Present Perfect: Learn | Practice | Review, lesson by lesson
+  if (activeExerciseMode === 'table' || activeExerciseMode === 'verb_past' || activeExerciseMode === 'verb_perfect') {
     return (
       <ConjugationView
         key={activeExerciseMode}
-        onCorrectAnswer={onCorrectAnswer}
-        onWrongAnswer={onWrongAnswer}
-        onRequestAbandon={onRequestAbandon}
-        onQuizActiveChange={onQuizActiveChange}
-        backHandlerRef={backHandlerRef}
-        fixed={auxiliary ? AUXILIARY : MODAL}
-        appLanguage={appLanguage}
-      />
-    );
-  }
-
-  // Conjugation: Learn | Practice | Review, lesson by lesson
-  if (activeExerciseMode === 'table') {
-    return (
-      <ConjugationView
+        tense={activeExerciseMode === 'verb_past' ? 'past' : activeExerciseMode === 'verb_perfect' ? 'perfect' : 'present'}
         onCorrectAnswer={onCorrectAnswer}
         onWrongAnswer={onWrongAnswer}
         onRequestAbandon={onRequestAbandon}
