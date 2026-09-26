@@ -952,7 +952,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             const level = selectedLevel;
             const lesson = selectedLektion;
             updateDrillPractice((prev) => markLessonReadyForDrills(prev, level, lesson, filteredWords));
-            // …and in the verb exercises (Präsens, Sentence) that have something for it
+            // …and in the three tenses that have something for it (Sentence waits for those)
             markReadyAfterWords(level, lesson, filteredWords);
           }
           if (typeof selectedLektion === 'number') {

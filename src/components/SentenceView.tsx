@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Volume2, X } from 'lucide-react';
-import { FSRSCardRecord, SentenceStemExercise } from '../types';
-import { SCHRITTE_SENTENCE_STEM_DRILLS } from '../data/schritteVerbs';
+import { Check, ChevronDown, Volume2, X } from 'lucide-react';
+import { CEFRLevel, FSRSCardRecord } from '../types';
+import { INITIAL_VOCABULARY } from '../data/vocabulary';
+import { SENTENCES, SentenceItem, SentenceTense, sentenceAnswer, sentenceText } from '../data/sentenceExercises';
 import {
   isCardDueForReview,
   loadAllFSRSRecords,
@@ -12,15 +13,21 @@ import {
 import { listenToGermanSpeech, speakGerman, speakGermanSequence } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
-import { markExerciseDone, readyKey } from '../utils/exerciseReady';
+import { lessonTopics } from './SchritteVocabView';
+import { useAuth } from './AuthGate';
+import { loadExerciseReady, markExerciseDone, readyKey, readyLessonKeys, SENTENCE_READY } from '../utils/exerciseReady';
 
 /**
- * Grammar · Sentence — Practice | Review, built like Plural: the verb on a chip,
- * the sentence with a blank for the conjugated verb, and its English.
+ * Grammar · Sentence — every verb of every lesson in a sentence, in Present,
+ * Simple Past or Present Perfect. Practice | Review, built like Plural: the verb
+ * on a chip, the sentence with its gaps, and its English.
  *
- * - Practice: every sentence, in a new order; a wrong one comes back in a redo
+ *   Ich [____] das Foto [____].   → type "habe angesehen"
+ *
+ * - Practice: a lesson's sentences in one tense; a wrong one comes back in a redo
  *   round until it is right. Finishing puts them into Review, due tomorrow.
- * - Review: the ones that are due, scheduled like everything else.
+ * - Review: the ones that are due, tense by tense.
+ * - A lesson turns amber here once its Practice in that tense is finished.
  */
 interface SentenceViewProps {
   onCorrectAnswer: (xpEarned?: number) => void;
@@ -33,11 +40,24 @@ interface SentenceViewProps {
 
 type Mode = 'practice' | 'review';
 export const sentenceCardId = (id: string) => `sentence:${id}`;
-const ALL = SCHRITTE_SENTENCE_STEM_DRILLS;
 
+const TENSES: { id: SentenceTense; en: string; de: string }[] = [
+  { id: 'present', en: 'Present', de: 'Präsens' },
+  { id: 'past', en: 'Simple Past', de: 'Präteritum' },
+  { id: 'perfect', en: 'Present Perfect', de: 'Perfekt' },
+];
+
+const REFLEXIVE = ['mich', 'dich', 'sich', 'uns', 'euch', 'mir', 'dir'];
 const clean = (t: string) => t.toLowerCase().replace(/[.!?,]+$/, '').replace(/\s+/g, ' ').trim();
-const whole = (ex: SentenceStemExercise) =>
-  `${ex.sentenceBefore} ${ex.expectedAnswer} ${ex.sentenceAfter} ${ex.separableEnd || ''}`.replace(/\s+/g, ' ').trim();
+/** Capitals and spaces don't count; nor the subject or the reflexive typed along ("ich habe mich gefreut"). */
+const isRight = (answer: string, s: SentenceItem) => {
+  const want = clean(sentenceAnswer(s));
+  let given = clean(answer);
+  const subject = clean(s.subject);
+  if (given.startsWith(`${subject} `)) given = given.slice(subject.length + 1);
+  if (given === want) return true;
+  return given.split(' ').filter((w) => !REFLEXIVE.includes(w)).join(' ') === want;
+};
 const shuffled = <T,>(items: T[]): T[] => {
   const out = [...items];
   for (let i = out.length - 1; i > 0; i--) {
@@ -45,6 +65,15 @@ const shuffled = <T,>(items: T[]): T[] => {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+};
+const readStored = <T,>(key: string, fallback: T, parse: (v: string) => T | null): T => {
+  try {
+    const raw = localStorage.getItem(key);
+    const value = raw === null ? null : parse(raw);
+    return value ?? fallback;
+  } catch {
+    return fallback;
+  }
 };
 
 export const SentenceView: React.FC<SentenceViewProps> = ({
@@ -56,7 +85,52 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
   appLanguage = 'en',
 }) => {
   const en = appLanguage === 'en';
+  const isSandbox = useAuth()?.isSandbox ?? false;
 
+  // --- Tense, level and lesson, kept for next time ------------------------------------
+  const [tense, setTense] = useState<SentenceTense>(() =>
+    readStored<SentenceTense>('schritte_sentence_tense', 'present', (v) =>
+      ['present', 'past', 'perfect'].includes(v) ? (v as SentenceTense) : null
+    )
+  );
+  const [level, setLevel] = useState<CEFRLevel>(() =>
+    readStored<CEFRLevel>('schritte_sentence_level', 'A1', (v) => (['A1', 'A2', 'B1'].includes(v) ? (v as CEFRLevel) : null))
+  );
+  const [lesson, setLesson] = useState<number>(() =>
+    readStored<number>('schritte_sentence_lesson', 1, (v) => (Number.isFinite(Number(v)) ? Number(v) : null))
+  );
+  const TENSE_SENTENCES = useMemo(() => SENTENCES.filter((s) => s.tense === tense), [tense]);
+  // Every lesson of the level is listed; the ones without verbs are greyed and can't be picked.
+  const allLessonsOfLevel = useMemo(
+    () => [...new Set(INITIAL_VOCABULARY.filter((w) => w.level === level).map((w) => w.lektion ?? 0))].sort((a, b) => a - b),
+    [level]
+  );
+  const lessonsOfLevel = useMemo(
+    () => [...new Set(TENSE_SENTENCES.filter((s) => s.level === level).map((s) => s.lektion))].sort((a, b) => a - b),
+    [level, TENSE_SENTENCES]
+  );
+  const activeLesson = lessonsOfLevel.includes(lesson) ? lesson : lessonsOfLevel.find((l) => l > 0) ?? lessonsOfLevel[0] ?? 1;
+  useEffect(() => {
+    try {
+      localStorage.setItem('schritte_sentence_tense', tense);
+      localStorage.setItem('schritte_sentence_level', level);
+      localStorage.setItem('schritte_sentence_lesson', String(activeLesson));
+    } catch {
+      // ignore
+    }
+  }, [tense, level, activeLesson]);
+  const [isLessonOpen, setIsLessonOpen] = useState(false);
+  const lessonSentences = useMemo(
+    () => TENSE_SENTENCES.filter((s) => s.level === level && s.lektion === activeLesson),
+    [TENSE_SENTENCES, level, activeLesson]
+  );
+
+  // Lessons waiting here, per tense, since that tense's Practice (amber)
+  const [ready, setReady] = useState(() => loadExerciseReady());
+  const readyKeysOf = (t: SentenceTense) => new Set(readyLessonKeys(ready, SENTENCE_READY[t]));
+  const readyKeys = useMemo(() => readyKeysOf(tense), [ready, tense]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Review records ----------------------------------------------------------------
   const [records, setRecords] = useState<Record<string, FSRSCardRecord>>(() => loadAllFSRSRecords());
   const updateRecords = (change: (prev: Record<string, FSRSCardRecord>) => Record<string, FSRSCardRecord>) =>
     setRecords((prev) => {
@@ -64,23 +138,51 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
       saveAllFSRSRecords(next);
       return next;
     });
-  const unlocked = useMemo(
-    () =>
-      ALL.filter((ex) => {
-        const r = records[sentenceCardId(ex.id)];
-        return !!r?.isUnlocked && r.status === 'review';
-      }),
-    [records]
-  );
-  const due = useMemo(() => unlocked.filter((ex) => isCardDueForReview(records[sentenceCardId(ex.id)])), [unlocked, records]);
+  const isUnlocked = (s: SentenceItem) => {
+    const r = records[sentenceCardId(s.id)];
+    return !!r?.isUnlocked && r.status === 'review';
+  };
+  const unlocked = useMemo(() => TENSE_SENTENCES.filter(isUnlocked), [records, TENSE_SENTENCES]); // eslint-disable-line react-hooks/exhaustive-deps
+  const due = useMemo(() => unlocked.filter((s) => isCardDueForReview(records[sentenceCardId(s.id)])), [unlocked, records]);
+  const dueOf = (t: SentenceTense) =>
+    SENTENCES.filter((s) => s.tense === t && isUnlocked(s) && isCardDueForReview(records[sentenceCardId(s.id)])).length;
 
+  // Sandbox only: an empty Review gets five test sentences, due now, so Review can be
+  // tried today instead of after a lesson's Practice and a day's wait.
+  useEffect(() => {
+    if (!isSandbox || unlocked.length > 0) return;
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const five = TENSE_SENTENCES.filter((s) => s.level === 'A1').slice(0, 5);
+    updateRecords((prev) => {
+      const next = { ...prev };
+      for (const s of five) {
+        const id = sentenceCardId(s.id);
+        if (next[id]) continue;
+        next[id] = {
+          wordId: id,
+          status: 'review',
+          isUnlocked: true,
+          stability: 1,
+          difficulty: 5,
+          intervalDays: 1,
+          nextReviewDate: yesterday,
+          lastReviewedAt: yesterday,
+          repetitionCount: 1,
+        };
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSandbox, tense]);
+
+  // --- Session -----------------------------------------------------------------------
   const [mode, setMode] = useState<Mode>('practice');
   const [started, setStarted] = useState(false);
-  const [queue, setQueue] = useState<SentenceStemExercise[]>([]);
-  const [sessionItems, setSessionItems] = useState<SentenceStemExercise[]>([]);
+  const [queue, setQueue] = useState<SentenceItem[]>([]);
+  const [sessionItems, setSessionItems] = useState<SentenceItem[]>([]);
   const [index, setIndex] = useState(0);
   const [round, setRound] = useState(1);
-  const [redo, setRedo] = useState<SentenceStemExercise[]>([]);
+  const [redo, setRedo] = useState<SentenceItem[]>([]);
   const [firstTryWrong, setFirstTryWrong] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [result, setResult] = useState<boolean | null>(null);
@@ -89,7 +191,7 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
   const checkedAt = useRef(0);
 
   const build = (m: Mode) => {
-    const list = m === 'review' ? shuffled(due.length > 0 ? due : unlocked) : shuffled(ALL);
+    const list = m === 'review' ? shuffled(due.length > 0 ? due : unlocked) : shuffled(lessonSentences);
     setQueue(list);
     setSessionItems(list);
     setIndex(0);
@@ -100,11 +202,12 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     setResult(null);
     setDone(false);
   };
+  // A new tense, lesson or mode: back to its Start screen.
   useEffect(() => {
     setStarted(false);
     build(mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, tense, level, activeLesson]);
 
   const current = queue[index];
   const inProgress = started && !done && (index > 0 || round > 1 || result !== null);
@@ -137,19 +240,15 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
 
   const switchMode = (m: Mode) => {
     if (m === mode) return;
-    const go = () => {
-      playSound('tap');
-      setMode(m);
-    };
-    if (inProgress) onRequestAbandon(go);
-    else go();
+    playSound('tap');
+    setMode(m);
   };
 
-  // A new sentence plays its verb by itself ("kommen"), as Plural plays its singular.
+  // A new sentence plays its verb by itself ("ansehen"), as Plural plays its singular.
   const verbAudioKey = started && !done && result === null && current ? `${current.id}|${index}|${round}` : '';
   useEffect(() => {
     if (!verbAudioKey || !current) return;
-    return speakGermanSequence([current.verbStem]);
+    return speakGermanSequence([current.lemma]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verbAudioKey]);
 
@@ -161,7 +260,7 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
   const check = (answer: string) => {
     if (!current || result !== null || !answer.trim()) return;
     checkedAt.current = Date.now();
-    const ok = clean(answer) === clean(current.expectedAnswer);
+    const ok = isRight(answer, current);
     setResult(ok);
     if (ok) {
       playSound('correct');
@@ -171,7 +270,7 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
       onWrongAnswer();
       if (round === 1) setFirstTryWrong((p) => (p.includes(current.id) ? p : [...p, current.id]));
     }
-    speakGerman(whole(current));
+    speakGerman(sentenceText(current));
     if (mode === 'review') {
       const id = sentenceCardId(current.id);
       updateRecords((prev) => ({ ...prev, [id]: reviewCard(id, ok, prev[id]) }));
@@ -201,8 +300,8 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     if (mode === 'practice') {
       const ids = sessionItems.map((x) => sentenceCardId(x.id));
       updateRecords((prev) => unlockWordsAfterPractice(ids, prev));
-      // Every sentence practised: each of their lessons is done here
-      markExerciseDone('sentence', [...new Set(sessionItems.map((x) => readyKey('A1', x.lektion ?? 0)))]);
+      // The lesson practised in this tense is done here: its amber notice goes.
+      setReady(markExerciseDone(SENTENCE_READY[tense], [readyKey(level, activeLesson)]));
     }
   };
 
@@ -244,12 +343,48 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
   // --- Pieces ------------------------------------------------------------------------
+  const tenseName = (t: SentenceTense) => {
+    const x = TENSES.find((y) => y.id === t)!;
+    return en ? x.en : x.de;
+  };
+  const lessonLabel = (l: number) => (l === 0 ? 'Intro' : `${en ? 'Lesson' : 'Lektion'} ${l}`);
   const pill = (active: boolean) =>
     `py-1.5 px-2 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
       active
         ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
         : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
     }`;
+  const dot = <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white dark:ring-zinc-900" />;
+
+  const tenseBar = (
+    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
+      <div className="grid grid-cols-3 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
+        {TENSES.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => {
+              if (t.id === tense) return;
+              playSound('tap');
+              setTense(t.id);
+            }}
+            className={`${pill(tense === t.id)} relative whitespace-nowrap`}
+          >
+            {en ? t.en : t.de}
+            {/* Red: due in Review there. Amber: a lesson waiting there. In the corner, so the name keeps one line. */}
+            {dueOf(t.id) > 0 ? (
+              <span className="absolute -top-1.5 -right-1 min-w-[16px] px-1 rounded-full text-[9px] font-black leading-4 text-center bg-rose-500 text-white ring-2 ring-white dark:ring-zinc-900">
+                {dueOf(t.id)}
+              </span>
+            ) : (
+              readyKeysOf(t.id).size > 0 && dot
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   const modeBar = (
     <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
       <div className="grid grid-cols-2 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
@@ -271,22 +406,128 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
       </div>
     </div>
   );
+
+  const filterBar = (
+    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2">
+      <div className="flex flex-row items-center justify-between gap-1 sm:gap-2">
+        <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shrink-0">
+          {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
+            <button
+              key={lvl}
+              type="button"
+              onClick={() => {
+                playSound('tap');
+                setLevel(lvl);
+              }}
+              className={`relative px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                level === lvl
+                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
+              }`}
+            >
+              {lvl}
+              {[...readyKeys].some((k) => k.startsWith(`${lvl}-`)) && dot}
+            </button>
+          ))}
+        </div>
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              playSound('tap');
+              setIsLessonOpen((o) => !o);
+            }}
+            className={`px-2.5 sm:px-3 py-1 font-black text-xs rounded-xl shadow-xs border flex items-center gap-1.5 transition-all cursor-pointer ${
+              readyKeys.has(readyKey(level, activeLesson))
+                ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border-amber-500'
+                : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700'
+            }`}
+          >
+            <span>{lessonLabel(activeLesson)}</span>
+            <ChevronDown className={`w-3 h-3 text-zinc-500 transition-transform ${isLessonOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {isLessonOpen && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setIsLessonOpen(false)} />
+              <div className="absolute right-0 mt-1.5 z-30 w-72 bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 animate-fadeIn">
+                <div className="grid grid-cols-7 gap-1.5">
+                  {allLessonsOfLevel.map((l) => {
+                    // No verbs in this lesson: greyed, and it can't be picked
+                    const has = lessonsOfLevel.includes(l);
+                    const waiting = readyKeys.has(readyKey(level, l));
+                    return (
+                      <button
+                        key={l}
+                        type="button"
+                        disabled={!has}
+                        onClick={() => {
+                          playSound('tap');
+                          setLesson(l);
+                          setIsLessonOpen(false);
+                        }}
+                        className={`py-1.5 rounded-lg text-xs font-black transition-all ${l === 0 ? 'col-span-2' : ''} ${
+                          !has
+                            ? 'bg-zinc-50 dark:bg-zinc-800/40 text-zinc-300 dark:text-zinc-600 cursor-not-allowed'
+                            : l === activeLesson
+                            ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs cursor-pointer ${waiting ? 'ring-2 ring-amber-400' : ''}`
+                            : waiting
+                            ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 cursor-pointer'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer'
+                        }`}
+                      >
+                        {l === 0 ? 'Intro' : l}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const primaryButton =
     'w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all';
 
+  /** A gap: empty lines until checked, then the answer in green. */
+  const gap = (text: string, last = false) => (
+    <span
+      className={`inline-block min-w-[2.6em] ${last ? 'ml-1' : 'mx-1'} px-1 border-b-4 align-baseline ${
+        result === null ? 'border-zinc-300 dark:border-zinc-600 text-transparent' : 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+      }`}
+    >
+      {result === null ? ' ' : text}
+    </span>
+  );
+
   let body: React.ReactNode;
   if (!started) {
+    const lessonWords = INITIAL_VOCABULARY.filter((w) => lessonSentences.some((s) => s.verbId === w.id));
     body =
       queue.length === 0 ? (
         <div className="flex-1 flex items-center justify-center font-black text-zinc-900 dark:text-zinc-100">
-          {en ? 'Nothing to review yet' : 'Noch nichts zu wiederholen'}
+          {mode === 'review' ? (en ? 'Nothing to review yet' : 'Noch nichts zu wiederholen') : en ? 'No verbs in this lesson.' : 'Keine Verben in dieser Lektion.'}
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8 text-center">
           <div className="space-y-3 max-w-xs">
-            <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">
-              {mode === 'review' ? (en ? 'Review' : 'Wiederholen') : en ? 'Sentence' : 'Satz'}
-            </p>
+            {mode === 'practice' ? (
+              <>
+                <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                  {level} · {lessonLabel(activeLesson)} · {tenseName(tense)}
+                </p>
+                <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
+                  {lessonTopics(lessonWords) || (en ? 'Sentence' : 'Satz')}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">{tenseName(tense)}</p>
+                <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">{en ? 'Review' : 'Wiederholen'}</p>
+              </>
+            )}
             <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
               {queue.length}{' '}
               {mode === 'review' ? (en ? 'sentences due' : 'Sätze fällig') : en ? 'sentences' : 'Sätze'}
@@ -338,11 +579,13 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
         }}
         className="flex-1 min-h-0 flex flex-col"
       >
-        {/* Lesson on the left, the tense in the middle (every sentence here is Present), counter top right */}
+        {/* Lesson on the left, the tense in the middle, counter top right */}
         <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
-          <span className="text-[10px] uppercase">A1 · L{ex.lektion}</span>
+          <span className="text-[10px] uppercase">
+            {ex.level} · {ex.lektion === 0 ? 'Intro' : `L${ex.lektion}`}
+          </span>
           <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-            {en ? 'Present' : 'Präsens'}
+            {tenseName(ex.tense)}
           </span>
           {round > 1 ? (
             <span className="justify-self-end px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80">
@@ -357,28 +600,21 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
 
         <div className="flex-1 flex flex-col items-center justify-center gap-4 kb:gap-2 px-1">
           <span className="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-black text-zinc-600 dark:text-zinc-300">
-            {ex.verbStem}
+            {ex.verb}
           </span>
           <p className="text-2xl sm:text-3xl kb:text-xl font-black text-zinc-900 dark:text-zinc-100 leading-relaxed text-center">
-            {ex.sentenceBefore}
-            <span
-              className={`inline-block min-w-[2.6em] mx-1 px-1 border-b-4 align-baseline ${
-                result === null
-                  ? 'border-zinc-300 dark:border-zinc-600 text-transparent'
-                  : 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-              }`}
-            >
-              {result === null ? ' ' : ex.expectedAnswer}
-            </span>
-            {ex.sentenceAfter} {ex.separableEnd || ''}
+            {ex.subject}
+            {gap(ex.finite)}
+            {[ex.reflexive, ex.middle].filter(Boolean).join(' ')}
+            {ex.end ? gap(ex.end, true) : ''}.
           </p>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 text-center">({ex.fullEnglish})</p>
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 text-center">({ex.english})</p>
           {result !== null && (
             <button
               type="button"
               onClick={() => {
                 playSound('tap');
-                speakGerman(whole(ex));
+                speakGerman(sentenceText(ex));
               }}
               title={en ? 'Listen to the sentence' : 'Satz anhören'}
               aria-label={en ? 'Listen to the sentence' : 'Satz anhören'}
@@ -440,13 +676,13 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
               <div className="w-full px-4 py-3.5 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500 dark:border-emerald-600 rounded-2xl flex items-center justify-between shadow-xs">
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">
                   <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 stroke-[3]" />
-                  <span className="font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 truncate">{ex.expectedAnswer}</span>
+                  <span className="font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 truncate">{sentenceAnswer(ex)}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
                     playSound('tap');
-                    speakGerman(whole(ex));
+                    speakGerman(sentenceText(ex));
                   }}
                   title={en ? 'Listen' : 'Anhören'}
                   className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 dark:hover:bg-emerald-800 text-emerald-800 dark:text-emerald-200 transition-all cursor-pointer shrink-0 ml-1 active:scale-95"
@@ -473,8 +709,14 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
   return (
     <div className="w-full h-full flex flex-col justify-start pt-0.5 sm:pt-1 pb-2 animate-fadeIn overflow-hidden">
       <div className="max-w-xl mx-auto w-full flex-1 min-h-0 flex flex-col">
-        {/* As everywhere: the bar belongs to the Start screen, not to a running session */}
-        {!started && modeBar}
+        {/* As everywhere: the bars belong to the Start screen, not to a running session */}
+        {!started && (
+          <>
+            {tenseBar}
+            {modeBar}
+            {mode === 'practice' && filterBar}
+          </>
+        )}
         <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm">
           {body}
         </div>

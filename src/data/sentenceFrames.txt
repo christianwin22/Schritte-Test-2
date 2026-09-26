@@ -1,0 +1,569 @@
+# One sentence per verb, for Grammar · Sentence. Every tense is built from it.
+#   id | person (1 ich, 2 du, 3 er/sie/es, 4 wir, 5 ihr, 6 sie) | subject | middle | English
+# The verb goes after the subject; a separable prefix or participle goes last.
+# English: {verb} is the base form, turned into each tense. "A || B || C" gives
+# Present and Simple Past by hand (Present Perfect uses the Simple Past English).
+a11_intro_ansehen|1|Ich|das Foto|I {look} at the photo.
+a11_intro_hoeren|2|Du|Musik|You {listen} to music.
+a11_intro_ankreuzen|1|Ich|die Antwort|I {tick} the answer.
+a11_intro_ergaenzen|4|Wir|den Text|We {complete} the text.
+a11_intro_zuordnen|6|Die Kinder|die Bilder|The children {match} the pictures.
+a11_intro_machen|1|Ich|die Hausaufgaben|I {do} my homework.
+a11_intro_sprechen|3|Anna|Deutsch|Anna {speak} German.
+a11_intro_lesen|2|Du|ein Buch|You {read} a book.
+a11_intro_spielen|6|Die Kinder|im Garten|The children {play} in the garden.
+a11_intro_suchen|1|Ich|meinen Schlüssel|I {look} for my key.
+a11_intro_zeigen|3|Tom|mir die Fotos|Tom {show} me the photos.
+a11_intro_fragen|5|Ihr|den Lehrer|You {ask} the teacher.
+a11_intro_markieren|4|Wir|die Verben|We {mark} the verbs.
+a11_intro_nachsprechen|6|Die Schüler|das Wort|The students {repeat} the word.
+a11_intro_raten|2|Du|das Wort|You {guess} the word.
+a11_intro_meinen|3|Lisa|das Buch|Lisa {mean} the book.
+a11_intro_sagen|1|Ich|Hallo|I {say} hello.
+a11_intro_notieren|4|Wir|die Wörter|We {note} down the words.
+a11_intro_vergleichen|6|Die Schüler|die Texte|The students {compare} the texts.
+a11_intro_schreiben|1|Ich|eine E-Mail|I {write} an email.
+a11_intro_variieren|4|Wir|das Gespräch|We {vary} the conversation.
+a11_intro_erzaehlen|3|Oma|eine Geschichte|Grandma {tell} a story.
+a11_intro_arbeiten|3|Mein Vater|in Berlin|My father {work} in Berlin.
+a11_intro_zeichnen|2|Du|ein Haus|You {draw} a house.
+a11_intro_verbinden|5|Ihr|die Sätze|You {connect} the sentences.
+a11_intro_antworten|3|Paul|schnell|Paul {answer} quickly.
+a11_l1_heissen|1|Ich|Lara|My name is Lara. || My name was Lara. || My name has been Lara.
+a11_l1_sein|3|Tom|müde|Tom {be} tired.
+a11_l1_wissen|1|Ich|die Antwort|I {know} the answer.
+a11_l1_kommen|3|Lara|aus Polen|Lara {come} from Poland.
+a11_l1_buchstabieren|2|Du|deinen Namen|You {spell} your name.
+a11_l2_lernen|4|Wir|Deutsch|We {learn} German.
+a11_l2_haben|3|Sofia|zwei Kinder|Sofia {have} two children.
+a11_l2_leben|6|Meine Eltern|in Hamburg|My parents {live} in Hamburg.
+a11_l2_wohnen|1|Ich|in München|I {live} in Munich.
+a11_l2_liegen|3|Das Buch|auf dem Tisch|The book {lie} on the table.
+a11_l2_kennen|2|Du|meinen Bruder|You {know} my brother.
+a11_l3_brauchen|1|Ich|Milch|I {need} milk.
+a11_l3_kaufen|4|Wir|Brot|We {buy} bread.
+a11_l3_helfen|3|Paul|seiner Mutter|Paul {help} his mother.
+a11_l3_kosten|3|Der Apfel|einen Euro|The apple {cost} one euro.
+a11_l3_essen_2|2|Du|einen Apfel|You {eat} an apple.
+a11_l3_kochen|3|Papa|Nudeln|Dad {cook} pasta.
+a11_l3_schmecken|3|Die Suppe|gut|The soup {taste} good.
+a11_l3_trinken|1|Ich|Kaffee|I {drink} coffee.
+a11_l3_studieren|3|Lisa|Medizin|Lisa {study} medicine.
+a11_l3_reichen|3|Das Geld|nicht|The money {be} not enough.
+a11_l4_gefallen|3|Die Wohnung|mir|I {like} the flat.
+a11_l4_finden|1|Ich|den Film gut|I {find} the film good.
+a11_l4_lieben|3|Anna|ihren Hund|Anna {love} her dog.
+a11_l4_glauben|1|Ich|dir|I {believe} you.
+a11_l4_vermieten|3|Herr Meier|eine Wohnung|Mr Meier {rent} out a flat.
+a11_l4_bezahlen|4|Wir|die Rechnung|We {pay} the bill.
+a11_l5_fruehstuecken|4|Wir|zusammen|We {have} breakfast together.
+a11_l5_einkaufen|3|Mama|im Supermarkt|Mum {shop} at the supermarket.
+a11_l5_aufraeumen|2|Du|dein Zimmer|You {tidy} up your room.
+a11_l5_aufstehen|1|Ich|früh|I {get} up early.
+a11_l5_gehen|4|Wir|ins Kino|We {go} to the cinema.
+a11_l5_anrufen|3|Lara|ihre Mutter|Lara {call} her mother.
+a11_l5_fernsehen|6|Die Kinder|am Abend|The children {watch} TV in the evening.
+a11_l5_anfangen|3|Der Kurs|um neun Uhr|The course {begin} at nine o'clock.
+a11_l5_passen|3|Der Termin|gut|The appointment {suit} me well.
+a11_l5_schlafen|3|Das Baby|lange|The baby {sleep} for a long time.
+a11_l5_chatten|2|Du|mit Freunden|You {chat} with friends.
+a11_l5_sehen|1|Ich|einen Film|I {watch} a film.
+a11_l5_kennenlernen|1|Ich|neue Leute|I {get} to know new people.
+a11_l6_wandern|4|Wir|in den Bergen|We {hike} in the mountains.
+a11_l6_telefonieren|3|Tom|mit seiner Oma|Tom {talk} on the phone with his grandma.
+a11_l6_fotografieren|2|Du|den Hund|You {photograph} the dog.
+a11_l6_scheinen|3|Die Sonne|hell|The sun {shine} brightly.
+a11_l6_regnen|3|Es|viel|It {rain} a lot.
+a11_l6_los|4|Wir|zusammen|We {set} off together.
+a11_l6_vergessen|1|Ich|meine Tasche|I {forget} my bag.
+a11_l6_bringen|3|Der Kellner|das Essen|The waiter {bring} the food.
+a11_l6_fahren|4|Wir|nach Berlin|We {travel} to Berlin.
+a11_l6_joggen|3|Lisa|im Park|Lisa {jog} in the park.
+a11_l6_schwimmen|6|Die Kinder|im See|The children {swim} in the lake.
+a11_l6_tanzen|5|Ihr|gern|You {like} dancing.
+a11_l6_treffen|1|Ich|meine Freunde|I {meet} my friends.
+a11_l6_grillen|4|Wir|im Garten|We {have} a barbecue in the garden.
+a11_l6_surfen|2|Du|im Internet|You {surf} the internet.
+a11_l6_schneien|3|Es|in den Bergen|It {snow} in the mountains.
+a11_l6_steigen|3|Die Temperatur|auf 30 Grad|The temperature {rise} to 30 degrees.
+a11_l6_bleiben|1|Ich|zu Hause|I {stay} at home.
+a11_l6_nehmen|3|Paul|den Bus|Paul {take} the bus.
+a11_l6_moechten|1|Ich|einen Kaffee|I would like a coffee. || - || -
+a11_l6_surfen_2|6|Meine Freunde|am Meer|My friends {windsurf} at the sea.
+a11_l6_klettern|3|Tom|auf den Baum|Tom {climb} up the tree.
+a11_l7_ueben|1|Ich|die Wörter|I {practise} the words.
+a11_l7_schicken|3|Anna|eine Nachricht|Anna {send} a message.
+a11_l7_funktionieren|3|Der Computer|nicht|The computer {do} not work. || The computer did not work. || The computer has not worked.
+a11_l7_aussehen|3|Das Kleid|schön|The dress {look} beautiful.
+a11_l7_koennen|3|Lara|gut Deutsch|Lara can speak German well. || Lara could speak German well. || Lara has been able to speak German well.
+a11_l7_stimmen|3|Die Antwort|nicht|The answer {be} not right.
+a11_l7_reiten|3|Meine Schwester|gern|My sister {like} riding.
+a11_l7_wollen|3|Das Kind|ein Eis|The child {want} an ice cream.
+a11_l7_malen|6|Die Kinder|ein Bild|The children {paint} a picture.
+a11_l7_backen|3|Oma|einen Kuchen|Grandma {bake} a cake.
+a11_l7_singen|2|Du|ein Lied|You {sing} a song.
+a11_l7_rechnen|4|Wir|im Kopf|We {calculate} in our heads.
+a12_l8_anbieten|3|Die Firma|mir eine Stelle|The company {offer} me a job.
+a12_l8_zahlen|1|Ich|mit Karte|I {pay} by card.
+a12_l8_dauern|3|Der Kurs|drei Monate|The course {last} three months.
+a12_l8_heiraten|6|Meine Freunde|im Sommer|My friends {get} married in the summer.
+a12_l8_bekommen|3|Tom|einen Brief|Tom {get} a letter.
+a12_l9_ausfuellen|2|Du|das Formular|You {fill} in the form.
+a12_l9_mitbringen|1|Ich|einen Kuchen|I {bring} a cake along.
+a12_l9_beantragen|3|Lisa|einen Pass|Lisa {apply} for a passport.
+a12_l9_muessen|1|Ich|nach Hause|I have to go home. || I had to go home. || I have had to go home.
+a12_l9_duerfen|3|Der Hund|ins Haus|The dog is allowed in the house. || The dog was allowed in the house. || The dog has been allowed in the house.
+a12_l9_rauchen|3|Mein Onkel|viel|My uncle {smoke} a lot.
+a12_l9_abgeben|4|Wir|den Test|We {hand} in the test.
+a12_l9_benutzen|2|Du|das Handy|You {use} the phone.
+a12_l9_mitnehmen|1|Ich|einen Regenschirm|I {take} an umbrella along.
+a12_l9_parken|3|Papa|vor dem Haus|Dad {park} in front of the house.
+a12_l9_auswaehlen|5|Ihr|ein Buch|You {choose} a book.
+a12_l9_waehlen|6|Die Leute|einen Bürgermeister|The people {elect} a mayor.
+a12_l9_verstehen|1|Ich|die Frage|I {understand} the question.
+a12_l9_mitkommen|2|Du|ins Kino|You {come} along to the cinema.
+a12_l9_mieten|4|Wir|ein Auto|We {rent} a car.
+a12_l9_beginnen|3|Der Film|um acht Uhr|The film {begin} at eight o'clock.
+a12_l9_besuchen|1|Ich|meine Oma|I {visit} my grandma.
+a12_l9_besichtigen|6|Die Touristen|das Schloss|The tourists {visit} the castle.
+a12_l9_buchen|4|Wir|ein Hotel|We {book} a hotel.
+a12_l9_wiederholen|3|Die Lehrerin|die Frage|The teacher {repeat} the question.
+a12_l9_reservieren|1|Ich|einen Tisch|I {reserve} a table.
+a12_l9_abholen|3|Papa|die Kinder|Dad {pick} up the children.
+a12_l9_erklaeren|3|Der Lehrer|die Regel|The teacher {explain} the rule.
+a12_l9_ausmachen|2|Du|das Licht|You {switch} off the light.
+a12_l9_schliessen|1|Ich|die Tür|I {close} the door.
+a12_l9_oeffnen|3|Anna|das Fenster|Anna {open} the window.
+a12_l9_zuhoeren|6|Die Kinder|gut|The children {listen} carefully.
+a12_l9_warten|4|Wir|auf den Bus|We {wait} for the bus.
+a12_l9_lachen|6|Die Leute|laut|The people {laugh} loudly.
+a12_l10_wehtun|3|Mein Kopf|sehr|My head {hurt} a lot.
+a12_l10_verwenden|1|Ich|das Wörterbuch|I {use} the dictionary.
+a12_l10_vereinbaren|4|Wir|einen Termin|We {arrange} an appointment.
+a12_l10_aendern|3|Tom|seinen Plan|Tom {change} his plan.
+a12_l10_absagen|1|Ich|den Termin|I {cancel} the appointment.
+a12_l10_trainieren|3|Lisa|jeden Tag|Lisa {train} every day.
+a12_l10_aufpassen|2|Du|gut|You {pay} good attention.
+a12_l10_laufen|3|Paul|schnell|Paul {run} fast.
+a12_l10_informieren|3|Die Firma|die Kunden|The company {inform} the customers.
+a12_l10_ausfallen|3|Der Kurs|leider|Unfortunately, the course {be} cancelled.
+a12_l10_vorbeikommen|3|Mein Freund|kurz|My friend {drop} by briefly.
+a12_l10_geben|3|Oma|mir ein Geschenk|Grandma {give} me a present.
+a12_l10_sollen|2|Du|zum Arzt|You should go to the doctor. || You were supposed to go to the doctor. || -
+a12_l10_tun|1|Ich|etwas für meine Gesundheit|I {do} something for my health.
+a12_l10_beobachten|4|Wir|die Vögel|We {watch} the birds.
+a12_l11_fliegen|4|Wir|nach Spanien|We {fly} to Spain.
+a12_l11_abfahren|3|Der Zug|um zehn Uhr|The train {leave} at ten o'clock.
+a12_l11_ankommen|3|Der Bus|pünktlich|The bus {arrive} on time.
+a12_l11_einsteigen|1|Ich|in den Zug|I {get} on the train.
+a12_l11_umsteigen|4|Wir|in Köln|We {change} trains in Cologne.
+a12_l11_aussteigen|2|Du|am Bahnhof|You {get} off at the station.
+a12_l11_stehen|3|Das Auto|vor dem Haus|The car {stand} in front of the house.
+a12_l11_sitzen|3|Die Katze|auf dem Sofa|The cat {sit} on the sofa.
+a12_l11_holen|1|Ich|die Zeitung|I {fetch} the newspaper.
+a12_l11_zumachen|3|Oma|das Fenster|Grandma {close} the window.
+a12_l11_bedeuten|3|Das Wort|nichts|The word {mean} nothing.
+a12_l11_kopieren|3|Die Sekretärin|den Brief|The secretary {photocopy} the letter.
+a12_l11_ausleihen|1|Ich|ein Buch|I {borrow} a book.
+a12_l11_achten|6|Die Eltern|auf die Kinder|The parents {pay} attention to the children.
+a12_l12_reparieren|3|Der Mechaniker|das Auto|The mechanic {repair} the car.
+a12_l12_naehen|3|Oma|ein Kleid|Grandma {sew} a dress.
+a12_l12_verkaufen|4|Wir|unser Fahrrad|We {sell} our bike.
+a12_l12_empfehlen|3|Der Kellner|den Fisch|The waiter {recommend} the fish.
+a12_l12_vorbeibringen|1|Ich|das Paket|I {drop} off the parcel.
+a12_l12_zurueckgeben|2|Du|das Buch|You {give} back the book.
+a12_l12_anmachen|3|Tom|das Radio|Tom {switch} on the radio.
+a12_l12_aufmachen|1|Ich|die Tür|I {open} the door.
+a12_l12_zurueckrufen|3|Frau Müller|schnell|Mrs Müller {call} back quickly.
+a12_l12_sparen|4|Wir|für den Urlaub|We {save} for the holiday.
+a12_l12_reinigen|3|Die Firma|die Büros|The company {clean} the offices.
+a12_l12_putzen|2|Du|das Bad|You {clean} the bathroom.
+a12_l12_bestellen|1|Ich|eine Pizza|I {order} a pizza.
+a12_l12_geniessen|4|Wir|die Sonne|We {enjoy} the sun.
+a12_l13_tragen|3|Lisa|einen Mantel|Lisa {wear} a coat.
+a12_l13_anziehen|1|Ich|mich|I {get} dressed.
+a12_l13_anprobieren|2|Du|die Jacke|You {try} on the jacket.
+a12_l13_gehoeren|3|Die Tasche|mir|The bag {belong} to me.
+a12_l13_moegen|1|Ich|Schokolade|I {like} chocolate.
+a12_l14_feiern|4|Wir|meinen Geburtstag|We {celebrate} my birthday.
+a12_l14_einladen|1|Ich|meine Freunde|I {invite} my friends.
+a12_l14_schenken|3|Tom|seiner Mutter Blumen|Tom {give} his mother flowers.
+a12_l14_gratulieren|4|Wir|dir|We {congratulate} you.
+a12_l14_wuenschen|1|Ich|mir ein Fahrrad|I {wish} for a bike.
+a12_l14_organisieren|5|Ihr|eine Party|You {organise} a party.
+a12_l14_werden|3|Paul|zehn Jahre alt|Paul {turn} ten years old.
+a12_l14_sich_freuen|1|Ich|über das Geschenk|I {be} pleased about the present.
+a12_l14_eroeffnen|3|Die Stadt|ein Museum|The town {open} a museum.
+a12_l14_sorgen|3|Mama|für das Essen|Mum {take} care of the food.
+a12_l14_anmelden|1|Ich|mich für den Kurs|I {sign} up for the course.
+a12_l14_bitten|1|Ich|dich um Hilfe|I {ask} you for help.
+a12_l14_mitmachen|2|Du|beim Spiel|You {join} in the game.
+a12_l14_waschen|3|Papa|das Auto|Dad {wash} the car.
+a12_l14_anzuenden|3|Oma|die Kerzen|Grandma {light} the candles.
+a12_l14_verstecken|6|Die Kinder|sich im Garten|The children {hide} in the garden.
+a12_l14_enden|3|Der Film|um zehn Uhr|The film {end} at ten o'clock.
+a12_l14_lieben|4|Wir|uns|We {love} each other.
+a12_l14_zurueckkommen|3|Mein Bruder|aus Italien|My brother {come} back from Italy.
+a12_l14_auspacken|2|Du|das Geschenk|You {unwrap} the present.
+a12_l14_vorlesen|3|Papa|eine Geschichte|Dad {read} out a story.
+a12_l14_stellen|1|Ich|die Vase auf den Tisch|I {put} the vase on the table.
+a21_l1_ziehen|4|Wir|nach Wien|We {move} to Vienna.
+a21_l1_umziehen|6|Meine Eltern|nach Köln|My parents {move} to Cologne.
+a21_l1_einziehen|1|Ich|in die Wohnung|I {move} into the flat.
+a21_l1_ausziehen|3|Mein Nachbar|aus dem Haus|My neighbour {move} out of the house.
+a21_l1_einschlafen|3|Das Baby|schnell|The baby {fall} asleep quickly.
+a21_l1_klappen|3|Alles|gut|Everything {work} out well.
+a21_l1_vermissen|1|Ich|meine Familie|I {miss} my family.
+a21_l1_klingen|3|Das|gut|That {sound} good.
+a21_l1_passieren|3|Ein Unfall|auf der Straße|An accident {happen} in the street.
+a21_l1_erleben|4|Wir|viel|We {experience} a lot.
+a21_l1_verpassen|1|Ich|den Zug|I {miss} the train.
+a21_l1_bemerken|3|Tom|den Fehler|Tom {notice} the mistake.
+a21_l1_vorstellen|1|Ich|mir das Leben in Berlin|I {imagine} life in Berlin.
+a21_l1_verlieren|2|Du|deinen Schlüssel|You {lose} your key.
+a21_l1_stossen|3|Das Kind|an den Tisch|The child {bump} into the table.
+a21_l1_erfahren|1|Ich|die Neuigkeit|I {find} out the news.
+a21_l1_teilen|4|Wir|die Pizza|We {share} the pizza.
+a21_l2_wechseln|3|Papa|die Glühbirne|Dad {change} the light bulb.
+a21_l2_haengen|3|Das Bild|an der Wand|The picture {hang} on the wall.
+a21_l2_stecken|3|Der Schlüssel|in der Tür|The key {be} in the door.
+a21_l2_legen|2|Du|das Buch auf den Tisch|You {put} the book on the table.
+a21_l2_stoeren|3|Die Musik|die Nachbarn|The music {disturb} the neighbours.
+a21_l2_fallen|3|Das Glas|auf den Boden|The glass {fall} on the floor.
+a21_l2_reinkommen|3|Der Nachbar|kurz|The neighbour {come} in briefly.
+a21_l2_giessen|1|Ich|die Blumen|I {water} the flowers.
+a21_l2_werfen|3|Das Kind|den Ball|The child {throw} the ball.
+a21_l2_annehmen|3|Die Nachbarin|das Paket|The neighbour {take} in the parcel.
+a21_l2_fuettern|2|Du|die Katze|You {feed} the cat.
+a21_l2_klingeln|3|Der Postbote|an der Tür|The postman {ring} the doorbell.
+a21_l2_erwarten|4|Wir|Besuch|We {expect} visitors.
+a21_l2_lassen|3|Mama|das Licht an|Mum {leave} the light on.
+a21_l2_verpacken|1|Ich|das Geschenk|I {wrap} the present.
+a21_l2_vermeiden|4|Wir|Plastik|We {avoid} plastic.
+a21_l2_trennen|6|Meine Nachbarn|den Müll|My neighbours {sort} the rubbish.
+a21_l2_verzichten|1|Ich|auf Zucker|I {do} without sugar.
+a21_l2_aufhoeren|3|Der Regen|endlich|The rain finally {stop}.
+a21_l3_uebernehmen|3|Mein Sohn|die Firma|My son {take} over the company.
+a21_l3_riechen|3|Die Suppe|gut|The soup {smell} good.
+a21_l3_ueberraschen|4|Wir|unsere Mutter|We {surprise} our mother.
+a21_l3_ausziehen|1|Ich|mir die Schuhe|I {take} off my shoes.
+a21_l3_leiten|3|Frau Weber|die Firma|Mrs Weber {run} the company.
+a21_l3_planen|4|Wir|eine Reise|We {plan} a trip.
+a21_l4_angeben|2|Du|deine Adresse|You {give} your address.
+a21_l4_ausschalten|1|Ich|den Computer|I {switch} off the computer.
+a21_l4_spuelen|3|Papa|das Geschirr|Dad {wash} up the dishes.
+a21_l4_ausrichten|1|Ich|ihm die Nachricht|I {pass} on the message to him.
+a21_l4_verbinden_mit|3|Die Sekretärin|mich mit dem Chef|The secretary {put} me through to the boss.
+a21_l4_verbringen|4|Wir|das Wochenende am See|We {spend} the weekend at the lake.
+a21_l4_nutzen|1|Ich|die Zeit|I {use} the time.
+a21_l4_versuchen|2|Du|es noch einmal|You {try} it again.
+a21_l4_beschaeftigen|3|Die Firma|100 Mitarbeiter|The company {employ} 100 people.
+a21_l4_behalten|1|Ich|das Geld|I {keep} the money.
+a21_l4_erkennen|3|Oma|mich nicht|Grandma {do} not recognise me. || Grandma did not recognise me. || Grandma has not recognised me.
+a21_l4_nennen|3|Die Lehrerin|drei Beispiele|The teacher {name} three examples.
+a21_l4_verdienen|3|Mein Bruder|gut|My brother {earn} well.
+a21_l4_akzeptieren|3|Der Laden|keine Karten|The shop {do} not accept cards. || The shop did not accept cards. || The shop has not accepted cards.
+a21_l4_bieten|3|Die Firma|gute Kurse|The company {offer} good courses.
+a21_l4_gelten|3|Das Ticket|einen Tag|The ticket {be} valid for one day.
+a21_l5_halten|1|Ich|mich fit|I {keep} fit.
+a21_l5_schaffen|2|Du|die Prüfung|You {manage} the exam.
+a21_l5_fuehlen|1|Ich|mich gut|I {feel} good.
+a21_l5_hinfallen|3|Das Kind|auf der Straße|The child {fall} down in the street.
+a21_l5_ernaehren|4|Wir|uns gesund|We {eat} healthily.
+a21_l5_ausruhen|1|Ich|mich am Wochenende|I {rest} at the weekend.
+a21_l5_duschen|2|Du|dich jeden Morgen|You {shower} every morning.
+a21_l5_rasieren|3|Papa|sich|Dad {shave}.
+a21_l5_schminken|3|Lisa|sich|Lisa {put} on make-up.
+a21_l5_umziehen|1|Ich|mich|I {change} my clothes.
+a21_l5_kaemmen|3|Das Mädchen|sich|The girl {comb} her hair.
+a21_l5_waschen|2|Du|dich|You {wash}.
+a21_l5_beeilen|4|Wir|uns|We {hurry}.
+a21_l5_verabreden_mit|1|Ich|mich mit Anna|I {arrange} to meet Anna.
+a21_l5_konzentrieren|3|Tom|sich auf die Arbeit|Tom {concentrate} on his work.
+a21_l5_aergern|1|Ich|mich über den Lärm|I {get} annoyed about the noise.
+a21_l5_beschweren|3|Der Gast|sich über das Essen|The guest {complain} about the food.
+a21_l5_kuemmern_um|3|Oma|sich um den Garten|Grandma {take} care of the garden.
+a21_l5_traeumen_von|1|Ich|von einem Haus am Meer|I {dream} of a house by the sea.
+a21_l5_erinnern_an|2|Du|dich an den Urlaub|You {remember} the holiday.
+a21_l5_denken_an|1|Ich|an dich|I {think} of you.
+a21_l5_betragen|3|Der Preis|zehn Euro|The price {amount} to ten euros.
+a21_l5_geschehen|3|Etwas Schlimmes|dort|Something bad {happen} there.
+a21_l5_uebertreiben|2|Du|immer|You always {exaggerate}.
+a21_l6_bestehen|3|Anna|die Prüfung|Anna {pass} the exam.
+a21_l6_bewerben|1|Ich|mich um die Stelle|I {apply} for the job.
+a21_l6_praesentieren|4|Wir|unser Projekt|We {present} our project.
+a21_l6_teilnehmen|3|Tom|am Kurs|Tom {take} part in the course.
+a21_l6_sammeln|6|Die Kinder|Steine|The children {collect} stones.
+a21_l6_realisieren|3|Die Firma|das Projekt|The company {carry} out the project.
+a21_l6_entdecken|4|Wir|ein schönes Café|We {discover} a nice café.
+a21_l6_verhalten_2|3|Der Hund|sich gut|The dog {behave} well.
+a21_l6_streiten|6|Die Kinder|sich|The children {argue}.
+a21_l6_verbessern|1|Ich|mein Deutsch|I {improve} my German.
+a21_l6_loesen|3|Paul|das Problem|Paul {solve} the problem.
+a21_l6_fuerchten|3|Das Kind|sich vor dem Hund|The child {be} afraid of the dog.
+a21_l6_fuehren|3|Die Chefin|das Gespräch|The boss {lead} the meeting.
+a21_l6_hassen|1|Ich|Montage|I {hate} Mondays.
+a21_l6_speichern|2|Du|die Datei|You {save} the file.
+a21_l6_loeschen|1|Ich|die E-Mail|I {delete} the email.
+a21_l6_verletzen|3|Der Spieler|sich am Knie|The player {injure} his knee.
+a21_l6_bluten|3|Die Wunde|stark|The wound {bleed} heavily.
+a21_l7_basteln|6|Die Kinder|eine Karte|The children {make} a card.
+a21_l7_probieren|1|Ich|den Kuchen|I {taste} the cake.
+a21_l7_liefern|3|Die Firma|das Sofa|The company {deliver} the sofa.
+a21_l7_ausdrucken|1|Ich|das Ticket|I {print} out the ticket.
+a21_l7_ausgeben|3|Tom|viel Geld|Tom {spend} a lot of money.
+a21_l7_vorbereiten|4|Wir|uns auf die Party|We {prepare} for the party.
+a21_l7_gruessen|3|Der Nachbar|mich freundlich|The neighbour {greet} me warmly.
+a21_l7_weinen|3|Das Baby|laut|The baby {cry} loudly.
+a21_l7_treten|3|Der Spieler|gegen den Ball|The player {kick} the ball.
+a21_l7_unterhalten|4|Wir|uns lange|We {chat} for a long time.
+a21_l7_dekorieren|5|Ihr|den Raum|You {decorate} the room.
+a21_l7_ueberzeugen|3|Die Idee|mich|The idea {convince} me.
+a21_l7_entscheiden|3|Der Chef|das|The boss {decide} that.
+a22_l8_ausgehen|4|Wir|am Samstag|We {go} out on Saturday.
+a22_l8_unternehmen|5|Ihr|etwas zusammen|You {do} something together.
+a22_l8_mitspielen|2|Du|beim Fußball|You {play} along in the football game.
+a22_l8_gewinnen|3|Unser Team|das Spiel|Our team {win} the game.
+a22_l8_auftreten|3|Die Band|im Park|The band {perform} in the park.
+a22_l8_reagieren|3|Tom|schnell|Tom {react} quickly.
+a22_l9_einrichten|4|Wir|die Wohnung|We {furnish} the flat.
+a22_l9_beraten|3|Der Verkäufer|die Kunden|The salesman {advise} the customers.
+a22_l9_gucken|1|Ich|aus dem Fenster|I {look} out of the window.
+a22_l9_schauen|3|Oma|auf die Uhr|Grandma {look} at the clock.
+a22_l9_vorschlagen|3|Anna|einen Ausflug|Anna {suggest} a trip.
+a22_l9_aufnehmen|4|Wir|einen Kredit|We {take} out a loan.
+a22_l10_verschicken|3|Die Firma|die Pakete|The company {send} off the parcels.
+a22_l10_beenden|1|Ich|meine Arbeit|I {finish} my work.
+a22_l10_testen|4|Wir|das neue Handy|We {test} the new phone.
+a22_l10_kaputtgehen|3|Die Waschmaschine|schon wieder|The washing machine {break} again.
+a22_l10_transportieren|3|Der Lkw|die Möbel|The lorry {transport} the furniture.
+a22_l10_wiegen|3|Das Paket|zwei Kilo|The parcel {weigh} two kilos.
+a22_l10_impfen|3|Die Ärztin|das Kind|The doctor {vaccinate} the child.
+a22_l10_untersuchen|3|Der Arzt|den Patienten|The doctor {examine} the patient.
+a22_l10_hoffen|1|Ich|auf gutes Wetter|I {hope} for good weather.
+a22_l10_versprechen|2|Du|mir das|You {promise} me that.
+a22_l10_vorkommen|3|Das|oft|That {happen} often.
+a22_l10_frieren|1|Ich|im Winter|I {be} cold in winter.
+a22_l11_anschauen|4|Wir|die Stadt|We {look} at the town.
+a22_l11_wegfahren|6|Meine Nachbarn|im Sommer|My neighbours {go} away in the summer.
+a22_l11_springen|3|Die Katze|auf den Tisch|The cat {jump} onto the table.
+a22_l11_tanken|3|Papa|an der Tankstelle|Dad {fill} up at the petrol station.
+a22_l11_abbiegen|2|Du|nach links|You {turn} left.
+a22_l11_stehen_bleiben|3|Der Bus|plötzlich|The bus suddenly {stop}.
+a22_l11_ueberholen|3|Das Auto|den Lkw|The car {overtake} the lorry.
+a22_l11_stuerzen|3|Der Radfahrer|auf der Straße|The cyclist {fall} in the street.
+a22_l11_hupen|3|Der Fahrer|laut|The driver {honk} loudly.
+a22_l11_verhindern|3|Die Polizei|einen Unfall|The police {prevent} an accident.
+a22_l11_starten|3|Das Flugzeug|pünktlich|The plane {take} off on time.
+a22_l11_landen|3|Das Flugzeug|in Berlin|The plane {land} in Berlin.
+a22_l11_bremsen|3|Die Fahrerin|schnell|The driver {brake} quickly.
+a22_l11_auffallen|3|Der Fehler|mir|I {notice} the mistake.
+a22_l11_reden|4|Wir|über das Wetter|We {talk} about the weather.
+a22_l11_beachten|2|Du|die Regeln|You {follow} the rules.
+a22_l12_einpacken|1|Ich|meine Sachen|I {pack} my things.
+a22_l12_einigen|4|Wir|uns auf einen Termin|We {agree} on a date.
+a22_l12_uebernachten|4|Wir|im Hotel|We {stay} the night at the hotel.
+a22_l12_ablehnen|3|Tom|das Angebot|Tom {turn} down the offer.
+a22_l12_faulenzen|1|Ich|am Strand|I {laze} around on the beach.
+a22_l13_abheben|1|Ich|Geld|I {withdraw} money.
+a22_l13_ueberweisen|3|Mama|die Miete|Mum {transfer} the rent.
+a22_l13_beantworten|2|Du|die E-Mail|You {answer} the email.
+a22_l13_besorgen|1|Ich|die Tickets|I {get} the tickets.
+a22_l13_verschieben|4|Wir|den Termin|We {postpone} the appointment.
+a22_l13_kriegen|3|Lisa|ein Geschenk|Lisa {get} a present.
+a22_l13_erledigen|1|Ich|die Einkäufe|I {do} the shopping.
+a22_l13_kontrollieren|3|Der Schaffner|die Fahrkarten|The conductor {check} the tickets.
+a22_l13_erstellen|3|Die Chefin|einen Plan|The boss {draw} up a plan.
+a22_l13_ueberpruefen|4|Wir|die Rechnung|We {check} the bill.
+a22_l13_erreichen|3|Der Zug|Berlin pünktlich|The train {reach} Berlin on time.
+a22_l13_renovieren|6|Meine Eltern|das Bad|My parents {renovate} the bathroom.
+a22_l13_schneiden|3|Papa|das Brot|Dad {cut} the bread.
+a22_l13_entsorgen|1|Ich|den alten Kühlschrank|I {dispose} of the old fridge.
+a22_l13_tauschen|4|Wir|die Plätze|We {swap} seats.
+a22_l13_versichern|3|Tom|sein Auto|Tom {insure} his car.
+a22_l14_zurueckgehen|3|Oma|nach Hause|Grandma {go} back home.
+a22_l14_sterben|3|Die Pflanze|langsam|The plant {die} slowly.
+a22_l14_zusammenleben|6|Anna und Tom|in Berlin|Anna and Tom {live} together in Berlin.
+a22_l14_versorgen|3|Die Tochter|ihre Mutter|The daughter {look} after her mother.
+a22_l14_sich_verlieben|1|Ich|in dich|I {fall} in love with you.
+a22_l14_ansprechen|3|Tom|das Mädchen|Tom {speak} to the girl.
+a22_l14_danken|1|Ich|dir|I {thank} you.
+a22_l14_reisen|4|Wir|nach Asien|We {travel} to Asia.
+b11_l1_schiessen|3|Der Spieler|ein Tor|The player {score} a goal.
+b11_l1_brechen|3|Das Eis|plötzlich|The ice suddenly {break}.
+b11_l1_verschwinden|3|Die Katze|im Garten|The cat {disappear} in the garden.
+b11_l1_rufen|3|Die Frau|um Hilfe|The woman {call} for help.
+b11_l1_absperren|3|Die Polizei|die Straße|The police {cordon} off the street.
+b11_l1_festnehmen|3|Die Polizei|den Dieb|The police {arrest} the thief.
+b11_l1_retten|3|Die Feuerwehr|den Hund|The fire brigade {rescue} the dog.
+b11_l1_steigen_in|1|Ich|in das Taxi|I {get} into the taxi.
+b11_l1_sich_wundern|1|Ich|über das Wetter|I {be} surprised by the weather.
+b11_l1_verwechseln|3|Tom|die Namen|Tom {mix} up the names.
+b11_l1_sich_setzen|3|Der Gast|auf das Sofa|The guest {sit} down on the sofa.
+b11_l1_sich_befinden|3|Das Hotel|im Zentrum|The hotel {be} in the centre.
+b11_l1_nachdenken|1|Ich|über die Frage|I {think} about the question.
+b11_l1_ausreichen|3|Das Essen|für alle|The food {be} enough for everyone.
+b11_l1_folgen|3|Der Hund|dem Kind|The dog {follow} the child.
+b11_l1_unterstuetzen|6|Meine Eltern|mich|My parents {support} me.
+b11_l2_handeln|3|Der Film|von einer Familie|The film {be} about a family.
+b11_l2_erfinden|3|Der Ingenieur|eine Maschine|The engineer {invent} a machine.
+b11_l2_veroeffentlichen|3|Die Autorin|ein Buch|The author {publish} a book.
+b11_l2_verlassen|1|Ich|das Haus|I {leave} the house.
+b11_l2_begleiten|3|Tom|seine Oma|Tom {accompany} his grandma.
+b11_l2_begegnen|1|Ich|meinem Lehrer|I {meet} my teacher.
+b11_l2_sich_erfuellen|3|Mein Wunsch|endlich|My wish finally {come} true.
+b11_l2_entstehen|3|Ein Problem|dabei|A problem {arise} from it.
+b11_l2_produzieren|3|Die Firma|Autos|The company {produce} cars.
+b11_l2_kritisieren|3|Der Chef|den Plan|The boss {criticise} the plan.
+b11_l2_sich_aendern|3|Das Wetter|schnell|The weather {change} quickly.
+b11_l2_gelingen|3|Der Kuchen|mir gut|My cake {turn} out well.
+b11_l2_zustimmen|4|Wir|dem Plan|We {agree} to the plan.
+b11_l3_behandeln|3|Die Ärztin|den Patienten|The doctor {treat} the patient.
+b11_l3_vermuten|1|Ich|das|I {suspect} that.
+b11_l3_verschreiben|3|Der Arzt|mir Tabletten|The doctor {prescribe} me tablets.
+b11_l3_erhalten|3|Anna|einen Brief|Anna {receive} a letter.
+b11_l3_ueberreden|1|Ich|meinen Freund|I {persuade} my friend.
+b11_l3_atmen|2|Du|tief|You {breathe} deeply.
+b11_l3_umgehen|3|Die Lehrerin|gut mit Kindern|The teacher {deal} well with children.
+b11_l3_aufwachen|1|Ich|früh|I {wake} up early.
+b11_l3_achten_auf|3|Lisa|auf ihre Gesundheit|Lisa {pay} attention to her health.
+b11_l3_sich_erhoehen|3|Der Preis|stark|The price {increase} sharply.
+b11_l3_druecken|2|Du|auf den Knopf|You {press} the button.
+b11_l3_greifen|3|Das Kind|nach dem Ball|The child {reach} for the ball.
+b11_l3_schieben|1|Ich|das Fahrrad|I {push} the bike.
+b11_l3_abnehmen|3|Mein Vater|fünf Kilo|My father {lose} five kilos.
+b11_l3_integrieren|3|Die Schule|die neuen Schüler|The school {integrate} the new students.
+b11_l3_treiben|4|Wir|Sport|We {do} sport.
+b11_l3_verbrauchen|3|Das Auto|viel Benzin|The car {use} a lot of petrol.
+b11_l4_uebersetzen|1|Ich|den Text|I {translate} the text.
+b11_l4_sich_anstrengen|3|Tom|in der Schule|Tom {make} an effort at school.
+b11_l4_erziehen|6|Die Eltern|ihre Kinder|The parents {bring} up their children.
+b11_l4_unterscheiden|1|Ich|die Zwillinge nicht|I {do} not tell the twins apart. || I did not tell the twins apart. || I have not told the twins apart.
+b11_l4_stammen|3|Die Familie|aus Italien|The family {come} from Italy.
+b11_l4_laecheln|3|Das Kind|freundlich|The child {smile} kindly.
+b11_l4_vorhaben|4|Wir|etwas Schönes|We {plan} something nice.
+b11_l4_sich_bedanken|1|Ich|für die Hilfe|I {say} thank you for the help.
+b11_l4_luegen|2|Du|nie|You never {tell} lies.
+b11_l5_einstellen|3|Die Firma|neue Mitarbeiter|The company {hire} new staff.
+b11_l5_herstellen|3|Die Firma|Möbel|The company {make} furniture.
+b11_l5_entwickeln|3|Das Team|eine App|The team {develop} an app.
+b11_l5_sich_melden|1|Ich|bei dir|I {get} in touch with you.
+b11_l5_genuegen|3|Eine Stunde|mir|One hour {be} enough for me.
+b11_l5_feststellen|3|Der Arzt|nichts|The doctor {find} nothing.
+b11_l5_sich_veraendern|3|Die Stadt|sehr|The town {change} a lot.
+b11_l5_sich_eignen|3|Der Raum|gut für Partys|The room {be} good for parties.
+b11_l5_sich_ueberlegen|1|Ich|das|I {think} about it.
+b11_l5_anwenden|4|Wir|die Regel|We {apply} the rule.
+b11_l5_sich_beruhigen|3|Das Baby|langsam|The baby slowly {calm} down.
+b11_l6_sich_lohnen|3|Die Arbeit|wirklich|The work {be} really worth it.
+b11_l6_besitzen|3|Mein Onkel|ein Boot|My uncle {own} a boat.
+b11_l6_unterrichten|3|Frau Klein|Mathe|Mrs Klein {teach} maths.
+b11_l6_gruenden|3|Mein Vater|eine Firma|My father {found} a company.
+b11_l6_kuendigen|1|Ich|meine Stelle|I {quit} my job.
+b11_l6_geboren_werden|1|Ich|in Wien|I was born in Vienna. || I was born in Vienna. || I was born in Vienna.
+b11_l6_sich_entschliessen|1|Ich|zu einer Reise|I {decide} on a trip.
+b11_l6_spueren|1|Ich|den Wind|I {feel} the wind.
+b11_l6_wiederkommen|3|Der Vogel|jedes Jahr|The bird {come} back every year.
+b11_l6_begruessen|3|Der Chef|die Gäste|The boss {welcome} the guests.
+b11_l6_sich_verabschieden|1|Ich|von meinen Freunden|I {say} goodbye to my friends.
+b11_l6_bestaetigen|3|Das Hotel|die Buchung|The hotel {confirm} the booking.
+b11_l6_fordern|6|Die Arbeiter|mehr Geld|The workers {demand} more money.
+b11_l6_enttaeuschen|3|Das Ergebnis|mich|The result {disappoint} me.
+b11_l6_auffordern|3|Der Lehrer|die Schüler zum Lesen|The teacher {ask} the students to read.
+b11_l7_brennen|3|Das Haus|lichterloh|The house {burn} fiercely.
+b11_l7_verdaechtigen|3|Die Polizei|den Nachbarn|The police {suspect} the neighbour.
+b11_l7_behaupten|3|Tom|das|Tom {claim} that.
+b11_l7_fehlen|3|Ein Stuhl|noch|A chair {be} still missing.
+b11_l7_hinterlassen|3|Der Dieb|Spuren|The thief {leave} traces.
+b11_l7_besprechen|4|Wir|das Problem|We {discuss} the problem.
+b11_l7_mitgehen|2|Du|zum Arzt|You {go} along to the doctor.
+b11_l7_abhaengen|3|Das|vom Wetter|That {depend} on the weather.
+b11_l7_erfordern|3|Die Arbeit|viel Zeit|The work {require} a lot of time.
+b11_l7_sich_gewoehnen|1|Ich|an das Wetter|I {get} used to the weather.
+b11_l7_verteilen|3|Die Lehrerin|die Bücher|The teacher {hand} out the books.
+b12_l8_zusagen|1|Ich|der Firma|I {accept} the company's offer.
+b12_l8_sich_krankmelden|3|Tom|beim Chef|Tom {call} in sick to his boss.
+b12_l8_sich_wenden|1|Ich|an den Chef|I {turn} to the boss.
+b12_l8_warnen|3|Die Polizei|die Leute|The police {warn} the people.
+b12_l8_beeinflussen|3|Das Wetter|meine Laune|The weather {influence} my mood.
+b12_l8_duzen|4|Wir|uns|We {say} "du" to each other.
+b12_l8_siezen|1|Ich|meinen Chef|I {say} "Sie" to my boss.
+b12_l8_wirken|3|Der Mann|nett|The man {seem} nice.
+b12_l9_runterladen|1|Ich|die App|I {download} the app.
+b12_l9_anschliessen|2|Du|den Drucker|You {connect} the printer.
+b12_l9_anklicken|1|Ich|den Link|I {click} on the link.
+b12_l9_installieren|3|Tom|das Programm|Tom {install} the program.
+b12_l9_senden|3|Die Firma|mir eine E-Mail|The company {send} me an email.
+b12_l9_unterschreiben|2|Du|den Vertrag|You {sign} the contract.
+b12_l9_beschreiben|3|Anna|ihr Zimmer|Anna {describe} her room.
+b12_l9_beschliessen|6|Die Nachbarn|ein Fest|The neighbours {decide} on a party.
+b12_l9_diskutieren|4|Wir|über das Thema|We {discuss} the topic.
+b12_l9_aufregen|3|Der Lärm|mich|The noise {upset} me.
+b12_l9_abwaschen|1|Ich|das Geschirr|I {wash} the dishes.
+b12_l10_sich_anstellen|4|Wir|an der Kasse|We {queue} up at the checkout.
+b12_l10_benoetigen|3|Die Firma|mehr Personal|The company {need} more staff.
+b12_l10_verbieten|3|Die Stadt|das Rauchen|The town {forbid} smoking.
+b12_l10_sich_entschuldigen|1|Ich|bei dir|I {apologise} to you.
+b12_l10_abmachen|4|Wir|einen Termin|We {arrange} a date.
+b12_l10_wegwerfen|2|Du|den Müll|You {throw} away the rubbish.
+b12_l10_streichen|3|Papa|die Wand|Dad {paint} the wall.
+b12_l10_korrigieren|3|Die Lehrerin|die Tests|The teacher {correct} the tests.
+b12_l10_wachsen|3|Die Blume|schnell|The flower {grow} quickly.
+b12_l10_sich_drehen|3|Die Erde|um die Sonne|The earth {turn} around the sun.
+b12_l10_abstimmen|6|Die Leute|über den Plan|The people {vote} on the plan.
+b12_l10_schalten|3|Die Ampel|auf Grün|The traffic light {switch} to green.
+b12_l10_weitermachen|4|Wir|mit der Arbeit|We {carry} on with the work.
+b12_l10_schuetteln|3|Tom|den Kopf|Tom {shake} his head.
+b12_l10_aufhalten|3|Der Stau|mich|The traffic jam {hold} me up.
+b12_l10_schlagen|3|Unser Team|die Gegner|Our team {beat} the other team.
+b12_l10_wecken|1|Ich|die Kinder|I {wake} the children.
+b12_l10_schweigen|3|Der Mann|lange|The man {stay} silent for a long time.
+b12_l10_einfallen|3|Der Name|mir nicht|I {do} not remember the name. || I did not remember the name. || I have not remembered the name.
+b12_l11_betruegen|3|Der Verkäufer|die Kunden|The salesman {cheat} the customers.
+b12_l11_anzeigen|1|Ich|den Dieb|I {report} the thief to the police.
+b12_l11_bestrafen|3|Der Lehrer|den Schüler|The teacher {punish} the student.
+b12_l11_stehlen|3|Der Dieb|das Fahrrad|The thief {steal} the bike.
+b12_l11_zerstoeren|3|Der Sturm|das Dach|The storm {destroy} the roof.
+b12_l11_kaputt_machen|3|Das Kind|das Spielzeug|The child {break} the toy.
+b12_l11_behindern|3|Das Auto|den Verkehr|The car {block} the traffic.
+b12_l11_ueberqueren|4|Wir|die Straße|We {cross} the street.
+b12_l11_begruenden|2|Du|deine Meinung|You {give} reasons for your opinion.
+b12_l11_sich_weigern|3|Das Kind|zu essen|The child {refuse} to eat.
+b12_l11_sich_verspaeten|3|Der Zug|oft|The train is often late. || The train was often late. || The train has often been late.
+b12_l11_missverstehen|1|Ich|dich|I {misunderstand} you.
+b12_l11_beleidigen|3|Der Mann|die Frau|The man {insult} the woman.
+b12_l11_herrschen|3|In der Stadt|Chaos|There {be} chaos in the town.
+b12_l11_weggehen|1|Ich|früh|I {leave} early.
+b12_l11_losfahren|4|Wir|um acht Uhr|We {set} off at eight o'clock.
+b12_l11_aufgeben|3|Der Läufer|nicht|The runner {do} not give up. || The runner did not give up. || The runner has not given up.
+b12_l11_sich_bemuehen|3|Tom|sehr|Tom {try} very hard.
+b12_l11_sich_vornehmen|1|Ich|mehr Sport|I {resolve} to do more sport.
+b12_l11_festlegen|4|Wir|den Preis|We {fix} the price.
+b12_l11_schreien|3|Das Baby|laut|The baby {scream} loudly.
+b12_l11_zuschauen|6|Die Kinder|beim Spiel|The children {watch} the game.
+b12_l11_erscheinen|3|Die Zeitung|jeden Tag|The newspaper {appear} every day.
+b12_l11_verletzen|3|Der Hund|den Mann|The dog {hurt} the man.
+b12_l11_eintragen|1|Ich|meinen Namen in die Liste|I {enter} my name on the list.
+b12_l11_verreisen|6|Meine Eltern|im Juli|My parents {go} away in July.
+b12_l12_sich_einsetzen|3|Anna|für die Umwelt|Anna {stand} up for the environment.
+b12_l12_betreuen|3|Die Nachbarin|die Kinder|The neighbour {look} after the children.
+b12_l12_eintreten|1|Ich|in den Verein|I {join} the club.
+b12_l12_anerkennen|3|Die Firma|seine Arbeit|The company {recognise} his work.
+b12_l12_hinweisen|3|Der Lehrer|auf den Fehler|The teacher {point} out the mistake.
+b12_l12_versaeumen|2|Du|den Termin|You {miss} the appointment.
+b12_l12_ausstellen|3|Die Stadt|den Ausweis|The town {issue} the ID card.
+b12_l12_entlassen|3|Die Firma|zehn Mitarbeiter|The company {fire} ten employees.
+b12_l12_sich_gefallen_lassen|1|Ich|das nicht|I {do} not put up with that. || I did not put up with that. || I have not put up with that.
+b12_l13_protestieren|6|Die Studenten|gegen den Plan|The students {protest} against the plan.
+b12_l13_kaempfen|6|Die Leute|für ihre Rechte|The people {fight} for their rights.
+b12_l13_toeten|3|Die Katze|die Maus|The cat {kill} the mouse.
+b12_l13_fliehen|6|Die Menschen|vor dem Krieg|The people {flee} from the war.
+b12_l13_empfangen|3|Der Chef|die Gäste|The boss {welcome} the guests.
+b12_l13_foerdern|3|Die Stadt|junge Künstler|The town {support} young artists.
+b12_l13_sich_leisten|1|Ich|ein neues Auto|I {treat} myself to a new car.
+b12_l13_sich_weiterbilden|3|Lisa|jedes Jahr|Lisa {do} a training course every year.
+b12_l13_zubereiten|3|Der Koch|das Essen|The cook {prepare} the food.
+b12_l13_bluehen|3|Der Baum|im Frühling|The tree {bloom} in spring.
+b12_l14_braten|3|Oma|das Fleisch|Grandma {fry} the meat.
+b12_l14_ruehren|1|Ich|die Suppe|I {stir} the soup.
+b12_l14_ordnen|2|Du|die Papiere|You {sort} the papers.

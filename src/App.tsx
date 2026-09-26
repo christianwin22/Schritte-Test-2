@@ -212,7 +212,16 @@ export default function App() {
       article: { due: due('article'), waiting: readyLessons(drillPractice, 'article').length },
       accusative: { due: due('accusative'), waiting: readyLessons(drillPractice, 'accusative').length },
       conj: { due: due('conj'), waiting: readyLessonKeys(exerciseReady, 'conj').length },
-      sentence: { due: due('sentence'), waiting: readyLessonKeys(exerciseReady, 'sentence').length },
+      sentence: {
+        // Only the three-tense cards: the old A1 sentences (sentence:st_1 …) are gone
+        due: Object.keys(fsrsRecords).filter(
+          (id) => /^sentence:.+:(present|past|perfect)$/.test(id) && isCardDueForReview(fsrsRecords[id])
+        ).length,
+        waiting: (['sentPresent', 'sentPast', 'sentPerfect'] as const).reduce(
+          (n, ex) => n + readyLessonKeys(exerciseReady, ex).length,
+          0
+        ),
+      },
       past: { due: due('past'), waiting: readyLessonKeys(exerciseReady, 'past').length },
       perfect: { due: due('perf'), waiting: readyLessonKeys(exerciseReady, 'perfect').length },
       weak: { due: due('weak'), waiting: readyLessons(drillPractice, 'weak').length },
