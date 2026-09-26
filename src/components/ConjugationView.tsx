@@ -98,42 +98,19 @@ const ConjTable: React.FC<{
   cell: (slot: number) => React.ReactNode;
   tint?: (slot: number) => string;
   pad?: string;
-}> = ({ en, cell, tint = () => 'bg-white dark:bg-zinc-900', pad = 'px-3 py-3' }) => (
-  <div className="w-full grid grid-cols-[3rem_1fr_1fr]">
-    <span style={{ gridRow: 1, gridColumn: 1 }} />
-    <span
-      style={{ gridRow: 1, gridColumn: 2 }}
-      className={`py-2 text-center text-[10px] font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border-t-2 border-l-2 border-b-2 border-r ${LINE} rounded-tl-2xl`}
-    >
-      Singular
-    </span>
-    <span
-      style={{ gridRow: 1, gridColumn: 3 }}
-      className={`py-2 text-center text-[10px] font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border-t-2 border-r-2 border-b-2 ${LINE} rounded-tr-2xl`}
-    >
-      Plural
-    </span>
-    {[0, 1, 2].map((i) => (
-      <span
-        key={`p${i}`}
-        style={{ gridRow: i + 2, gridColumn: 1 }}
-        className={`flex items-center justify-center text-xs font-black text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/60 border-l-2 border-r-2 ${LINE} ${
-          i === 0 ? 'border-t-2 rounded-tl-2xl' : ''
-        } ${i === 2 ? 'border-b-2 rounded-bl-2xl' : 'border-b'}`}
-      >
-        {en ? ['1st', '2nd', '3rd'][i] : ['1.', '2.', '3.'][i]}
-      </span>
-    ))}
+}> = ({ cell, tint = () => 'bg-white dark:bg-zinc-900', pad = 'px-3 py-3' }) => (
+  // The Simple layout, as on the Learn page: one box, singular | plural, no labels.
+  // Cells come in column order (ich, du, er, then wir, ihr, sie), so Tab goes down
+  // the left, then the right.
+  <div className={`w-full grid grid-cols-2 rounded-2xl border-2 ${LINE} overflow-hidden`}>
     {[0, 1, 2, 3, 4, 5].map((slot) => {
       const plural = slot >= 3;
       const i = slot % 3;
       return (
         <div
           key={slot}
-          style={{ gridRow: i + 2, gridColumn: plural ? 3 : 2 }}
-          className={`${pad} min-w-0 text-left ${LINE} ${tint(slot)} ${plural ? 'border-r-2' : 'border-r'} ${
-            i === 2 ? 'border-b-2' : 'border-b'
-          } ${plural && i === 2 ? 'rounded-br-2xl' : ''}`}
+          style={{ gridRow: i + 1, gridColumn: plural ? 2 : 1 }}
+          className={`${pad} min-w-0 text-left ${LINE} ${tint(slot)} ${plural ? 'border-l' : ''} ${i > 0 ? 'border-t' : ''}`}
         >
           {cell(slot)}
         </div>
@@ -261,6 +238,34 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     [records]
   );
   const due = useMemo(() => unlocked.filter((v) => isCardDueForReview(records[cardId(v.id)])), [unlocked, records]);
+
+  // Sandbox only: an empty Review gets five test verbs, due now, so Review can be tried
+  // today instead of after a lesson's Practice and a day's wait.
+  useEffect(() => {
+    if (!isSandbox || fixed || unlocked.length > 0) return;
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const five = TENSE_VERBS.filter((v) => v.level === 'A1').slice(0, 5);
+    updateRecords((prev) => {
+      const next = { ...prev };
+      for (const v of five) {
+        const id = cardId(v.id);
+        if (next[id]) continue;
+        next[id] = {
+          wordId: id,
+          status: 'review',
+          isUnlocked: true,
+          stability: 1,
+          difficulty: 5,
+          intervalDays: 1,
+          nextReviewDate: yesterday,
+          lastReviewedAt: yesterday,
+          repetitionCount: 1,
+        };
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSandbox, tense]);
 
   // --- Mode and session --------------------------------------------------------------
   const [mode, setMode] = useState<Mode>('learn');
@@ -683,13 +688,11 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
         onFinish={() => setLearnDone(true)}
         className="flex-1 flex flex-col cursor-pointer"
       >
-        {/* The lesson bar above already says which lesson; the counter sits in the middle */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center mb-2">
-          <span />
+        {/* The lesson bar above already says which lesson; the counter sits top right */}
+        <div className="flex justify-end mb-2">
           <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
             {learnIndex + 1} / {lessonVerbs.length}
           </span>
-          <span />
         </div>
         <div key={verb.id} className="flex-1 flex flex-col justify-center gap-4 animate-fadeIn">
           {/* The verb, no box: the word and its speaker, the English under it */}
@@ -830,8 +833,8 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     const allRight = !!results?.every(Boolean);
     body = (
       <div className="flex-1 flex flex-col justify-between gap-4 kb:gap-2.5 text-left">
-        {/* Lesson on the left (the lesson bar is hidden during a session), counter in the middle */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
+        {/* Lesson on the left (the lesson bar is hidden during a session), counter top right */}
+        <div className="flex items-center justify-between text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
           <span className="text-[10px] uppercase">
             {current.level} · {current.lektion === 0 ? 'Intro' : `L${current.lektion}`}
           </span>
@@ -847,8 +850,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
         </div>
 
         {/* The verb */}
-        {/* The verb, as on the Learn page and with no box: the word and its speaker, the
-            English under it once checked (before, it would give the answer away). */}
+        {/* The verb, as on the Learn page and with no box: the word and its speaker, the English under it. */}
         <div className="text-center space-y-0.5 py-2 kb:py-0">
           <div className="flex items-center justify-center gap-2">
             <h3 className="text-2xl sm:text-3xl kb:text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{current.lemma}</h3>
@@ -865,11 +867,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
               <Volume2 className="w-5 h-5 kb:w-4 kb:h-4" />
             </button>
           </div>
-          {results && (
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 animate-fadeIn">
-              ({current.translation.replace(/<br>/g, ' · ')})
-            </p>
-          )}
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">({current.translation.replace(/<br>/g, ' · ')})</p>
         </div>
 
         {(() => {
