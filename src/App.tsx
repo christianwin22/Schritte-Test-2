@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { WordEntry, DuolingoTab } from './types';
 import { INITIAL_VOCABULARY } from './data/vocabulary';
 import { DuolingoTopBar } from './components/DuolingoTopBar';
@@ -10,6 +10,7 @@ import { DuolingoProfileView } from './components/DuolingoProfileView';
 import { SettingsView } from './components/SettingsView';
 import { ThemeMode } from './components/SettingsModal';
 import { AbandonExerciseModal } from './components/AbandonExerciseModal';
+import { WritingView } from './components/WritingView';
 import { OrientationGuard } from './components/OrientationGuard';
 import { playSound, setGlobalSoundEnabled, setGlobalMusicEnabled } from './utils/audioEffects';
 import { AppLanguage, getTranslation } from './utils/translations';
@@ -23,6 +24,15 @@ import { clearActivity, currentStreak, recordActivity } from './utils/streak';
 /** As Hueber writes it. */
 const SCHRITTE = 'Schritte international Neu';
 import { useAuth } from './components/AuthGate';
+
+/**
+ * Grammar · Article exercises that are drills on the Vocabulary screen: Nominative is
+ * the Der/Die/Das drill itself, Accusative its twin with den / die / das.
+ */
+const GRAMMAR_ARTICLE_DRILLS: Record<string, string> = {
+  article_nominative: 'gender_blitz',
+  article_accusative: 'accusative_drill',
+};
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
 const STREAK_STORAGE_KEY = 'deutschmeister_streak_v2';
@@ -76,6 +86,8 @@ export default function App() {
   const [activeExerciseMode, setActiveExerciseMode] = useState<string | null>(null);
   const [isQuizActive, setIsQuizActive] = useState(false);
   const [quizProgressSaved, setQuizProgressSaved] = useState(false);
+  // An exercise can take the back arrow for itself (Vocabulary: back to its Start screen).
+  const exerciseBackRef = useRef<(() => boolean) | null>(null);
 
   // Abandon Confirmation Modal State
   const [isAbandonModalOpen, setIsAbandonModalOpen] = useState(false);
@@ -175,14 +187,25 @@ export default function App() {
     };
   }, []);
 
-  // Everything due in Vocabulary: Flashcard reviews plus Der/Die/Das and Plural reviews.
+  // Everything due in Vocabulary: Flashcard reviews plus Plural and Weak Nouns reviews.
   const globalDueCount = useMemo(() => {
     const flashcards = INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id])).length;
     const drills = Object.keys(fsrsRecords).filter(
-      (id) => /^(article|plural):/.test(id) && isCardDueForReview(fsrsRecords[id])
+      (id) => /^(plural|weak):/.test(id) && isCardDueForReview(fsrsRecords[id])
     ).length;
     return flashcards + drills;
   }, [fsrsRecords]);
+
+  // Due in Grammar: Article · Nominative (the old Der/Die/Das cards) and Accusative.
+  const grammarDrillBadges = useMemo(() => {
+    const due = (skill: string) =>
+      Object.keys(fsrsRecords).filter((id) => id.startsWith(`${skill}:`) && isCardDueForReview(fsrsRecords[id])).length;
+    return {
+      article: { due: due('article'), waiting: readyLessons(drillPractice, 'article').length },
+      accusative: { due: due('accusative'), waiting: readyLessons(drillPractice, 'accusative').length },
+    };
+  }, [fsrsRecords, drillPractice]);
+  const grammarDueCount = grammarDrillBadges.article.due + grammarDrillBadges.accusative.due;
 
   // Persist State Changes
   useEffect(() => {
@@ -350,6 +373,7 @@ export default function App() {
 
   // Top Bar Back button handler
   const handleTopBack = () => {
+    if (activeExerciseMode && exerciseBackRef.current?.()) return;
     if (isQuizActive) {
       setPendingAbandonCallback(() => () => {
         setIsQuizActive(false);
@@ -404,18 +428,25 @@ export default function App() {
         if (activeExerciseMode === 'explorer') return 'Vocabulary • Flashcard';
         if (activeExerciseMode === 'gender_blitz') return 'Vocabulary • Der / Die / Das';
         if (activeExerciseMode === 'plural_drill') return 'Vocabulary • Plural';
+        if (activeExerciseMode === 'weak_nouns') return 'Vocabulary • Weak Nouns';
         return 'Vocabulary';
       }
       if (currentTab === 'grammar') {
-        if (activeExerciseMode === 'table') return 'Grammar • Full Conjugation';
+        if (activeExerciseMode === 'table') return 'Grammar • Conjugation';
         if (activeExerciseMode === 'single_pronoun') return 'Grammar • Single Conjugation';
         if (activeExerciseMode === 'sentence_stem') return 'Grammar • Sentence with Verb Stem';
+        if (activeExerciseMode === 'article_nominative') return 'Grammar • Nominative';
+        if (activeExerciseMode === 'article_accusative') return 'Grammar • Accusative';
         return 'Grammar';
       }
       if (currentTab === 'listening') return 'Listening • Audio Practice';
       if (currentTab === 'speaking') return 'Speaking • Pronunciation';
       if (currentTab === 'reading') return 'Reading • Story & Quiz';
-      if (currentTab === 'writing') return 'Writing • Sentence Builder';
+      if (currentTab === 'writing') {
+        if (activeExerciseMode === 'writing_translate') return 'Writing • Translate';
+        if (activeExerciseMode === 'writing_answer') return 'Writing • Answer';
+        return 'Writing';
+      }
       return appLanguage === 'en' ? 'Active Exercise' : 'Aktive Übung';
     }
     if (currentTab === 'home') return undefined;
@@ -489,7 +520,9 @@ export default function App() {
               gems={gems}
               vocabCount={vocabulary.length}
               dueReviewCount={globalDueCount}
-              lessonsToPractiseCount={readyLessons(drillPractice, 'article').length + readyLessons(drillPractice, 'plural').length}
+              lessonsToPractiseCount={readyLessons(drillPractice, 'plural').length + readyLessons(drillPractice, 'weak').length}
+              grammarDueCount={grammarDueCount}
+              grammarLessonsToPractiseCount={grammarDrillBadges.article.waiting + grammarDrillBadges.accusative.waiting}
               appLanguage={appLanguage}
             />
           )}
@@ -502,6 +535,7 @@ export default function App() {
               activeExerciseMode={activeExerciseMode}
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
+              backHandlerRef={exerciseBackRef}
               onQuizActiveChange={(active, saved) => {
                 setIsQuizActive(active);
                 setQuizProgressSaved(!!saved);
@@ -511,8 +545,27 @@ export default function App() {
           )}
 
           {/* TAB 2: GRAMMATIK / GRAMMAR & VERBS */}
-          {currentTab === 'grammar' && (
+          {/* Grammar • Article • Nominative is the Vocabulary Der/Die/Das exercise
+              itself — same screen, same progress — so it changes whenever that does. */}
+          {currentTab === 'grammar' && GRAMMAR_ARTICLE_DRILLS[activeExerciseMode ?? ''] && (
+            <SchritteVocabView
+              onCorrectAnswer={handleCorrectAnswer}
+              onWrongAnswer={handleWrongAnswer}
+              activeExerciseMode={GRAMMAR_ARTICLE_DRILLS[activeExerciseMode ?? '']}
+              onSelectExerciseMode={setActiveExerciseMode}
+              onRequestAbandon={handleRequestAbandon}
+              backHandlerRef={exerciseBackRef}
+              onQuizActiveChange={(active, saved) => {
+                setIsQuizActive(active);
+                setQuizProgressSaved(!!saved);
+              }}
+              appLanguage={appLanguage}
+            />
+          )}
+
+          {currentTab === 'grammar' && !GRAMMAR_ARTICLE_DRILLS[activeExerciseMode ?? ''] && (
             <SchritteGrammarView
+              drillBadges={grammarDrillBadges}
               onCorrectAnswer={handleCorrectAnswer}
               onWrongAnswer={handleWrongAnswer}
               activeExerciseMode={activeExerciseMode}
@@ -567,13 +620,11 @@ export default function App() {
 
           {/* TAB 6: SCHREIBEN / WRITING */}
           {currentTab === 'writing' && (
-            <SkillsView
-              skillType="writing"
+            <WritingView
               onCorrectAnswer={handleCorrectAnswer}
               onWrongAnswer={handleWrongAnswer}
               activeExerciseMode={activeExerciseMode}
               onSelectExerciseMode={setActiveExerciseMode}
-              onRequestAbandon={handleRequestAbandon}
               appLanguage={appLanguage}
             />
           )}

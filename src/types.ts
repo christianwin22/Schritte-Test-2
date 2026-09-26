@@ -62,6 +62,9 @@ export interface WordEntry {
   /** Der/Die/Das drill: the sentence, and the same with {{blank}} in place of the article. */
   articleSentence?: string;
   articleSentenceBlank?: string;
+  /** Accusative drill: the sentence, and the same with {{blank}} in place of den / die / das. */
+  accusativeSentence?: string;
+  accusativeSentenceBlank?: string;
   /** Plural drill: the sentence, and the same with {{blank}} in place of the plural. */
   pluralSentence?: string;
   pluralSentenceBlank?: string;

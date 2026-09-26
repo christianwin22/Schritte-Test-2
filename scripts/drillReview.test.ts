@@ -79,13 +79,14 @@ check(`a wrong answer comes back soonest (${Math.round(days(missed))} day)`, day
 
 console.log('6. Flashcard Practice → "ready" in both drills → drill Practice → its own Review');
 const { markLessonReadyForDrills, markLessonsDoneForDrill, readyLessons, lessonKey } = engine;
-let st = { article: {}, plural: {} } as ReturnType<typeof engine.loadDrillPracticeState>;
+let st = { article: {}, plural: {}, accusative: {}, weak: {} } as ReturnType<typeof engine.loadDrillPracticeState>;
 st = markLessonReadyForDrills(st, 'A1', 1, lesson1);
 check('Flashcard Practice of Lesson 1 → ready in Der/Die/Das', st.article[lessonKey('A1', 1)] === 'ready');
 check('...and ready in Plural', st.plural[lessonKey('A1', 1)] === 'ready');
+check('...and ready in Accusative', st.accusative[lessonKey('A1', 1)] === 'ready');
 check('one notice per lesson (not per word)', readyLessons(st, 'article').length === 1);
 const verbsOnly = INITIAL_VOCABULARY.filter((w) => !w.nounDetails);
-check('a lesson with no nouns is never "ready"', markLessonReadyForDrills({ article: {}, plural: {} }, 'A1', 99, verbsOnly).article['A1-99'] === undefined);
+check('a lesson with no nouns is never "ready"', markLessonReadyForDrills({ article: {}, plural: {}, accusative: {}, weak: {} }, 'A1', 99, verbsOnly).article['A1-99'] === undefined);
 const half = lesson1Nouns.slice(0, 2);
 check('practising only part of a lesson does not finish it', markLessonsDoneForDrill(st, 'article', half, INITIAL_VOCABULARY).article['A1-1'] === 'ready');
 st = markLessonsDoneForDrill(st, 'article', lesson1Nouns, INITIAL_VOCABULARY);

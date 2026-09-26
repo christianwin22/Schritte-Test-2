@@ -1,4 +1,5 @@
 import { SRSRating, SRSItemState, SRSHistoryEntry, FSRSCardRecord, WordEntry } from '../types';
+import { weakForm } from '../data/nounDrillSentences';
 
 const SRS_STORAGE_KEY = 'deutschmeister_srs_state_v1';
 const FSRS_STORAGE_KEY = 'deutschmeister_fsrs_records_v1';
@@ -96,7 +97,7 @@ export function seedEverythingForTesting(words: WordEntry[], howMany = 10): void
   });
 
   for (const word of words.slice(0, howMany)) records[word.id] = due(word.id);
-  for (const skill of ['article', 'plural'] as DrillSkill[]) {
+  for (const skill of DRILL_SKILLS) {
     const nouns = words.filter((w) => isDrillable(skill, w)).slice(0, howMany);
     for (const noun of nouns) {
       const id = drillCardId(skill, noun.id);
@@ -360,7 +361,9 @@ export function saveSRSStates(states: Record<string, SRSItemState>): void {
 // "der Tisch" or "die Tische". Their cards live in the same records map under
 // "article:<wordId>" and "plural:<wordId>", so they save and sync with the rest.
 
-export type DrillSkill = 'article' | 'plural';
+export type DrillSkill = 'article' | 'plural' | 'accusative' | 'weak';
+
+export const DRILL_SKILLS: DrillSkill[] = ['article', 'plural', 'accusative', 'weak'];
 
 export function drillCardId(skill: DrillSkill, wordId: string): string {
   return `${skill}:${wordId}`;
@@ -371,6 +374,10 @@ export function isDrillable(skill: DrillSkill, word: WordEntry): boolean {
   const details = word.nounDetails;
   if (!details?.gender) return false;
   if (skill === 'plural') return !!details.plural && !/\(Sg\.?\)/i.test(details.plural);
+  // Accusative needs its own sentence (den / die / das in front of the noun).
+  if (skill === 'accusative') return !!word.accusativeSentenceBlank;
+  // Weak nouns: only the masculine ones whose own ending changes (den Kollegen).
+  if (skill === 'weak') return weakForm(word) !== null;
   return true;
 }
 
@@ -381,7 +388,7 @@ export function isDrillable(skill: DrillSkill, word: WordEntry): boolean {
 export function unlockDrillsAfterPractice(
   words: WordEntry[],
   existingRecords: Record<string, FSRSCardRecord>,
-  skills: DrillSkill[] = ['article', 'plural']
+  skills: DrillSkill[] = DRILL_SKILLS
 ): Record<string, FSRSCardRecord> {
   const ids = skills.flatMap((skill) =>
     words.filter((w) => isDrillable(skill, w)).map((w) => drillCardId(skill, w.id))
@@ -451,10 +458,14 @@ export function lessonKey(level: string, lektion: number): string {
 export function loadDrillPracticeState(): DrillPracticeState {
   try {
     const parsed = JSON.parse(localStorage.getItem(DRILL_PRACTICE_KEY) || '{}');
-    return { article: parsed.article ?? {}, plural: parsed.plural ?? {} };
+    return Object.fromEntries(DRILL_SKILLS.map((k) => [k, parsed[k] ?? {}])) as DrillPracticeState;
   } catch {
-    return { article: {}, plural: {} };
+    return Object.fromEntries(DRILL_SKILLS.map((k) => [k, {}])) as DrillPracticeState;
   }
+}
+
+function copyDrillPracticeState(state: DrillPracticeState): DrillPracticeState {
+  return Object.fromEntries(DRILL_SKILLS.map((k) => [k, { ...(state[k] ?? {}) }])) as DrillPracticeState;
 }
 
 export function saveDrillPracticeState(state: DrillPracticeState): void {
@@ -473,8 +484,8 @@ export function markLessonReadyForDrills(
   lessonWords: WordEntry[]
 ): DrillPracticeState {
   const key = lessonKey(level, lektion);
-  const next: DrillPracticeState = { article: { ...state.article }, plural: { ...state.plural } };
-  for (const skill of ['article', 'plural'] as DrillSkill[]) {
+  const next = copyDrillPracticeState(state);
+  for (const skill of DRILL_SKILLS) {
     if (next[skill][key] === 'done') continue;
     if (lessonWords.some((w) => isDrillable(skill, w))) next[skill][key] = 'ready';
   }
@@ -488,7 +499,7 @@ export function markLessonsDoneForDrill(
   practised: WordEntry[],
   allWords: WordEntry[]
 ): DrillPracticeState {
-  const next: DrillPracticeState = { article: { ...state.article }, plural: { ...state.plural } };
+  const next = copyDrillPracticeState(state);
   const practisedIds = new Set(practised.map((w) => w.id));
   const lessons = new Set(practised.filter((w) => typeof w.lektion === 'number').map((w) => lessonKey(w.level, w.lektion!)));
   for (const key of lessons) {
@@ -502,7 +513,7 @@ export function markLessonsDoneForDrill(
 
 /** Lessons waiting in a drill, in course order. */
 export function readyLessons(state: DrillPracticeState, skill: DrillSkill): { level: string; lektion: number }[] {
-  return Object.entries(state[skill])
+  return Object.entries(state[skill] ?? {})
     .filter(([, status]) => status === 'ready')
     .map(([key]) => {
       const [level, n] = key.split('-');

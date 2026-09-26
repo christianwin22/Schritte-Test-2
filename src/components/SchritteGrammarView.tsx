@@ -16,7 +16,6 @@ import {
 import { CEFRLevel } from '../types';
 import { speakGerman } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
-import { UmlautHelper } from './UmlautHelper';
 import { AppLanguage, getTranslation } from '../utils/translations';
 
 interface SchritteGrammarViewProps {
@@ -26,16 +25,12 @@ interface SchritteGrammarViewProps {
   onSelectExerciseMode: (mode: string | null) => void;
   onRequestAbandon: (onConfirmLeave: () => void) => void;
   onQuizActiveChange?: (isActive: boolean) => void;
+  /** Badges on Nominative and Accusative: lessons ready to practise, nouns due. */
+  drillBadges?: Record<'article' | 'accusative', { waiting: number; due: number }>;
   appLanguage?: AppLanguage;
 }
 
-type VerbCategoryFilter =
-  | 'ALL'
-  | 'regular'
-  | 'vowel_change'
-  | 'separable'
-  | 'modal'
-  | 'auxiliary';
+type GrammarSection = 'verb' | 'article' | 'preposition';
 
 type PronounKey = 'ich' | 'du' | 'er_sie_es' | 'wir' | 'ihr' | 'sie_Sie';
 
@@ -55,13 +50,19 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   onSelectExerciseMode,
   onRequestAbandon,
   onQuizActiveChange,
+  drillBadges,
   appLanguage = 'en',
 }) => {
   const t = getTranslation(appLanguage);
+  const en = appLanguage === 'en';
 
   const [selectedLevel, setSelectedLevel] = useState<CEFRLevel>('A1');
-  const [selectedCategory, setSelectedCategory] = useState<VerbCategoryFilter>('ALL');
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  // Every part starts open, so every exercise is in view; close one by hand.
+  const [openSections, setOpenSections] = useState<Record<GrammarSection, boolean>>({
+    verb: true,
+    article: true,
+    preposition: true,
+  });
   const [selectedVerbIndex, setSelectedVerbIndex] = useState(0);
   const [activeInputFocus, setActiveInputFocus] = useState<string>('ich');
 
@@ -75,9 +76,8 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   const filteredVerbs = useMemo(() => {
     let list = SCHRITTE_VERBS.filter((v) => v.level === selectedLevel);
     if (list.length === 0) list = SCHRITTE_VERBS;
-    if (selectedCategory === 'ALL') return list;
-    return list.filter((v) => v.type === selectedCategory);
-  }, [selectedCategory, selectedLevel]);
+    return list;
+  }, [selectedLevel]);
 
   const currentVerb: VerbGrammarEntry =
     filteredVerbs[selectedVerbIndex % (filteredVerbs.length || 1)] ||
@@ -235,23 +235,10 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     setStemIndex((prev) => (prev + 1) % SCHRITTE_SENTENCE_STEM_DRILLS.length);
   };
 
-  const categoryLabels: Record<VerbCategoryFilter, { en: string; de: string }> = {
-    ALL: { en: 'All Categories', de: 'Alle Kategorien' },
-    regular: { en: 'Regular Verbs', de: 'Regelmäßige Verben' },
-    vowel_change: { en: 'Vowel Change (e->i, a->ä)', de: 'Vokalwechsel (e->i, a->ä)' },
-    separable: { en: 'Separable (trennbare)', de: 'Trennbare Verben' },
-    modal: { en: 'Modal Verbs (können, müssen)', de: 'Modalverben' },
-    auxiliary: { en: 'Auxiliary (sein, haben)', de: 'Hilfsverben' },
-  };
-
-  const availableExercises = [
+  const verbExercises = [
     {
       id: 'table',
-      title: 'Full Conjugation',
-    },
-    {
-      id: 'single_pronoun',
-      title: 'Single Conjugation',
+      title: 'Conjugation',
     },
     {
       id: 'sentence_stem',
@@ -259,118 +246,125 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     },
   ];
 
-  // VIEW 1: GRAMMAR AREA HUB (Filter Banner with Level & Category Selector + 3 Minimal Cards)
+  // The four cases Schritte teaches from A1 to B1. Nominative is the Vocabulary
+  // Der/Die/Das exercise itself (App opens that same screen), so any change there
+  // shows up here too. Accusative is its twin with den / die / das. Dative and Genitive have no exercise yet.
+  const articleExercises: { id: string; title: string; drill?: 'article' | 'accusative'; soon?: boolean }[] = [
+    { id: 'article_nominative', title: en ? 'Nominative (Subject)' : 'Nominativ (Subjekt)', drill: 'article' },
+    { id: 'article_accusative', title: en ? 'Accusative (Direct object)' : 'Akkusativ (direktes Objekt)', drill: 'accusative' },
+    { id: 'article_dative', title: en ? 'Dative (Indirect object)' : 'Dativ (indirektes Objekt)', soon: true },
+    { id: 'article_genitive', title: en ? 'Genitive (Possession)' : 'Genitiv (Besitz)', soon: true },
+  ];
+
+  // VIEW 1: GRAMMAR AREA HUB — the parts, each folding open to its exercises.
+  // No level bar for now: the verbs are A1.
   if (!activeExerciseMode) {
+    const sections: { id: GrammarSection; title: string; exercises: { id: string; title: string; drill?: 'article' | 'accusative'; soon?: boolean }[] }[] = [
+      { id: 'verb', title: appLanguage === 'en' ? 'Verb' : 'Verben', exercises: verbExercises },
+      { id: 'article', title: appLanguage === 'en' ? 'Article' : 'Artikel', exercises: articleExercises },
+      { id: 'preposition', title: appLanguage === 'en' ? 'Preposition' : 'Präpositionen', exercises: [] },
+    ];
     return (
-      <div className="w-full h-full flex flex-col justify-center gap-3 sm:gap-5 py-1 animate-fadeIn overflow-hidden">
-        {/* Filter Banner matching Vocab */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4">
-            {/* Filter 1: A1 / A2 / B1 Level Selector */}
-            <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-2.5">
-              <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 sm:p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-700">
-                {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
-                  <button
-                    key={lvl}
-                    onClick={() => {
-                      playSound('tap');
-                      setSelectedLevel(lvl);
-                    }}
-                    className={`px-3 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-xs font-black transition-all cursor-pointer ${
-                      selectedLevel === lvl
-                        ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs scale-100'
-                        : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
-                    }`}
-                  >
-                    {lvl}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Filter 2: Category Selector Dropdown */}
-            <div className="relative">
-              <button
-                id="grammar-category-filter-button"
-                onClick={() => {
-                  playSound('tap');
-                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
-                }}
-                className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-98 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl sm:rounded-2xl shadow-xs border border-zinc-200 dark:border-zinc-700 flex items-center justify-between sm:justify-start gap-2 sm:gap-2.5 transition-all cursor-pointer"
+      <div className="w-full h-full flex flex-col justify-start gap-2.5 pt-0.5 sm:pt-1 pb-2 animate-fadeIn overflow-y-auto">
+        <div className="max-w-xl mx-auto w-full flex flex-col gap-2.5">
+          {sections.map((section) => {
+            const isOpen = openSections[section.id];
+            return (
+              <div
+                key={section.id}
+                className="w-full bg-white dark:bg-zinc-900 rounded-2xl border-2 border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden"
               >
-                <span>
-                  {categoryLabels[selectedCategory][appLanguage === 'en' ? 'en' : 'de']}
-                </span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${
-                    isCategoryDropdownOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              {/* Dropdown Popover */}
-              {isCategoryDropdownOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-20"
-                    onClick={() => setIsCategoryDropdownOpen(false)}
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => {
+                    playSound('tap');
+                    setOpenSections((prev) => ({ ...prev, [section.id]: !prev[section.id] }));
+                  }}
+                  className="w-full px-4 py-3.5 flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all"
+                >
+                  <span className="font-black text-base sm:text-lg text-zinc-900 dark:text-zinc-100 tracking-tight">
+                    {section.title}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                  {/* The part's own total, like the Grammar tile on Home, so it shows even when closed */}
+                  {(() => {
+                    const drills = section.exercises.map((e) => e.drill).filter(Boolean) as ('article' | 'accusative')[];
+                    const waiting = drills.reduce((n, d) => n + (drillBadges?.[d]?.waiting ?? 0), 0);
+                    const due = drills.reduce((n, d) => n + (drillBadges?.[d]?.due ?? 0), 0);
+                    return (
+                      <>
+                        {waiting > 0 && (
+                          <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black flex items-center justify-center shadow-xs">
+                            {waiting}
+                          </span>
+                        )}
+                        {due > 0 && (
+                          <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-xs animate-pulse">
+                            {due}
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
+                  <ChevronDown
+                    className={`w-4 h-4 text-zinc-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                   />
-                  <div className="absolute right-0 mt-2 z-30 w-72 sm:w-80 bg-white dark:bg-zinc-900 rounded-3xl p-4 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 space-y-2 animate-fadeIn">
-                    <div className="text-xs font-black text-zinc-500 dark:text-zinc-400 pb-2 border-b border-zinc-100 dark:border-zinc-800">
-                      {appLanguage === 'en' ? 'Verb Type / Rule:' : 'Verbgruppe / Regel:'}
-                    </div>
-                    <div className="space-y-1 max-h-60 overflow-y-auto p-1">
-                      {(
-                        [
-                          'ALL',
-                          'regular',
-                          'vowel_change',
-                          'separable',
-                          'modal',
-                          'auxiliary',
-                        ] as VerbCategoryFilter[]
-                      ).map((cat) => (
+                  </span>
+                </button>
+                {isOpen && (
+                  <div className="px-3 pb-3 space-y-2">
+                    {section.exercises.length > 0 ? (
+                      section.exercises.map((ex) => (
+                        ex.soon ? (
+                          <div
+                            key={ex.id}
+                            aria-disabled="true"
+                            className="w-full px-4 py-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-left font-black text-sm text-zinc-400 dark:text-zinc-500 flex items-center justify-between opacity-60 cursor-not-allowed"
+                          >
+                            <span>{ex.title}</span>
+                            <span className="text-[10px] font-black uppercase tracking-wider">
+                              {appLanguage === 'en' ? 'Soon' : 'Bald'}
+                            </span>
+                          </div>
+                        ) : (
                         <button
-                          key={cat}
+                          key={ex.id}
+                          id={`grammar-mode-${ex.id}`}
                           onClick={() => {
                             playSound('tap');
-                            setSelectedCategory(cat);
-                            setIsCategoryDropdownOpen(false);
+                            onSelectExerciseMode(ex.id);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                            selectedCategory === cat
-                              ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                          }`}
+                          className="w-full px-4 py-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-950 dark:hover:border-white text-left font-black text-sm text-zinc-900 dark:text-zinc-100 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
                         >
-                          {categoryLabels[cat][appLanguage === 'en' ? 'en' : 'de']}
+                          <span>{ex.title}</span>
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            {/* Amber = lessons ready to practise, red = nouns due — as in Vocabulary */}
+                            {ex.drill && drillBadges?.[ex.drill]?.waiting ? (
+                              <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black flex items-center justify-center shadow-xs">
+                                {drillBadges[ex.drill].waiting}
+                              </span>
+                            ) : null}
+                            {ex.drill && drillBadges?.[ex.drill]?.due ? (
+                              <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-xs animate-pulse">
+                                {drillBadges[ex.drill].due}
+                              </span>
+                            ) : null}
+                            <ArrowRight className="w-4 h-4 text-zinc-400" />
+                          </span>
                         </button>
-                      ))}
-                    </div>
+                        )
+                      ))
+                    ) : (
+                      <p className="px-1 py-2 text-sm font-bold text-zinc-400 dark:text-zinc-500">
+                        {appLanguage === 'en' ? 'No exercises yet' : 'Noch keine Übungen'}
+                      </p>
+                    )}
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Available Exercises Grid (Exactly 3 Boxes - 1 Phrase/Title Each) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-5">
-          {availableExercises.map((ex) => (
-            <button
-              key={ex.id}
-              id={`grammar-mode-${ex.id}`}
-              onClick={() => {
-                playSound('tap');
-                onSelectExerciseMode(ex.id);
-              }}
-              className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 sm:p-8 border-2 border-zinc-200 dark:border-zinc-800 hover:border-zinc-950 dark:hover:border-white shadow-xs hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 sm:hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center text-center min-h-[64px] sm:min-h-[140px] group"
-            >
-              <h4 className="font-black text-zinc-900 dark:text-zinc-100 text-base sm:text-xl tracking-tight group-hover:scale-105 transition-transform">
-                {ex.title}
-              </h4>
-            </button>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -461,15 +455,6 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
               })}
             </div>
 
-            <UmlautHelper
-              onInsert={(char) =>
-                setTableInputs((prev) => ({
-                  ...prev,
-                  [activeInputFocus]: (prev as any)[activeInputFocus] + char,
-                }))
-              }
-            />
-
             {!tableChecked ? (
               <button
                 type="submit"
@@ -535,7 +520,6 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
               className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 text-center font-bold text-sm focus:border-zinc-950 dark:focus:border-white outline-none text-zinc-900 dark:text-white"
             />
 
-            <UmlautHelper onInsert={(char) => setSinglePronounInput((prev) => prev + char)} />
 
             {!singlePronounChecked ? (
               <button
@@ -639,8 +623,6 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
               }
               className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 text-center font-bold text-sm focus:border-zinc-950 dark:focus:border-white outline-none text-zinc-900 dark:text-white"
             />
-
-            <UmlautHelper onInsert={(char) => setStemInput((prev) => prev + char)} />
 
             {!stemChecked ? (
               <button

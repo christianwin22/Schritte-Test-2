@@ -74,6 +74,36 @@ export function pluralSentence(word: WordEntry): string {
   return frameFor(PLURAL_FRAMES, word.id);
 }
 
+/** Accusative drill: the word list's own "Accusative example" ("Ich mag {{blank}} Tisch."). */
+export function accusativeSentence(word: WordEntry): string {
+  return word.accusativeSentenceBlank ?? `Ich mag ${BLANK} ${word.lemma}.`;
+}
+
+/**
+ * Weak nouns (n-Deklination): masculine nouns whose own ending changes in the
+ * accusative — der Kollege → den Kollegen, der Herr → den Herrn. Read from the
+ * Accusative example, where the noun already stands in its accusative form.
+ * Null for every other noun.
+ */
+export function weakForm(word: WordEntry): string | null {
+  if (word.nounDetails?.gender !== 'der' || !word.accusativeSentenceBlank) return null;
+  const after = word.accusativeSentenceBlank.split(BLANK)[1] ?? '';
+  const form = after.trim().match(/^[\p{L}-]+/u)?.[0];
+  return form && form !== word.lemma ? form : null;
+}
+
+/** "Kennst du {{blank}} Kollegen?" → "Kennst du den {{blank}}?" — the noun is the blank. */
+export function weakSentence(word: WordEntry): string {
+  const form = weakForm(word) ?? word.lemma;
+  const given = word.accusativeSentenceBlank ?? `Ich mag ${BLANK} ${form}.`;
+  return given.replace(`${BLANK} ${form}`, `den ${BLANK}`);
+}
+
+/** der → den; die and das stay. */
+export function accusativeArticle(gender: string): string {
+  return gender === 'der' ? 'den' : gender;
+}
+
 /** The plural as it goes in the blank: "die Tische" → "Tische". */
 export function barePlural(word: WordEntry): string {
   const plural = word.nounDetails?.pluralAlternatives?.[0] ?? word.nounDetails?.plural ?? '';

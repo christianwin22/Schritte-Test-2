@@ -31,6 +31,9 @@ interface HomeGuideViewProps {
   dueReviewCount?: number;
   /** Lessons waiting in Der/Die/Das + Plural Practice (amber) */
   lessonsToPractiseCount?: number;
+  /** The same two badges for Grammar (Article · Nominative and Accusative). */
+  grammarDueCount?: number;
+  grammarLessonsToPractiseCount?: number;
   appLanguage?: AppLanguage;
 }
 
@@ -42,6 +45,8 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
   onChangeLevelRange,
   dueReviewCount = 0,
   lessonsToPractiseCount = 0,
+  grammarDueCount = 0,
+  grammarLessonsToPractiseCount = 0,
   appLanguage = 'en',
 }) => {
   const t = getTranslation(appLanguage);
@@ -59,16 +64,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
       label: t.grammar,
       icon: <Zap className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
     },
-    {
-      id: 'listening' as DuolingoTab,
-      label: t.listening,
-      icon: <Headphones className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
-    },
-    {
-      id: 'speaking' as DuolingoTab,
-      label: t.speaking,
-      icon: <Mic className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
-    },
+    // Row 2: Reading | Writing. Row 3: Listening | Speaking.
     {
       id: 'reading' as DuolingoTab,
       label: t.reading,
@@ -78,6 +74,16 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
       id: 'writing' as DuolingoTab,
       label: t.writing,
       icon: <FileEdit className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
+    },
+    {
+      id: 'listening' as DuolingoTab,
+      label: t.listening,
+      icon: <Headphones className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
+    },
+    {
+      id: 'speaking' as DuolingoTab,
+      label: t.speaking,
+      icon: <Mic className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
     },
   ];
 
@@ -155,28 +161,38 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
             )}
             {/* Notification Badge on Vocab Card for Pending Due Spaced Repetition Words */}
             {/* Amber = lessons waiting to practise, red = words due for review */}
-            {area.id === 'vocab' && (dueReviewCount > 0 || lessonsToPractiseCount > 0) && (
-              <span className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 flex items-center gap-1 z-10">
-                {lessonsToPractiseCount > 0 && (
-                  <span
-                    id="vocab-practice-badge"
-                    title="Lessons ready to practise"
-                    className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black flex items-center justify-center shadow-md"
-                  >
-                    {lessonsToPractiseCount}
-                  </span>
-                )}
-                {dueReviewCount > 0 && (
-                  <span
-                    id="vocab-due-badge"
-                    title="Words due for review"
-                    className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-md animate-pulse"
-                  >
-                    {dueReviewCount}
-                  </span>
-                )}
-              </span>
-            )}
+            {(() => {
+              const badge =
+                area.id === 'vocab'
+                  ? { waiting: lessonsToPractiseCount, due: dueReviewCount }
+                  : area.id === 'grammar'
+                  ? { waiting: grammarLessonsToPractiseCount, due: grammarDueCount }
+                  : null;
+              if (!badge || (!badge.due && !badge.waiting)) return null;
+              return (
+                // Stacked in the corner, so they never sit on the icon or its grey box
+                <span className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 flex flex-col items-end gap-1 z-10">
+                  {badge.waiting > 0 && (
+                    <span
+                      id={`${area.id}-practice-badge`}
+                      title="Lessons ready to practise"
+                      className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black flex items-center justify-center shadow-md"
+                    >
+                      {badge.waiting}
+                    </span>
+                  )}
+                  {badge.due > 0 && (
+                    <span
+                      id={`${area.id}-due-badge`}
+                      title="Words due for review"
+                      className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-md animate-pulse"
+                    >
+                      {badge.due}
+                    </span>
+                  )}
+                </span>
+              );
+            })()}
 
             <div className="p-2.5 sm:p-3.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-xl sm:rounded-2xl group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700/90 group-hover:scale-105 group-active:scale-95 transition-all duration-200">
               {area.icon}

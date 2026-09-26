@@ -118,6 +118,7 @@ def german_forms(display: str, pos: str):
 
 
 BLANK = "{{blank}}"
+ACCUSATIVE = {"der": "den", "die": "die", "das": "das"}
 
 
 def blank_out_article(sentence: str, article: str, noun: str) -> str:
@@ -214,6 +215,17 @@ def main():
                         break
                 if blanked:
                     entry["articleSentenceBlank"] = blanked
+            accusative_example = cell(row, "accusative example")
+            if accusative_example:
+                entry["accusativeSentence"] = accusative_example
+                # "Ich mag den Tisch." → "Ich mag {{blank}} Tisch." (den / die / das)
+                blanked = ""
+                for g in genders:
+                    blanked = blank_out_article(accusative_example, ACCUSATIVE.get(g.lower(), g), lemma)
+                    if blanked:
+                        break
+                if blanked:
+                    entry["accusativeSentenceBlank"] = blanked
             if plural_example:
                 entry["pluralSentence"] = plural_example
                 bare = re.sub(r"^die\s+", "", plural_variants[0] if plural_variants else "", flags=re.I).strip()
@@ -235,6 +247,7 @@ def main():
     print(f"stems:                 {sum(1 for w in words if w['isStem'])}")
     print(f"article drill ready:   {sum(1 for w in nouns if w.get('articleSentenceBlank'))}")
     print(f"plural drill ready:    {sum(1 for w in nouns if w.get('pluralSentenceBlank'))}")
+    print(f"accusative ready:      {sum(1 for w in nouns if w.get('accusativeSentenceBlank'))}")
     print(f"Intro words:           {sum(1 for w in words if w['lektion'] == 0)}")
     print(f"written to {OUT.relative_to(OUT.parent.parent.parent)}  ({OUT.stat().st_size // 1024} KB)")
 
