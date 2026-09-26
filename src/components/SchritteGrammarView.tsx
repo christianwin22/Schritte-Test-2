@@ -36,7 +36,7 @@ interface SchritteGrammarViewProps {
 }
 
 type GrammarSection = 'verb' | 'article' | 'preposition';
-type GrammarDrill = 'article' | 'accusative' | 'conj' | 'sentence';
+type GrammarDrill = 'article' | 'accusative' | 'conj' | 'sentence' | 'weak';
 
 type PronounKey = 'ich' | 'du' | 'er_sie_es' | 'wir' | 'ihr' | 'sie_Sie';
 
@@ -305,6 +305,8 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     { id: 'article_accusative', title: en ? 'Accusative (Direct object)' : 'Akkusativ (direktes Objekt)', drill: 'accusative' },
     { id: 'article_dative', title: en ? 'Dative (Indirect object)' : 'Dativ (indirektes Objekt)', soon: true },
     { id: 'article_genitive', title: en ? 'Genitive (Possession)' : 'Genitiv (Besitz)', soon: true },
+    // The nouns that change as well as their article (den Kollegen), one case at a time
+    { id: 'article_special', title: en ? 'Special Case' : 'Sonderfall', drill: 'weak' },
   ];
 
   // VIEW 1: GRAMMAR AREA HUB — the parts, each folding open to its exercises.
@@ -416,6 +418,58 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
               </div>
             );
           })}
+        </div>
+      </div>
+    );
+  }
+
+  // Special Case: one button per case. Only Accusative has its nouns yet.
+  if (activeExerciseMode === 'article_special') {
+    const cases: { id: string; title: string; drill?: GrammarDrill; soon?: boolean }[] = [
+      { id: 'article_special_acc', title: en ? 'Accusative' : 'Akkusativ', drill: 'weak' },
+      { id: 'article_special_dat', title: en ? 'Dative' : 'Dativ', soon: true },
+      { id: 'article_special_gen', title: en ? 'Genitive' : 'Genitiv', soon: true },
+    ];
+    return (
+      <div className="w-full h-full flex flex-col justify-start gap-2.5 pt-0.5 sm:pt-1 pb-2 animate-fadeIn overflow-y-auto">
+        <div className="max-w-xl mx-auto w-full bg-white dark:bg-zinc-900 rounded-2xl border-2 border-zinc-200 dark:border-zinc-800 shadow-xs p-3 space-y-2">
+          {cases.map((c) =>
+            c.soon ? (
+              <div
+                key={c.id}
+                aria-disabled="true"
+                className="w-full px-4 py-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-left font-black text-sm text-zinc-400 dark:text-zinc-500 flex items-center justify-between opacity-60 cursor-not-allowed"
+              >
+                <span>{c.title}</span>
+                <span className="text-[10px] font-black uppercase tracking-wider">{en ? 'Soon' : 'Bald'}</span>
+              </div>
+            ) : (
+              <button
+                key={c.id}
+                id={`grammar-mode-${c.id}`}
+                onClick={() => {
+                  playSound('tap');
+                  onSelectExerciseMode(c.id);
+                }}
+                className="w-full px-4 py-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-950 dark:hover:border-white text-left font-black text-sm text-zinc-900 dark:text-zinc-100 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all"
+              >
+                <span>{c.title}</span>
+                <span className="flex items-center gap-1.5 shrink-0">
+                  {c.drill && drillBadges?.[c.drill]?.waiting ? (
+                    <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-amber-400 text-amber-950 text-[11px] font-black flex items-center justify-center shadow-xs">
+                      {drillBadges[c.drill].waiting}
+                    </span>
+                  ) : null}
+                  {c.drill && drillBadges?.[c.drill]?.due ? (
+                    <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-black flex items-center justify-center shadow-xs animate-pulse">
+                      {drillBadges[c.drill].due}
+                    </span>
+                  ) : null}
+                  <ArrowRight className="w-4 h-4 text-zinc-400" />
+                </span>
+              </button>
+            )
+          )}
         </div>
       </div>
     );

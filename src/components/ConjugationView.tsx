@@ -29,8 +29,8 @@ import { LearnPager } from './LearnPager';
  */
 
 type Mode = 'learn' | 'practice' | 'review';
-type LearnView = 'table' | 'rows' | 'cards';
-const LEARN_VIEWS: LearnView[] = ['table', 'rows', 'cards'];
+type LearnView = 'table' | 'rows' | 'cards' | 'simple';
+const LEARN_VIEWS: LearnView[] = ['table', 'rows', 'cards', 'simple'];
 
 interface ConjugationViewProps {
   onCorrectAnswer: (xpEarned?: number) => void;
@@ -212,8 +212,8 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     readStored<LearnView>('schritte_conj_learn_view', 'table', (v) => ((LEARN_VIEWS as string[]).includes(v) ? (v as LearnView) : null))
   );
   const learnViewLabel: Record<LearnView, string> = en
-    ? { table: 'Table', rows: 'Rows', cards: 'Cards' }
-    : { table: 'Tabelle', rows: 'Zeilen', cards: 'Karten' };
+    ? { table: 'Table', rows: 'Rows', cards: 'Cards', simple: 'Simple' }
+    : { table: 'Tabelle', rows: 'Zeilen', cards: 'Karten', simple: 'Einfach' };
   const [learnIndex, setLearnIndex] = useState(0);
   const [learnDone, setLearnDone] = useState(false);
 
@@ -637,10 +637,31 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
             const spokenOf = (slot: number) =>
               `${slot === 2 && verb.presentTense?.[0] === '-' ? 'es' : SPOKEN_PRONOUNS[slot]} ${formOf(slot)}`;
             /** "ich" in plain black, "heiße" in bold black — with room between them. */
-            const pair = (slot: number, inline = false) => (
-              <span className={`min-w-0 text-left ${inline ? 'flex items-baseline gap-2' : 'block space-y-1'}`}>
-                <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">{PRONOUNS[slot]}</span>
-                <span className="block font-black text-base sm:text-lg text-zinc-900 dark:text-zinc-100 break-words">
+            /**
+             * "ich" and its speaker on the top line, "heiße" under it across the whole box.
+             * Words wrap only between words, never inside one ("verabschiede" stays whole);
+             * the very longest single words are set a size smaller so they still fit.
+             */
+            /**
+             * The form's size follows its box: normal size, shrinking only as far as the
+             * longest word needs to fit (bold letters are about 0.62 em wide). The box is a
+             * size container, so 100cqw is the room there really is.
+             */
+            const formStyle = (slot: number): React.CSSProperties => {
+              const longestWord = Math.max(...formOf(slot).split(' ').map((w) => w.length));
+              return { overflowWrap: 'normal', fontSize: `min(1.0625rem, calc(100cqw / ${(longestWord * 0.62).toFixed(2)}))` };
+            };
+            const pair = (slot: number) => (
+              <span className="block w-full min-w-0 text-left space-y-1" style={{ containerType: 'inline-size' }}>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{PRONOUNS[slot]}</span>
+                  {say(slot)}
+                </span>
+                <span
+                  lang="de"
+                  className="block font-black text-zinc-900 dark:text-zinc-100 break-normal"
+                  style={formStyle(slot)}
+                >
                   {formOf(slot) === '-' ? '–' : formOf(slot)}
                 </span>
               </span>
@@ -668,12 +689,32 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
                             className={`px-3 py-4 flex items-center justify-between gap-2 min-w-0 ${k > 0 ? 'border-l border-zinc-200 dark:border-zinc-700' : ''}`}
                           >
                             {pair(slot)}
-                            {say(slot)}
                           </div>
                         ))}
                       </div>
                     </div>
                   ))}
+                </div>
+              );
+            }
+
+            if (learnView === 'simple') {
+              // The table's words in the same places, without the Singular / Plural and
+              // 1st / 2nd / 3rd labels — all the width goes to the words.
+              return (
+                <div className="grid grid-cols-2 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden">
+                  {ROWS.flatMap((row, i) =>
+                    [row.singular, row.plural].map((slot, k) => (
+                      <div
+                        key={slot}
+                        className={`px-3.5 py-4 flex items-center justify-between gap-2 min-w-0 ${
+                          k > 0 ? 'border-l border-zinc-200 dark:border-zinc-700' : ''
+                        } ${i > 0 ? 'border-t border-zinc-200 dark:border-zinc-700' : ''}`}
+                      >
+                        {pair(slot)}
+                      </div>
+                    ))
+                  )}
                 </div>
               );
             }
@@ -694,19 +735,25 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
                             key={slot}
                             className={`px-2.5 sm:px-3 py-3.5 flex items-center justify-between gap-1.5 ${i > 0 ? 'border-t border-zinc-200 dark:border-zinc-700' : ''}`}
                           >
-                            {/* "1st ich" on one line, the form under it — narrow enough for a phone */}
-                            <span className="min-w-0 text-left space-y-1">
-                              <span className="flex items-center gap-1.5">
-                                <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black text-zinc-500 dark:text-zinc-400 shrink-0">
-                                  {person(i)}
+                            {/* "1st ich 🔊" on one line, the form under it across the whole card */}
+                            <span className="block w-full min-w-0 text-left space-y-1" style={{ containerType: 'inline-size' }}>
+                              <span className="flex items-center justify-between gap-1.5">
+                                <span className="flex items-center gap-1.5 min-w-0">
+                                  <span className="px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[10px] font-black text-zinc-500 dark:text-zinc-400 shrink-0">
+                                    {person(i)}
+                                  </span>
+                                  <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{PRONOUNS[slot]}</span>
                                 </span>
-                                <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{PRONOUNS[slot]}</span>
+                                {say(slot)}
                               </span>
-                              <span className="block font-black text-base sm:text-lg text-zinc-900 dark:text-zinc-100">
+                              <span
+                                lang="de"
+                                className="block font-black text-zinc-900 dark:text-zinc-100 break-normal"
+                                style={formStyle(slot)}
+                              >
                                 {formOf(slot) === '-' ? '–' : formOf(slot)}
                               </span>
                             </span>
-                            {say(slot)}
                           </div>
                         );
                       })}
@@ -724,7 +771,6 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
                 cell={(slot) => (
                   <div className="flex items-center justify-between gap-2">
                     {pair(slot)}
-                    {say(slot)}
                   </div>
                 )}
               />
@@ -947,7 +993,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
                           ) : (
                             <X className="w-4 h-4 shrink-0 stroke-[3]" />
                           )}
-                          <span className="truncate">{inputs[slot].trim()}</span>
+                          <span className="min-w-0 break-normal" lang="de">{inputs[slot].trim()}</span>
                         </span>
                       </span>
                       {/* All right: each form can be heard straight from here */}
@@ -971,7 +1017,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
                       <div className="flex items-center justify-between gap-2">
                         <span className="min-w-0">
                           {pronoun(slot)}
-                          <span className="block font-black text-base sm:text-lg text-emerald-800 dark:text-emerald-200 truncate">
+                          <span lang="de" className="block font-black text-base sm:text-lg text-emerald-800 dark:text-emerald-200 break-normal">
                             {expected[slot]}
                           </span>
                         </span>

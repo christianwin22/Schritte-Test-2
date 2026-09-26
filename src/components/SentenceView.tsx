@@ -9,7 +9,7 @@ import {
   saveAllFSRSRecords,
   unlockWordsAfterPractice,
 } from '../utils/srsEngine';
-import { listenToGermanSpeech, speakGerman } from '../utils/speech';
+import { listenToGermanSpeech, speakGerman, speakGermanSequence } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
 
@@ -143,6 +143,14 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     if (inProgress) onRequestAbandon(go);
     else go();
   };
+
+  // A new sentence plays its verb by itself ("kommen"), as Plural plays its singular.
+  const verbAudioKey = started && !done && result === null && current ? `${current.id}|${index}|${round}` : '';
+  useEffect(() => {
+    if (!verbAudioKey || !current) return;
+    return speakGermanSequence([current.verbStem]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verbAudioKey]);
 
   // A new sentence is ready for typing straight away.
   useEffect(() => {

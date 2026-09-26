@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowDown, ArrowRight, Volume2 } from 'lucide-react';
 import { WordEntry } from '../types';
-import { BLANK, fillBlank, weakForm, weakSentence } from '../data/nounDrillSentences';
+import { BLANK, fillBlank, weakAnswer, weakForm, weakSentence } from '../data/nounDrillSentences';
 import { speakGerman } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
@@ -75,7 +75,7 @@ export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, where, 
   const form = weakForm(noun) ?? noun.lemma;
   const ending = form.startsWith(noun.lemma) ? form.slice(noun.lemma.length) : '';
   const stem = ending ? noun.lemma : form;
-  const sentence = fillBlank(weakSentence(noun), form);
+  const sentence = fillBlank(weakSentence(noun), weakAnswer(noun));
   const [before, after = ''] = weakSentence(noun).split(BLANK);
 
   const speaker = (text: string, big = false) => (
@@ -120,7 +120,7 @@ export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, where, 
         </div>
         <div className="mt-2 pt-3 border-t border-zinc-200/80 dark:border-zinc-700/80 w-full max-w-sm flex items-center justify-center gap-2">
           <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
-            {before.replace(/den\s*$/, '')}
+            {before}
             <strong>den {form}</strong>
             {after}
           </p>

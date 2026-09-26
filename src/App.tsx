@@ -32,10 +32,13 @@ import { useAuth } from './components/AuthGate';
 const GRAMMAR_ARTICLE_DRILLS: Record<string, string> = {
   article_nominative: 'gender_blitz',
   article_accusative: 'accusative_drill',
+  article_special_acc: 'weak_nouns',
 };
 
 /** Pages inside pages: back (and the middle of the title) goes to the one above. */
-const EXERCISE_PARENT: Record<string, string> = {};
+const EXERCISE_PARENT: Record<string, string> = {
+  article_special_acc: 'article_special',
+};
 
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
 const STREAK_STORAGE_KEY = 'deutschmeister_streak_v2';
@@ -208,13 +211,15 @@ export default function App() {
       accusative: { due: due('accusative'), waiting: readyLessons(drillPractice, 'accusative').length },
       conj: { due: due('conj'), waiting: 0 },
       sentence: { due: due('sentence'), waiting: 0 },
+      weak: { due: due('weak'), waiting: readyLessons(drillPractice, 'weak').length },
     };
   }, [fsrsRecords, drillPractice]);
   const grammarDueCount =
     grammarDrillBadges.article.due +
     grammarDrillBadges.accusative.due +
     grammarDrillBadges.conj.due +
-    grammarDrillBadges.sentence.due;
+    grammarDrillBadges.sentence.due +
+    grammarDrillBadges.weak.due;
 
   // Persist State Changes
   useEffect(() => {
@@ -498,6 +503,8 @@ export default function App() {
         if (activeExerciseMode === 'sentence_stem') return 'Grammar • Sentence';
         if (activeExerciseMode === 'article_nominative') return 'Grammar • Nominative';
         if (activeExerciseMode === 'article_accusative') return 'Grammar • Accusative';
+        if (activeExerciseMode === 'article_special') return 'Grammar • Special Case';
+        if (activeExerciseMode === 'article_special_acc') return 'Grammar • Special Case • Accusative';
         return 'Grammar';
       }
       if (currentTab === 'listening') return 'Listening • Audio Practice';
@@ -585,7 +592,7 @@ export default function App() {
               lessonsToPractiseCount={readyLessons(drillPractice, 'plural').length}
               grammarDueCount={grammarDueCount}
               grammarLessonsToPractiseCount={
-                grammarDrillBadges.article.waiting + grammarDrillBadges.accusative.waiting
+                grammarDrillBadges.article.waiting + grammarDrillBadges.accusative.waiting + grammarDrillBadges.weak.waiting
               }
               appLanguage={appLanguage}
             />

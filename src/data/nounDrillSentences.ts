@@ -92,11 +92,19 @@ export function weakForm(word: WordEntry): string | null {
   return form && form !== word.lemma ? form : null;
 }
 
-/** "Kennst du {{blank}} Kollegen?" → "Kennst du den {{blank}}?" — the noun is the blank. */
+/**
+ * Special Case: "Kennst du {{blank}} Kollegen?" → "Kennst du {{blank}}?" — the
+ * article AND the noun are the blank, since both change: "den Kollegen".
+ */
 export function weakSentence(word: WordEntry): string {
   const form = weakForm(word) ?? word.lemma;
   const given = word.accusativeSentenceBlank ?? `Ich mag ${BLANK} ${form}.`;
-  return given.replace(`${BLANK} ${form}`, `den ${BLANK}`);
+  return given.replace(`${BLANK} ${form}`, BLANK);
+}
+
+/** What goes in that blank: "den Kollegen". */
+export function weakAnswer(word: WordEntry): string {
+  return `den ${weakForm(word) ?? word.lemma}`;
 }
 
 /** der → den; die and das stay. */

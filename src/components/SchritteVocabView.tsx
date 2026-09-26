@@ -22,6 +22,7 @@ import {
   accusativeArticle,
   accusativeSentence,
   articleSentence,
+  weakAnswer,
   weakForm,
   weakSentence,
   barePlural,
@@ -35,7 +36,7 @@ import { highlightWord, stemLabel } from '../utils/sentenceParts';
 
 /** Where a half-finished Review session waits. Synced with the rest of the progress. */
 const REVIEW_SESSION_KEY = 'schritte_review_session_v1';
-import { speakGerman, listenToGermanSpeech, isSpeechRecognitionSupported } from '../utils/speech';
+import { speakGerman, speakGermanSequence, listenToGermanSpeech, isSpeechRecognitionSupported } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import {
@@ -562,8 +563,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       ? 'weak'
       : null;
   const isDrillReview = activeDrillSkill !== null && drillSubMode === 'review';
-  const drillHasLearn = activeDrillSkill === 'accusative' || activeDrillSkill === 'weak';
-  // Accusative and Special Article open on Learn, as Flashcard does; the others have none.
+  // Only Special Case has Learn (the nouns that change); the plain article drills are Practice | Review.
+  const drillHasLearn = activeDrillSkill === 'weak';
   useEffect(() => {
     if (drillHasLearn) setDrillSubMode('learn');
     else setDrillSubMode((m) => (m === 'learn' ? 'practice' : m));
@@ -723,9 +724,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       if (onCorrectAnswer) {
         onCorrectAnswer(15, 5);
       }
-      if (practiceDirection === 'EN_TO_DE') {
-        speakGerman(expectedDisplay);
-      }
     } else {
       playSound('wrong');
       if (onWrongAnswer) {
@@ -831,10 +829,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           if (onCorrectAnswer) {
             onCorrectAnswer(15, 5);
           }
-          if (practiceDirection === 'EN_TO_DE') {
-            speakGerman(expectedDisplay);
-          }
-
           // Process FSRS review algorithm if in Review mode
           if (flashcardSubMode === 'review') {
             const existing = fsrsRecords[currentPracticeWord.id] || {
@@ -1235,6 +1229,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // The top bar's back arrow: inside a session, back to this exercise's Start
   // screen — asking first only if at least one answer has been given.
   const handleBackInExercise = (): boolean => {
+    if (activeExerciseMode === 'explorer' && flashcardSubMode === 'learn' && sessionStarted) {
+      // Learn has nothing to lose: straight back to its Start page
+      cancelFlip();
+      setIsCardFlipped(false);
+      setSessionStarted(false);
+      return true;
+    }
     if (activeExerciseMode === 'explorer' && flashcardSubMode !== 'learn' && sessionStarted) {
       if (isPracticeInProgress) onRequestAbandon(leaveFlashcardSession);
       else leaveFlashcardSession();
@@ -1247,6 +1248,85 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
     return false;
   };
+  // --- Audio that plays by itself (German only — never the English) -----------------
+  /** "das Foto", then "die Fotos" when it has a plural. */
+  const germanWordLines = (card?: WordEntry | null): string[] => {
+    if (!card) return [];
+    const word = card.nounDetails?.gender ? `${card.nounDetails.gender} ${card.lemma}` : card.lemma;
+    const plural = card.nounDetails?.gender ? getCleanPluralString(card) : null;
+    const hasPlural = !!plural && !/\(Sg\.?\)|^die\s*-?$/i.test(plural.trim());
+    return hasPlural ? [word, plural!] : [word];
+  };
+  const germanSentenceLines = (card?: WordEntry | null): string[] => {
+    const sentence = card ? getExampleSentence(card).german : '';
+    return sentence ? [sentence] : [];
+  };
+
+  // Words · Learn — DE → EN: the German side plays the word (and plural); turned
+  // over, the German sentence. EN → DE: the English side is silent; turned over,
+  // word (and plural), then the sentence.
+  const learnAudioKey =
+    activeExerciseMode === 'explorer' && flashcardSubMode === 'learn' && sessionStarted && !isLearnComplete && currentFlashcard
+      ? `${currentFlashcard.id}|${learnDirection}|${isCardFlipped}`
+      : '';
+  useEffect(() => {
+    if (!learnAudioKey) return;
+    const card = currentFlashcard;
+    const lines =
+      learnDirection === 'DE_TO_EN'
+        ? isCardFlipped
+          ? germanSentenceLines(card)
+          : germanWordLines(card)
+        : isCardFlipped
+        ? [...germanWordLines(card), ...germanSentenceLines(card)]
+        : [];
+    return lines.length ? speakGermanSequence(lines) : undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [learnAudioKey]);
+
+  // Words · Practice and Review — DE → EN: the question (German) plays the word and
+  // plural; once answered, the sentence. EN → DE: silent until answered, then word,
+  // plural and sentence.
+  const practiceAudioKey =
+    activeExerciseMode === 'explorer' &&
+    flashcardSubMode !== 'learn' &&
+    sessionStarted &&
+    !isPracticeComplete &&
+    currentPracticeWord
+      ? `${currentPracticeWord.id}|${practiceQueueIndex}|${roundNumber}|${practiceDirection}|${practiceFeedback !== null}`
+      : '';
+  useEffect(() => {
+    if (!practiceAudioKey) return;
+    const card = currentPracticeWord;
+    const answered = practiceFeedback !== null;
+    const lines =
+      practiceDirection === 'DE_TO_EN'
+        ? answered
+          ? germanSentenceLines(card)
+          : germanWordLines(card)
+        : answered
+        ? [...germanWordLines(card), ...germanSentenceLines(card)]
+        : [];
+    return lines.length ? speakGermanSequence(lines) : undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [practiceAudioKey]);
+
+  // Plural and Special Case: the singular plays when a noun comes up ("der Name").
+  const drillAudioKey =
+    (activeDrillSkill === 'plural' || activeDrillSkill === 'weak') &&
+    drillSubMode !== 'learn' &&
+    drillStarted &&
+    !drillSessionDone &&
+    !pluralFeedback &&
+    drillSessionNoun
+      ? `${drillSessionNoun.id}|${drillQueueIndex}|${drillRound}`
+      : '';
+  useEffect(() => {
+    if (!drillAudioKey || !drillSessionNoun?.nounDetails?.gender) return;
+    return speakGermanSequence([`${drillSessionNoun.nounDetails.gender} ${drillSessionNoun.lemma}`]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drillAudioKey]);
+
   useEffect(() => {
     if (!backHandlerRef) return;
     backHandlerRef.current = handleBackInExercise;
@@ -1561,15 +1641,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   //   Plural:     "die Häuser" or "Häuser"
   //   Weak Nouns: "den Kollegen" or "Kollegen"
   const isWeakDrill = activeDrillSkill === 'weak';
-  const typedExpected = (word: WordEntry) =>
-    isWeakDrill ? `den ${weakForm(word) ?? word.lemma}` : word.nounDetails?.plural || '';
-  const typedBlankAnswer = (word: WordEntry) => (isWeakDrill ? weakForm(word) ?? word.lemma : barePlural(word));
+  // Special Case asks for article and noun together ("den Kollegen"): both change.
+  const typedExpected = (word: WordEntry) => (isWeakDrill ? weakAnswer(word) : word.nounDetails?.plural || '');
+  const typedBlankAnswer = (word: WordEntry) => (isWeakDrill ? weakAnswer(word) : barePlural(word));
   const typedSentence = (word: WordEntry) => (isWeakDrill ? weakSentence(word) : pluralSentence(word));
 
   const isPluralCorrect = (answer: string, word: WordEntry) => {
     const cleanUser = answer.trim().replace(/[.!?,]+$/, '').toLowerCase();
-    const cleanExpected = typedExpected(word).toLowerCase();
-    return cleanUser === cleanExpected || cleanUser === cleanExpected.replace(/^(die|den)\s+/, '');
+    const cleanExpected = typedExpected(word).toLowerCase().replace(/\s+/g, ' ');
+    const given = cleanUser.replace(/\s+/g, ' ');
+    if (isWeakDrill) return given === cleanExpected; // the article is part of the answer here
+    return given === cleanExpected || given === cleanExpected.replace(/^die\s+/, '');
   };
 
   const handlePluralSubmit = (e: React.FormEvent) => {
@@ -2257,10 +2339,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           )}
 
           <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
-            {flashcardSubMode !== 'learn' && !sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
+            {/* Learn, Practice and Review all wait on a Start page, so their audio never starts on its own */}
+            {!sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8">
                 <div className="space-y-3 max-w-xs">
-                  {flashcardSubMode === 'practice' ? (
+                  {flashcardSubMode !== 'review' ? (
                     <>
                       <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
                         {selectedLevel}
@@ -2278,7 +2361,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     </p>
                   )}
                   <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
-                    {flashcardSubMode === 'practice'
+                    {flashcardSubMode !== 'review'
                       ? `${filteredWords.length} ${appLanguage === 'en' ? 'words' : 'Wörter'}`
                       : `${practiceQueue.length} ${appLanguage === 'en' ? 'words due' : 'Wörter fällig'}`}
                   </p>
@@ -3394,7 +3477,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             : isArticle
                             ? appLanguage === 'en' ? 'Der, die or das' : 'Der, die oder das'
                             : isWeakDrill
-                            ? appLanguage === 'en' ? 'Special article' : 'Besonderer Artikel'
+                            ? appLanguage === 'en' ? 'Special case' : 'Sonderfall'
                             : appLanguage === 'en' ? 'Plurals' : 'Pluralformen')}
                     </p>
                     <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
