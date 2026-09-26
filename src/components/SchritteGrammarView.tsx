@@ -36,7 +36,15 @@ interface SchritteGrammarViewProps {
 }
 
 type GrammarSection = 'verb' | 'article' | 'preposition';
-type GrammarDrill = 'article' | 'accusative' | 'conj' | 'sentence' | 'weak';
+
+/** The verbs of Auxiliary and Modal Verbs, by their id in the word list. */
+const AUXILIARY = { ids: ['a11_l1_sein', 'a11_l2_haben', 'a12_l14_werden'], cardPrefix: 'aux', title: 'Hilfsverben' };
+const MODAL = {
+  ids: ['a11_l7_koennen', 'a12_l9_muessen', 'a12_l9_duerfen', 'a11_l7_wollen', 'a12_l10_sollen', 'a12_l13_moegen', 'a11_l6_moechten'],
+  cardPrefix: 'modal',
+  title: 'Modalverben',
+};
+type GrammarDrill = 'article' | 'accusative' | 'conj' | 'sentence' | 'weak' | 'aux' | 'modal';
 
 type PronounKey = 'ich' | 'du' | 'er_sie_es' | 'wir' | 'ihr' | 'sie_Sie';
 
@@ -284,17 +292,14 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const verbExercises: { id: string; title: string; drill?: GrammarDrill }[] = [
-    {
-      id: 'table',
-      title: en ? 'Conjugation' : 'Konjugation',
-      drill: 'conj',
-    },
-    {
-      id: 'sentence_stem',
-      title: en ? 'Sentence' : 'Satz',
-      drill: 'sentence',
-    },
+  // Verb, one tense or group at a time. Präsens is ready; Präteritum and Perfekt come next.
+  const verbExercises: { id: string; title: string; drill?: GrammarDrill; soon?: boolean }[] = [
+    { id: 'table', title: en ? 'Präsens (Present)' : 'Präsens (Gegenwart)', drill: 'conj' },
+    { id: 'verb_praeteritum', title: en ? 'Präteritum (Simple Past)' : 'Präteritum', soon: true },
+    { id: 'verb_perfekt', title: en ? 'Perfekt (Present Perfect)' : 'Perfekt', soon: true },
+    { id: 'verb_auxiliary', title: en ? 'Auxiliary Verbs (Hilfsverben)' : 'Hilfsverben', drill: 'aux' },
+    { id: 'verb_modal', title: en ? 'Modal Verbs (Modalverben)' : 'Modalverben', drill: 'modal' },
+    { id: 'sentence_stem', title: en ? 'Sentence' : 'Satz', drill: 'sentence' },
   ];
 
   // The four cases Schritte teaches from A1 to B1. Nominative is the Vocabulary
@@ -303,7 +308,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   const articleExercises: { id: string; title: string; drill?: GrammarDrill; soon?: boolean }[] = [
     // First: the nouns that change as well as their article (den Kollegen). Learn only;
     // once learned, Accusative asks them typed.
-    { id: 'article_special_acc', title: en ? 'Special Case' : 'Sonderfall' },
+    { id: 'article_special_acc', title: en ? 'Special Case' : 'Sonderfall', drill: 'weak' },
     { id: 'article_nominative', title: en ? 'Nominative (Subject)' : 'Nominativ (Subjekt)', drill: 'article' },
     { id: 'article_accusative', title: en ? 'Accusative (Direct object)' : 'Akkusativ (direktes Objekt)', drill: 'accusative' },
     { id: 'article_dative', title: en ? 'Dative (Indirect object)' : 'Dativ (indirektes Objekt)', soon: true },
@@ -485,6 +490,23 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
         onRequestAbandon={onRequestAbandon}
         onQuizActiveChange={onQuizActiveChange}
         backHandlerRef={backHandlerRef}
+        appLanguage={appLanguage}
+      />
+    );
+  }
+
+  // Auxiliary and Modal Verbs: the same Learn | Practice | Review, over a fixed set of verbs
+  if (activeExerciseMode === 'verb_auxiliary' || activeExerciseMode === 'verb_modal') {
+    const auxiliary = activeExerciseMode === 'verb_auxiliary';
+    return (
+      <ConjugationView
+        key={activeExerciseMode}
+        onCorrectAnswer={onCorrectAnswer}
+        onWrongAnswer={onWrongAnswer}
+        onRequestAbandon={onRequestAbandon}
+        onQuizActiveChange={onQuizActiveChange}
+        backHandlerRef={backHandlerRef}
+        fixed={auxiliary ? AUXILIARY : MODAL}
         appLanguage={appLanguage}
       />
     );

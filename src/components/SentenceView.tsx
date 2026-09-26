@@ -12,6 +12,7 @@ import {
 import { listenToGermanSpeech, speakGerman, speakGermanSequence } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
+import { markExerciseDone, readyKey } from '../utils/exerciseReady';
 
 /**
  * Grammar · Sentence — Practice | Review, built like Plural: the verb on a chip,
@@ -200,6 +201,8 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     if (mode === 'practice') {
       const ids = sessionItems.map((x) => sentenceCardId(x.id));
       updateRecords((prev) => unlockWordsAfterPractice(ids, prev));
+      // Every sentence practised: each of their lessons is done here
+      markExerciseDone('sentence', [...new Set(sessionItems.map((x) => readyKey('A1', x.lektion ?? 0)))]);
     }
   };
 

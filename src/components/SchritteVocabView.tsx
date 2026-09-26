@@ -30,6 +30,7 @@ import {
   pluralSentence,
 } from '../data/nounDrillSentences';
 import { NounChangeLearn } from './NounChangeLearn';
+import { markReadyAfterWords } from '../utils/exerciseReady';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
 import { checkEnglish, checkEnglishPair, checkGerman, englishSenses, meaningLines } from '../utils/answerCheck';
 import { highlightWord, stemLabel } from '../utils/sentenceParts';
@@ -951,6 +952,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             const level = selectedLevel;
             const lesson = selectedLektion;
             updateDrillPractice((prev) => markLessonReadyForDrills(prev, level, lesson, filteredWords));
+            // …and in the verb exercises (Präsens, Sentence) that have something for it
+            markReadyAfterWords(level, lesson, filteredWords);
           }
           if (typeof selectedLektion === 'number') {
             recordLessonPracticeCompleted(selectedLevel, selectedLektion);
@@ -1861,8 +1864,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // Banner 1: Filter Selector (Level & Lesson)
   // `waiting`: lessons ready to practise in Der/Die/Das or Plural, highlighted in amber.
   // Flashcard passes nothing, so its filter looks as before.
+  /** Lessons (level-lektion) that have something for the exercise that is open; the rest are greyed. */
+  const lessonsWithItems = useMemo(() => {
+    const keys = new Set<string>();
+    for (const w of INITIAL_VOCABULARY) {
+      if (activeDrillSkill && !isDrillable(activeDrillSkill, w)) continue;
+      keys.add(`${w.level}-${w.lektion ?? 0}`);
+    }
+    return keys;
+  }, [activeDrillSkill]);
+  const lessonHasItems = (level: string, lektion: number) => lessonsWithItems.has(`${level}-${lektion}`);
+
   const renderFilterBanner = (waiting: { level: string; lektion: number }[] = []) => {
-    const hasIntro = INITIAL_VOCABULARY.some((w) => w.level === selectedLevel && w.lektion === 0);
+    // The Intro button only where this exercise has something in it
+    const hasIntro = INITIAL_VOCABULARY.some((w) => w.level === selectedLevel && w.lektion === 0) && lessonHasItems(selectedLevel, 0);
     const introWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === 0);
     const introDone = isLessonFullyCompleted(selectedLevel, 0);
     return (
@@ -1988,10 +2003,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       const isDone = isLessonFullyCompleted(selectedLevel, num);
                       const isSelected = selectedLektion === num;
                       const isWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === num);
+                      // Nothing in this lesson for this exercise: greyed, and it can't be picked
+                      const isEmpty = !lessonHasItems(selectedLevel, num);
                       return (
                         <button
                           key={num}
+                          disabled={isEmpty}
                           onClick={() => {
+                            if (isEmpty) return;
                             playSound('tap');
                             handleFilterChange(undefined, num);
                           }}
@@ -2001,7 +2020,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                               : (appLanguage === 'en' ? `Lesson ${num}` : `Lektion ${num}`)
                           }
                           className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
-                            isSelected
+                            isEmpty
+                              ? 'bg-zinc-50 dark:bg-zinc-800/40 text-zinc-300 dark:text-zinc-600 cursor-not-allowed'
+                              : isSelected
                               ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ${isWaiting ? 'ring-amber-400' : 'ring-zinc-400/80 dark:ring-zinc-500/80'}`
                               : isWaiting
                               ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 shadow-2xs'
@@ -2035,10 +2056,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       const isDone = isLessonFullyCompleted(selectedLevel, num);
                       const isSelected = selectedLektion === num;
                       const isWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === num);
+                      // Nothing in this lesson for this exercise: greyed, and it can't be picked
+                      const isEmpty = !lessonHasItems(selectedLevel, num);
                       return (
                         <button
                           key={num}
+                          disabled={isEmpty}
                           onClick={() => {
+                            if (isEmpty) return;
                             playSound('tap');
                             handleFilterChange(undefined, num);
                           }}
@@ -2048,7 +2073,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                               : (appLanguage === 'en' ? `Lesson ${num}` : `Lektion ${num}`)
                           }
                           className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
-                            isSelected
+                            isEmpty
+                              ? 'bg-zinc-50 dark:bg-zinc-800/40 text-zinc-300 dark:text-zinc-600 cursor-not-allowed'
+                              : isSelected
                               ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ${isWaiting ? 'ring-amber-400' : 'ring-zinc-400/80 dark:ring-zinc-500/80'}`
                               : isWaiting
                               ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 shadow-2xs'
@@ -3479,7 +3506,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 <NounChangeLearn
                   nouns={weakNouns}
                   where=""
-                  onLearned={(nouns) => setSpecialLearned(new Set(markSpecialLearned('accusative', nouns.map((n) => n.id)).accusative))}
+                  onLearned={(nouns) => {
+                    setSpecialLearned(new Set(markSpecialLearned('accusative', nouns.map((n) => n.id)).accusative));
+                    // Learned here = done here: the lesson's amber notice goes
+                    updateDrillPractice((prev) => markLessonsDoneForDrill(prev, 'weak', nouns, INITIAL_VOCABULARY));
+                  }}
                   appLanguage={appLanguage}
                 />
               </div>

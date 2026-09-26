@@ -15,6 +15,7 @@ import { OrientationGuard } from './components/OrientationGuard';
 import { playSound, setGlobalSoundEnabled, setGlobalMusicEnabled } from './utils/audioEffects';
 import { AppLanguage, getTranslation } from './utils/translations';
 import { clearAppData } from './lib/progressSync';
+import { loadExerciseReady, readyLessonKeys } from './utils/exerciseReady';
 import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLessons } from './utils/srsEngine';
 import { isTabLocked } from './config/features';
 import { SuggestionButton } from './components/SuggestionButton';
@@ -176,12 +177,15 @@ export default function App() {
   const [fsrsRecords, setFsrsRecords] = useState(() => loadAllFSRSRecords());
   // Lessons waiting in Der/Die/Das and Plural Practice, for the amber badge
   const [drillPractice, setDrillPractice] = useState(() => loadDrillPracticeState());
+  // Lessons waiting in Präsens and Sentence since their Words Practice
+  const [exerciseReady, setExerciseReady] = useState(() => loadExerciseReady());
 
   // Listen to FSRS storage changes to keep global due count synchronized
   useEffect(() => {
     const syncFsrs = () => {
       setFsrsRecords(loadAllFSRSRecords());
       setDrillPractice(loadDrillPracticeState());
+      setExerciseReady(loadExerciseReady());
     };
     window.addEventListener('storage', syncFsrs);
     const interval = setInterval(syncFsrs, 3000);
@@ -207,17 +211,21 @@ export default function App() {
     return {
       article: { due: due('article'), waiting: readyLessons(drillPractice, 'article').length },
       accusative: { due: due('accusative'), waiting: readyLessons(drillPractice, 'accusative').length },
-      conj: { due: due('conj'), waiting: 0 },
-      sentence: { due: due('sentence'), waiting: 0 },
+      conj: { due: due('conj'), waiting: readyLessonKeys(exerciseReady, 'conj').length },
+      sentence: { due: due('sentence'), waiting: readyLessonKeys(exerciseReady, 'sentence').length },
+      aux: { due: due('aux'), waiting: 0 },
+      modal: { due: due('modal'), waiting: 0 },
       weak: { due: due('weak'), waiting: readyLessons(drillPractice, 'weak').length },
     };
-  }, [fsrsRecords, drillPractice]);
+  }, [fsrsRecords, drillPractice, exerciseReady]);
   const grammarDueCount =
     grammarDrillBadges.article.due +
     grammarDrillBadges.accusative.due +
     grammarDrillBadges.conj.due +
     grammarDrillBadges.sentence.due +
-    grammarDrillBadges.weak.due;
+    grammarDrillBadges.weak.due +
+    grammarDrillBadges.aux.due +
+    grammarDrillBadges.modal.due;
 
   // Persist State Changes
   useEffect(() => {
@@ -496,7 +504,9 @@ export default function App() {
         return 'Vocabulary';
       }
       if (currentTab === 'grammar') {
-        if (activeExerciseMode === 'table') return 'Grammar • Conjugation';
+        if (activeExerciseMode === 'table') return 'Grammar • Präsens';
+        if (activeExerciseMode === 'verb_auxiliary') return 'Grammar • Hilfsverben';
+        if (activeExerciseMode === 'verb_modal') return 'Grammar • Modalverben';
         if (activeExerciseMode === 'single_pronoun') return 'Grammar • Single Conjugation';
         if (activeExerciseMode === 'sentence_stem') return 'Grammar • Sentence';
         if (activeExerciseMode === 'article_nominative') return 'Grammar • Nominative';
@@ -589,7 +599,11 @@ export default function App() {
               lessonsToPractiseCount={readyLessons(drillPractice, 'plural').length}
               grammarDueCount={grammarDueCount}
               grammarLessonsToPractiseCount={
-                grammarDrillBadges.article.waiting + grammarDrillBadges.accusative.waiting + grammarDrillBadges.weak.waiting
+                grammarDrillBadges.article.waiting +
+                grammarDrillBadges.accusative.waiting +
+                grammarDrillBadges.weak.waiting +
+                grammarDrillBadges.conj.waiting +
+                grammarDrillBadges.sentence.waiting
               }
               appLanguage={appLanguage}
             />

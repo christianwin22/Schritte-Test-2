@@ -15,6 +15,7 @@ import { AppLanguage } from '../utils/translations';
 import { lessonTopics } from './SchritteVocabView';
 import { LearnPager } from './LearnPager';
 import { useAuth } from './AuthGate';
+import { loadExerciseReady, markExerciseDone, readyKey, readyLessonKeys } from '../utils/exerciseReady';
 
 /**
  * Grammar · Conjugation — Learn | Practice | Review, lesson by lesson, like Flashcard.
@@ -39,6 +40,11 @@ interface ConjugationViewProps {
   onRequestAbandon: (onConfirmLeave: () => void) => void;
   onQuizActiveChange?: (isActive: boolean, progressIsSaved?: boolean) => void;
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  /**
+   * A fixed set of verbs instead of a lesson (Auxiliary, Modal): no lesson bar,
+   * and their review cards under their own prefix, apart from Präsens.
+   */
+  fixed?: { ids: string[]; cardPrefix: string; title: string };
   appLanguage?: AppLanguage;
 }
 
@@ -163,19 +169,33 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   onRequestAbandon,
   onQuizActiveChange,
   backHandlerRef,
+  fixed,
   appLanguage = 'en',
 }) => {
   const en = appLanguage === 'en';
   const isSandbox = useAuth()?.isSandbox ?? false;
+  const cardId = (wordId: string) => (fixed ? `${fixed.cardPrefix}:${wordId}` : conjCardId(wordId));
+  const fixedVerbs = useMemo(
+    () => (fixed ? fixed.ids.map((id) => VERBS.find((v) => v.id === id)).filter((v): v is WordEntry => !!v) : null),
+    [fixed]
+  );
 
   // --- Filter: level and lesson, kept for next time ---------------------------------
   const [level, setLevel] = useState<CEFRLevel>(() =>
     readStored<CEFRLevel>('schritte_conj_level', 'A1', (v) => (['A1', 'A2', 'B1'].includes(v) ? (v as CEFRLevel) : null))
   );
+  // Every lesson of the level is listed; the ones without verbs are greyed and can't be picked.
+  const allLessonsOfLevel = useMemo(
+    () => [...new Set(INITIAL_VOCABULARY.filter((w) => w.level === level).map((w) => w.lektion ?? 0))].sort((a, b) => a - b),
+    [level]
+  );
   const lessonsOfLevel = useMemo(
     () => [...new Set(VERBS.filter((v) => v.level === level).map((v) => v.lektion ?? 0))].sort((a, b) => a - b),
     [level]
   );
+  // Lessons waiting here since their Words Practice (amber)
+  const [ready, setReady] = useState(() => loadExerciseReady());
+  const readyKeys = useMemo(() => new Set(readyLessonKeys(ready, 'conj')), [ready]);
   const [lesson, setLesson] = useState<number>(() =>
     readStored<number>('schritte_conj_lesson', 1, (v) => (Number.isFinite(Number(v)) ? Number(v) : null))
   );
@@ -197,10 +217,12 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
 
   const lessonVerbs = useMemo(
     () =>
-      activeLesson === TEST_LESSON
+      fixedVerbs
+        ? fixedVerbs
+        : activeLesson === TEST_LESSON
         ? LONGEST_TEN
         : VERBS.filter((v) => v.level === level && (v.lektion ?? 0) === activeLesson),
-    [level, activeLesson]
+    [fixedVerbs, level, activeLesson]
   );
 
   // --- Review records ----------------------------------------------------------------
@@ -214,13 +236,13 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     });
   const unlocked = useMemo(
     () =>
-      VERBS.filter((v) => {
-        const r = records[conjCardId(v.id)];
+      (fixedVerbs ?? VERBS).filter((v) => {
+        const r = records[cardId(v.id)];
         return !!r?.isUnlocked && r.status === 'review';
       }),
     [records]
   );
-  const due = useMemo(() => unlocked.filter((v) => isCardDueForReview(records[conjCardId(v.id)])), [unlocked, records]);
+  const due = useMemo(() => unlocked.filter((v) => isCardDueForReview(records[cardId(v.id)])), [unlocked, records]);
 
   // --- Mode and session --------------------------------------------------------------
   const [mode, setMode] = useState<Mode>('learn');
@@ -345,7 +367,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
       if (round === 1) setFirstTryWrong((prev) => (prev.includes(current.id) ? prev : [...prev, current.id]));
     }
     if (mode === 'review') {
-      const id = conjCardId(current.id);
+      const id = cardId(current.id);
       updateRecords((prev) => ({ ...prev, [id]: reviewCard(id, allRight, prev[id]) }));
     } else if (!allRight) {
       setRedo((prev) => (prev.some((w) => w.id === current.id) ? prev : [...prev, current]));
@@ -370,8 +392,10 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     setDone(true);
     playSound('correct');
     if (mode === 'practice') {
-      const ids = sessionVerbs.map((v) => conjCardId(v.id));
+      const ids = sessionVerbs.map((v) => cardId(v.id));
       updateRecords((prev) => unlockWordsAfterPractice(ids, prev));
+      // A lesson practised here is done: its amber notice goes.
+      if (!fixed && activeLesson !== TEST_LESSON) setReady(markExerciseDone('conj', [readyKey(level, activeLesson)]));
     }
   };
 
@@ -474,13 +498,16 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
                 playSound('tap');
                 setLevel(lvl);
               }}
-              className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              className={`relative px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                 level === lvl
                   ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
                   : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
               {lvl}
+              {[...readyKeys].some((k) => k.startsWith(`${lvl}-`)) && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white dark:ring-zinc-900" />
+              )}
             </button>
           ))}
         </div>
@@ -491,7 +518,11 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
               playSound('tap');
               setIsLessonOpen((o) => !o);
             }}
-            className="px-2.5 sm:px-3 py-1 font-black text-xs rounded-xl shadow-xs border flex items-center gap-1.5 transition-all cursor-pointer bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700"
+            className={`px-2.5 sm:px-3 py-1 font-black text-xs rounded-xl shadow-xs border flex items-center gap-1.5 transition-all cursor-pointer ${
+              readyKeys.has(readyKey(level, activeLesson))
+                ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border-amber-500'
+                : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700'
+            }`}
           >
             <span>{lessonLabel(activeLesson)}</span>
             <ChevronDown className={`w-3 h-3 text-zinc-500 transition-transform ${isLessonOpen ? 'rotate-180' : ''}`} />
@@ -518,26 +549,34 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
                   </button>
                 )}
                 <div className="grid grid-cols-7 gap-1.5">
-                  {lessonsOfLevel.map((l) => (
-                    <button
-                      key={l}
-                      type="button"
-                      onClick={() => {
-                        playSound('tap');
-                        setLesson(l);
-                        setIsLessonOpen(false);
-                      }}
-                      className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                        l === 0 ? 'col-span-2' : ''
-                      } ${
-                        l === activeLesson
-                          ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                      }`}
-                    >
-                      {l === 0 ? 'Intro' : l}
-                    </button>
-                  ))}
+                  {allLessonsOfLevel.map((l) => {
+                    // No verbs in this lesson: greyed, and it can't be picked
+                    const has = lessonsOfLevel.includes(l);
+                    const waiting = readyKeys.has(readyKey(level, l));
+                    return (
+                      <button
+                        key={l}
+                        type="button"
+                        disabled={!has}
+                        onClick={() => {
+                          playSound('tap');
+                          setLesson(l);
+                          setIsLessonOpen(false);
+                        }}
+                        className={`py-1.5 rounded-lg text-xs font-black transition-all ${l === 0 ? 'col-span-2' : ''} ${
+                          !has
+                            ? 'bg-zinc-50 dark:bg-zinc-800/40 text-zinc-300 dark:text-zinc-600 cursor-not-allowed'
+                            : l === activeLesson
+                            ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs cursor-pointer ${waiting ? 'ring-2 ring-amber-400' : ''}`
+                            : waiting
+                            ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 cursor-pointer'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer'
+                        }`}
+                      >
+                        {l === 0 ? 'Intro' : l}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </>
@@ -827,11 +866,13 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
         <div className="space-y-3 max-w-xs">
           {mode === 'practice' ? (
             <>
-              <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
-                {level} · {lessonLabel(activeLesson)}
-              </p>
+              {!fixed && (
+                <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                  {level} · {lessonLabel(activeLesson)}
+                </p>
+              )}
               <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
-                {lessonTopics(lessonVerbs) || (en ? 'Conjugation' : 'Konjugation')}
+                {fixed ? fixed.title : lessonTopics(lessonVerbs) || (en ? 'Conjugation' : 'Konjugation')}
               </p>
             </>
           ) : (
@@ -1100,7 +1141,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
         {showBars && (
           <>
             {modeBar}
-            {mode !== 'review' && filterBar}
+            {mode !== 'review' && !fixed && filterBar}
           </>
         )}
         <div className={card}>{body}</div>
