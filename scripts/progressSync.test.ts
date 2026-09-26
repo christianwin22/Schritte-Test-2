@@ -232,5 +232,58 @@ check('a claim made after this sign-in still takes over', (await sync.wasTakenOv
 storage.setItem('cpa_device_id', 'device-A');
 check('the claiming device stays', (await sync.wasTakenOver('u-take')) === false);
 
+console.log('\nTwo devices studied: their progress is merged, nobody is asked');
+{
+  const FS = 'deutschmeister_fsrs_records_v1';
+  const card = (at: string, days: number) => ({ wordId: 'x', status: 'review', isUnlocked: true, nextReviewDate: at, lastReviewedAt: at, intervalDays: days });
+  const base = {
+    [FS]: JSON.stringify({ a: card('2026-09-01T00:00:00Z', 1), b: card('2026-09-01T00:00:00Z', 1) }),
+    schritte_saved_level: 'A1',
+    deutschmeister_streak: '3',
+    schritte_drill_practice_v1: JSON.stringify({ article: { 'A1-1': 'ready' } }),
+  };
+  // Mac reviewed card a; phone reviewed card b and learned a new card c.
+  const mac = { ...base, [FS]: JSON.stringify({ a: card('2026-09-26T09:00:00Z', 4), b: card('2026-09-01T00:00:00Z', 1) }), schritte_saved_level: 'B1', deutschmeister_streak: '4', schritte_drill_practice_v1: JSON.stringify({ article: { 'A1-1': 'done' } }) };
+  const phone = { ...base, [FS]: JSON.stringify({ a: card('2026-09-01T00:00:00Z', 1), b: card('2026-09-26T10:00:00Z', 4), c: card('2026-09-26T10:05:00Z', 1) }), deutschmeister_streak: '5', schritte_drill_practice_v1: JSON.stringify({ article: { 'A1-1': 'ready', 'A1-2': 'ready' } }) };
+  const merged = sync.mergeSnapshots(base, mac, phone);
+  const cards = JSON.parse(merged[FS]);
+  check("the Mac's review of card a is kept", cards.a.lastReviewedAt === '2026-09-26T09:00:00Z');
+  check("the phone's review of card b is kept", cards.b.lastReviewedAt === '2026-09-26T10:00:00Z');
+  check('a card only the phone has is kept', !!cards.c);
+  check('a setting changed on one device only follows that device', merged.schritte_saved_level === 'B1');
+  check('changed on both: the bigger streak', merged.deutschmeister_streak === '5');
+  const drill = JSON.parse(merged.schritte_drill_practice_v1);
+  check('"done" beats "ready"', drill.article['A1-1'] === 'done');
+  check('a lesson only one device has is kept', drill.article['A1-2'] === 'ready');
+  check('the old "who is in charge" note is dropped', !('deutschmeister_active_device_v1' in sync.mergeSnapshots({}, { deutschmeister_active_device_v1: 'x' }, {})));
+}
+
+console.log('\nThe auto-sync merges when another device has saved, and asks nothing');
+{
+  reset();
+  table.clear();
+  failWrites = false;
+  storage.setItem('cpa_device_id', 'device-M');
+  table.set('u-merge', { data: { deutschmeister_streak: '1', schritte_saved_level: 'A1' }, updated_at: new Date(Date.now() - 10_000).toISOString() });
+  await sync.restoreForUser('u-merge');
+  storage.setItem('schritte_saved_level', 'A2'); // this device moves on
+  otherDeviceSaves('u-merge', { deutschmeister_streak: '2', schritte_saved_level: 'A1' }); // the phone does too
+  const events: any[] = [];
+  (globalThis as any).window = { setInterval: () => 0, clearInterval: () => {} };
+  (globalThis as any).document = { addEventListener: () => {}, removeEventListener: () => {}, visibilityState: 'visible' };
+  (globalThis as any).window.addEventListener = () => {};
+  (globalThis as any).window.removeEventListener = () => {};
+  let tick: () => Promise<void> = async () => {};
+  (globalThis as any).window.setInterval = (fn: () => Promise<void>) => { tick = fn; return 1; };
+  const stop = sync.startAutoSync('u-merge', 4000, (e) => events.push(e));
+  await tick();
+  stop();
+  check('no question: the event says it merged', events.length === 1 && !!events[0].merged);
+  check('...and that this device changed', events[0]?.merged?.changedHere === true);
+  check("this device's own change survives", storage.getItem('schritte_saved_level') === 'A2');
+  check("the other device's change arrives", storage.getItem('deutschmeister_streak') === '2');
+  check('the merged progress is saved for both', tableData('u-merge')?.schritte_saved_level === 'A2' && tableData('u-merge')?.deutschmeister_streak === '2');
+}
+
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

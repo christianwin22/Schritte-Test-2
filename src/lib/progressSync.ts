@@ -72,6 +72,132 @@ export async function wasTakenOver(userId: string): Promise<boolean> {
   }
 }
 const DIRTY_KEY = 'cpa_sync_dirty'; // local changes that have not reached Supabase yet
+/**
+ * The progress as it stood at the last sync, on this device (not synced). When
+ * both devices have moved on, comparing each side with this tells which one
+ * changed what — so the two can be merged instead of one being thrown away.
+ */
+const BASE_KEY = 'cpa_sync_base';
+
+function saveBase(snapshot: ProgressSnapshot): void {
+  try {
+    localStorage.setItem(BASE_KEY, JSON.stringify(snapshot));
+  } catch {
+    // No room for a second copy: merging then treats everything as changed on
+    // both sides, which still keeps both devices' work.
+    localStorage.removeItem(BASE_KEY);
+  }
+}
+
+function loadBase(): ProgressSnapshot {
+  try {
+    return JSON.parse(localStorage.getItem(BASE_KEY) || '{}') as ProgressSnapshot;
+  } catch {
+    return {};
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Merging two devices' progress
+// ---------------------------------------------------------------------------
+//
+// Three-way, key by key, against the copy from the last sync:
+//   changed on one side only  → that side
+//   changed on both           → combined: inside objects key by key; a review
+//                                card goes to whichever was reviewed last;
+//                                "done" beats "ready"; bigger number wins;
+//                                later date wins; lists are joined; otherwise
+//                                this device's value.
+
+const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const isCard = (v: unknown): v is { lastReviewedAt?: string } =>
+  isObject(v) && ('nextReviewDate' in v || 'lastReviewedAt' in v);
+const ISO = /^\d{4}-\d{2}-\d{2}(T|$)/;
+const RANK: Record<string, number> = { ready: 1, done: 2 };
+
+function combine(base: unknown, mine: unknown, theirs: unknown): unknown {
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  if (same(mine, theirs)) return mine;
+  if (same(mine, base)) return theirs;
+  if (same(theirs, base)) return mine;
+  if (mine === undefined) return theirs;
+  if (theirs === undefined) return mine;
+  if (isCard(mine) && isCard(theirs)) {
+    return (theirs.lastReviewedAt ?? '') > (mine.lastReviewedAt ?? '') ? theirs : mine;
+  }
+  if (isObject(mine) && isObject(theirs)) {
+    const b = isObject(base) ? base : {};
+    const out: Record<string, unknown> = {};
+    for (const k of new Set([...Object.keys(mine), ...Object.keys(theirs)])) {
+      const v = combine(b[k], mine[k], theirs[k]);
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  if (Array.isArray(mine) && Array.isArray(theirs)) {
+    const seen = new Set<string>();
+    return [...mine, ...theirs].filter((x) => {
+      const k = JSON.stringify(x);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }
+  if (typeof mine === 'number' && typeof theirs === 'number') return Math.max(mine, theirs);
+  if (typeof mine === 'string' && typeof theirs === 'string') {
+    if (RANK[mine] && RANK[theirs]) return RANK[theirs] > RANK[mine] ? theirs : mine;
+    if (ISO.test(mine) && ISO.test(theirs)) return theirs > mine ? theirs : mine;
+  }
+  return mine;
+}
+
+/** Merges this device's progress with another device's, against the last shared copy. */
+export function mergeSnapshots(base: ProgressSnapshot, mine: ProgressSnapshot, theirs: ProgressSnapshot): ProgressSnapshot {
+  const out: ProgressSnapshot = {};
+  const parse = (v: string | undefined): unknown => {
+    if (v === undefined) return undefined;
+    try {
+      return JSON.parse(v);
+    } catch {
+      return v;
+    }
+  };
+  for (const key of new Set([...Object.keys(mine), ...Object.keys(theirs)])) {
+    if (key === ACTIVE_DEVICE_KEY) continue; // an old note, never needed again
+    const b = base[key];
+    const m = mine[key];
+    const t = theirs[key];
+    let value: string | undefined;
+    if (m === t) value = m;
+    else if (m === b) value = t;
+    else if (t === b) value = m;
+    else {
+      const merged = combine(parse(b), parse(m), parse(t));
+      value = merged === undefined ? undefined : typeof merged === 'string' && !/^[\[{"]/.test(m ?? '') ? merged : JSON.stringify(merged);
+    }
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Another device has saved: fold its progress into this one's and save the
+ * result. Resolves whether this device's own progress changed (so the screens
+ * should reload what they show), or null if it could not reach Supabase.
+ */
+export async function mergeWithRemote(userId: string): Promise<boolean | null> {
+  try {
+    const { snapshot: remote } = await pullRemote(userId);
+    const mine = takeSnapshot();
+    const merged = mergeSnapshots(loadBase(), mine, remote ?? {});
+    const changedHere = JSON.stringify(merged) !== JSON.stringify(mine);
+    if (changedHere) applySnapshot(merged);
+    const saved = await pushSnapshot(userId, merged);
+    return saved ? changedHere : null;
+  } catch {
+    return null;
+  }
+}
 
 const TABLE = 'user_progress';
 
@@ -173,6 +299,7 @@ export async function adoptRemote(userId: string): Promise<boolean> {
     applySnapshot(snapshot);
     localStorage.removeItem(DIRTY_KEY);
     lastSeenUpdatedAt = updatedAt;
+    saveBase(snapshot);
     return true;
   } catch {
     return false;
@@ -191,6 +318,7 @@ export async function pushSnapshot(userId: string, snapshot: ProgressSnapshot): 
   }
   localStorage.removeItem(DIRTY_KEY);
   lastSeenUpdatedAt = updatedAt;
+  saveBase(snapshot);
   return true;
 }
 
@@ -219,6 +347,7 @@ export async function restoreForUser(userId: string): Promise<void> {
   if (remote && !(owner === userId && hasUnsentChanges)) {
     applySnapshot(remote);
     localStorage.removeItem(DIRTY_KEY);
+    saveBase(remote);
   } else {
     await pushSnapshot(userId, takeSnapshot());
   }
@@ -232,6 +361,8 @@ export async function restoreForUser(userId: string): Promise<void> {
 export interface OtherDeviceEvent {
   /** True when this device has work of its own that has not been saved yet. */
   hasLocalChanges: boolean;
+  /** Set when the two devices' progress has been merged and saved already. */
+  merged?: { changedHere: boolean };
 }
 
 /**
@@ -249,43 +380,38 @@ export function startAutoSync(
 ): () => void {
   let lastSent = JSON.stringify(takeSnapshot());
   let inFlight = false;
-  let halted = false;
 
-  const halt = (hasLocalChanges: boolean) => {
-    halted = true;
-    onOtherDevice?.({ hasLocalChanges });
+  /**
+   * Another device has saved since this one last did. Nothing is overwritten
+   * and nobody is asked: both devices' progress is merged and saved, and the
+   * app is told whether what it shows has changed.
+   */
+  const merge = async () => {
+    const changedHere = await mergeWithRemote(userId);
+    if (changedHere === null) return; // offline: try again next time
+    lastSent = JSON.stringify(takeSnapshot());
+    onOtherDevice?.({ hasLocalChanges: false, merged: { changedHere } });
   };
 
   const syncIfChanged = async () => {
-    if (inFlight || halted) return;
-    const snapshot = takeSnapshot();
-    const serialized = JSON.stringify(snapshot);
-    const changedHere = serialized !== lastSent || localStorage.getItem(DIRTY_KEY) === '1';
-    if (!changedHere) return;
+    if (inFlight) return;
     inFlight = true;
     try {
       if (await otherDeviceHasSaved(userId)) {
-        halt(true);
+        await merge();
         return;
       }
+      const snapshot = takeSnapshot();
+      const serialized = JSON.stringify(snapshot);
+      const changedHere = serialized !== lastSent || localStorage.getItem(DIRTY_KEY) === '1';
+      if (!changedHere) return;
       if (await pushSnapshot(userId, snapshot)) lastSent = serialized;
     } finally {
       inFlight = false;
     }
   };
 
-  /** Coming back to the app: catch up before anything is typed into stale data. */
-  const onShow = async () => {
-    if (halted || inFlight) return;
-    if (!(await otherDeviceHasSaved(userId))) return;
-    const changedHere = JSON.stringify(takeSnapshot()) !== lastSent;
-    halt(changedHere);
-  };
-
-  const onVisibility = () => {
-    if (document.visibilityState === 'hidden') void syncIfChanged();
-    else void onShow();
-  };
+  const onVisibility = () => void syncIfChanged(); // leaving: save; coming back: catch up first
 
   const timer = window.setInterval(syncIfChanged, intervalMs);
   document.addEventListener('visibilitychange', onVisibility);
@@ -311,6 +437,7 @@ export async function signOutAndClear(userId: string): Promise<boolean> {
   localStorage.removeItem(OWNER_KEY);
   localStorage.removeItem(DIRTY_KEY);
   localStorage.removeItem(SIGNED_IN_AT_KEY);
+  localStorage.removeItem(BASE_KEY);
   // Local only: this device forgets you. A global sign-out would also revoke
   // the tokens on your other phone or laptop, which is not what Log out here
   // should mean — and it would kill a session kept for switching accounts.

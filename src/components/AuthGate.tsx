@@ -79,6 +79,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   /** Set when the saved progress has moved on under us, on another device. */
   const [otherDevice, setOtherDevice] = useState<OtherDeviceEvent | null>(null);
   const [syncRun, setSyncRun] = useState(0); // bumping this restarts the sync
+  /** Bumped when another device's progress has been merged in: the app re-reads it. */
+  const [dataVersion, setDataVersion] = useState(0);
   const [profileReady, setProfileReady] = useState(false);
 
   useEffect(() => {
@@ -136,11 +138,17 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         window.location.reload();
         return;
       }
-      // Only worth saying when both devices have been worked on. Merely being
-      // signed in somewhere else is not something to interrupt anyone about;
-      // in that case the newer progress is taken quietly.
+      // Studying on two devices never asks anything any more: the sync has
+      // merged both devices' progress already. If that changed what this
+      // device holds, the screens are rebuilt so they show — and later save —
+      // the merged progress, not the copy they loaded before.
+      if (event.merged) {
+        if (event.merged.changedHere) setDataVersion((n) => n + 1);
+        return;
+      }
       if (!event.hasLocalChanges) {
         await adoptRemote(userId);
+        setDataVersion((n) => n + 1);
         setSyncRun((n) => n + 1);
         return;
       }
@@ -230,7 +238,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      <React.Fragment key={dataVersion}>{children}</React.Fragment>
       {otherDevice?.hasLocalChanges && (
         <OtherDeviceNotice
           hasLocalChanges
