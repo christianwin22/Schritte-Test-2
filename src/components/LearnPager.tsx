@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { playSound } from '../utils/audioEffects';
 
 /**
@@ -8,7 +8,7 @@ import { playSound } from '../utils/audioEffects';
  *   iPad, iPhone:   tap the left or right half, or swipe left / right
  *
  * Taps on a button inside (the speakers) stay with that button. Moving past the
- * last page calls onFinish.
+ * last page calls onFinish. Each turn plays like a book page (index.css).
  */
 interface LearnPagerProps {
   index: number;
@@ -24,11 +24,14 @@ const SWIPE = 50;
 export const LearnPager: React.FC<LearnPagerProps> = ({ index, count, onChange, onFinish, children, className = '' }) => {
   const start = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
+  // Which way the last turn went, for the page-turn animation (0 = no turn yet)
+  const [turn, setTurn] = useState<0 | 1 | -1>(0);
 
   const go = (step: 1 | -1) => {
     const next = index + step;
     if (next < 0) return;
     playSound('tap');
+    setTurn(step);
     if (next >= count) onFinish?.();
     else onChange(next);
   };
@@ -78,7 +81,13 @@ export const LearnPager: React.FC<LearnPagerProps> = ({ index, count, onChange, 
         go(e.clientX - box.left < box.width / 2 ? -1 : 1);
       }}
     >
-      {children}
+      {/* A new key per page restarts the turn, so quick taps never wait for one to finish */}
+      <div
+        key={index}
+        className={`flex-1 flex flex-col ${turn === 1 ? 'page-turn-next' : turn === -1 ? 'page-turn-back' : ''}`}
+      >
+        {children}
+      </div>
     </div>
   );
 };

@@ -9,7 +9,7 @@ import {
   saveAllFSRSRecords,
   unlockWordsAfterPractice,
 } from '../utils/srsEngine';
-import { speakGerman } from '../utils/speech';
+import { speakGerman, speakGermanSequence } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
 import { lessonTopics } from './SchritteVocabView';
@@ -362,12 +362,17 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     e.preventDefault();
     const order = TYPING_ORDER.filter((s) => asked(s));
     const at = order.indexOf(slot);
+    // The screen keyboard's Enter / Next goes box by box: ich → du → er → wir → ihr → sie.
+    if (at < order.length - 1) {
+      inputRefs.current[order[at + 1]]?.focus();
+      return;
+    }
+    // On the last box it checks — once every box has something in it; otherwise back to the first empty one.
     if (allFilled) {
       check();
       return;
     }
-    // Check needs every box filled: go to the next empty one (wrapping round to the first).
-    const empty = [...order.slice(at + 1), ...order.slice(0, at + 1)].find((s) => !inputs[s].trim());
+    const empty = order.find((s) => !inputs[s].trim());
     if (empty !== undefined) inputRefs.current[empty]?.focus();
   };
   useEffect(() => {
@@ -389,6 +394,19 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
       .filter(Boolean);
     speakGerman(lines.join('. '));
   };
+
+  // Learn: when a verb comes up it is read out — the verb, then ich …, du …, er …,
+  // wir …, ihr …, sie … — one by one. Turning the page or tapping a speaker stops it.
+  const autoplayVerb = mode === 'learn' && !learnDone ? lessonVerbs[learnIndex] : undefined;
+  useEffect(() => {
+    if (!autoplayVerb) return;
+    const forms = autoplayVerb.presentTense ?? [];
+    const lines = [
+      autoplayVerb.lemma,
+      ...forms.map((f, i) => (f === '-' ? '' : i === 2 && forms[0] === '-' ? `es ${f}` : `${SPOKEN_PRONOUNS[i]} ${f}`)),
+    ].filter(Boolean);
+    return speakGermanSequence(lines);
+  }, [autoplayVerb]);
 
   // --- Pieces ------------------------------------------------------------------------
   const lessonLabel = (l: number) => (l === 0 ? 'Intro' : `${en ? 'Lesson' : 'Lektion'} ${l}`);
@@ -640,24 +658,20 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
                     <span className="text-center">Plural</span>
                   </div>
                   {ROWS.map((row, i) => (
-                    <div
-                      key={row.person}
-                      className="grid grid-cols-[3rem_1fr_1fr] rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden"
-                    >
-                      <span className="flex items-center justify-center">
-                        <span className="w-8 h-8 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 text-[11px] font-black flex items-center justify-center">
-                          {person(i)}
-                        </span>
-                      </span>
-                      {[row.singular, row.plural].map((slot, k) => (
-                        <div
-                          key={slot}
-                          className={`px-3 py-4 flex items-center justify-between gap-2 min-w-0 ${k > 0 ? 'border-l border-zinc-200 dark:border-zinc-700' : ''}`}
-                        >
-                          {pair(slot)}
-                          {say(slot)}
-                        </div>
-                      ))}
+                    <div key={row.person} className="grid grid-cols-[3rem_1fr] items-center">
+                      {/* The person label sits outside the box, like Singular / Plural above */}
+                      <span className="text-center text-[10px] font-black uppercase tracking-wider text-zinc-400">{person(i)}</span>
+                      <div className="grid grid-cols-2 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs overflow-hidden">
+                        {[row.singular, row.plural].map((slot, k) => (
+                          <div
+                            key={slot}
+                            className={`px-3 py-4 flex items-center justify-between gap-2 min-w-0 ${k > 0 ? 'border-l border-zinc-200 dark:border-zinc-700' : ''}`}
+                          >
+                            {pair(slot)}
+                            {say(slot)}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>

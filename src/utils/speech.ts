@@ -108,7 +108,47 @@ export function testGermanVoice(onDone: (result: VoiceCheck) => void): void {
 }
 
 /** Text-to-speech utility for German pronunciation using Web Speech API */
+/** Bumped whenever something new is said, so a running sequence knows to stop. */
+let sequenceToken = 0;
+
+/**
+ * Says several things one after another with a short pause between them —
+ * e.g. a verb, then ich …, du …, er …, wir …, ihr …, sie …. Anything else said
+ * (a tapped speaker) or the returned stop() ends it at once.
+ */
+export function speakGermanSequence(texts: string[], pauseMs = 450): () => void {
+  if (!isSpeechAvailable() || texts.length === 0) return () => {};
+  const token = ++sequenceToken;
+  const synth = window.speechSynthesis;
+  let timer: number | undefined;
+  const sayAt = (i: number) => {
+    if (token !== sequenceToken || i >= texts.length) return;
+    const utterance = new SpeechSynthesisUtterance(texts[i]);
+    utterance.lang = 'de-DE';
+    utterance.rate = 0.88;
+    const voice = germanVoice();
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => {
+      if (token === sequenceToken) timer = window.setTimeout(() => sayAt(i + 1), pauseMs);
+    };
+    utterance.onerror = () => {
+      // interrupted or cancelled: the sequence is over
+    };
+    synth.speak(utterance);
+  };
+  prime();
+  if (synth.speaking || synth.pending) synth.cancel();
+  timer = window.setTimeout(() => sayAt(0), 120);
+  return () => {
+    if (token !== sequenceToken) return;
+    sequenceToken++;
+    window.clearTimeout(timer);
+    synth.cancel();
+  };
+}
+
 export function speakGerman(text: string): void {
+  sequenceToken++; // a tap on a speaker stops any sequence that is playing
   if (!isSpeechAvailable()) {
     console.warn('Web Speech API is not supported in this browser.');
     return;
