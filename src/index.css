@@ -7,6 +7,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
+ * kb: — only while an on-screen keyboard covers the screen (iPhone, iPad
+ * without its keyboard). A Mac, or an iPad with a keyboard attached, never
+ * sees it and keeps the roomy layout. main.tsx sets data-keyboard.
+ * Every exercise with typing uses it: roomy by default, kb:… when squeezed.
+ */
+@custom-variant kb (&:where([data-keyboard='1'], [data-keyboard='1'] *));
+
+/*
  * --app-height follows the part of the screen you can actually see. On a phone
  * the keyboard covers the bottom of the page without making the page any
  * shorter, so the top — the direction pill, the counter — scrolls out of reach

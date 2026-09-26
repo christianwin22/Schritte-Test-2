@@ -7,6 +7,7 @@ import {
   Sparkles,
   Check,
   X,
+  Volume2,
 } from 'lucide-react';
 import {
   SCHRITTE_VERBS,
@@ -14,9 +15,11 @@ import {
   VerbGrammarEntry,
 } from '../data/schritteVerbs';
 import { CEFRLevel } from '../types';
-import { speakGerman } from '../utils/speech';
+import { listenToGermanSpeech, speakGerman } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
+import { ConjugationView } from './ConjugationView';
+import { SentenceView } from './SentenceView';
 
 interface SchritteGrammarViewProps {
   onCorrectAnswer: (xpEarned?: number) => void;
@@ -24,13 +27,16 @@ interface SchritteGrammarViewProps {
   activeExerciseMode: string | null;
   onSelectExerciseMode: (mode: string | null) => void;
   onRequestAbandon: (onConfirmLeave: () => void) => void;
-  onQuizActiveChange?: (isActive: boolean) => void;
+  onQuizActiveChange?: (isActive: boolean, progressIsSaved?: boolean) => void;
+  /** The top bar's back arrow asks here first (Conjugation: back to its Start screen). */
+  backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
   /** Badges on Nominative and Accusative: lessons ready to practise, nouns due. */
-  drillBadges?: Record<'article' | 'accusative', { waiting: number; due: number }>;
+  drillBadges?: Record<GrammarDrill, { waiting: number; due: number }>;
   appLanguage?: AppLanguage;
 }
 
 type GrammarSection = 'verb' | 'article' | 'preposition';
+type GrammarDrill = 'article' | 'accusative' | 'conj' | 'sentence';
 
 type PronounKey = 'ich' | 'du' | 'er_sie_es' | 'wir' | 'ihr' | 'sie_Sie';
 
@@ -50,6 +56,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   onSelectExerciseMode,
   onRequestAbandon,
   onQuizActiveChange,
+  backHandlerRef,
   drillBadges,
   appLanguage = 'en',
 }) => {
@@ -110,6 +117,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   const [stemIndex, setStemIndex] = useState(0);
   const [stemInput, setStemInput] = useState('');
   const [stemChecked, setStemChecked] = useState(false);
+  const [stemCorrect, setStemCorrect] = useState(false);
 
   const currentStemExercise =
     SCHRITTE_SENTENCE_STEM_DRILLS[
@@ -211,9 +219,9 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   const handleStemSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentStemExercise || stemChecked || !stemInput.trim()) return;
-    const isCorrect =
-      stemInput.trim().toLowerCase() ===
-      currentStemExercise.expectedAnswer.toLowerCase();
+    const clean = (t: string) => t.toLowerCase().replace(/[.!?,]+$/, '').replace(/\s+/g, ' ').trim();
+    const isCorrect = clean(stemInput) === clean(currentStemExercise.expectedAnswer);
+    setStemCorrect(isCorrect);
     setStemChecked(true);
 
     if (isCorrect) {
@@ -228,6 +236,34 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     }
   };
 
+  const stemInputRef = React.useRef<HTMLInputElement>(null);
+  const [isStemListening, setIsStemListening] = useState(false);
+  const stemRecognitionRef = React.useRef<{ stop: () => void } | null>(null);
+  const handleStemSpeak = () => {
+    if (isStemListening) {
+      stemRecognitionRef.current?.stop();
+      setIsStemListening(false);
+      return;
+    }
+    if (stemChecked) return;
+    playSound('tap');
+    setIsStemListening(true);
+    stemRecognitionRef.current = listenToGermanSpeech(
+      (transcript) => {
+        setIsStemListening(false);
+        setStemInput(transcript.trim().replace(/[.!?,]+$/, ''));
+        stemInputRef.current?.focus(); // check it, or fix it first
+      },
+      () => setIsStemListening(false),
+      () => setIsStemListening(false),
+      'de-DE'
+    );
+  };
+  // A new sentence is ready for typing straight away.
+  React.useEffect(() => {
+    if (activeExerciseMode === 'sentence_stem' && !stemChecked) stemInputRef.current?.focus();
+  }, [activeExerciseMode, stemIndex, stemChecked]);
+
   const handleNextStem = () => {
     playSound('tap');
     setStemChecked(false);
@@ -235,21 +271,36 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     setStemIndex((prev) => (prev + 1) % SCHRITTE_SENTENCE_STEM_DRILLS.length);
   };
 
-  const verbExercises = [
+  // After checking, Enter goes on to the next sentence, as in Vocabulary.
+  React.useEffect(() => {
+    if (activeExerciseMode !== 'sentence_stem' || !stemChecked) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleNextStem();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  const verbExercises: { id: string; title: string; drill?: GrammarDrill }[] = [
     {
       id: 'table',
-      title: 'Conjugation',
+      title: en ? 'Conjugation' : 'Konjugation',
+      drill: 'conj',
     },
     {
       id: 'sentence_stem',
-      title: 'Sentence with Verb Stem',
+      title: en ? 'Sentence' : 'Satz',
+      drill: 'sentence',
     },
   ];
 
   // The four cases Schritte teaches from A1 to B1. Nominative is the Vocabulary
   // Der/Die/Das exercise itself (App opens that same screen), so any change there
   // shows up here too. Accusative is its twin with den / die / das. Dative and Genitive have no exercise yet.
-  const articleExercises: { id: string; title: string; drill?: 'article' | 'accusative'; soon?: boolean }[] = [
+  const articleExercises: { id: string; title: string; drill?: GrammarDrill; soon?: boolean }[] = [
     { id: 'article_nominative', title: en ? 'Nominative (Subject)' : 'Nominativ (Subjekt)', drill: 'article' },
     { id: 'article_accusative', title: en ? 'Accusative (Direct object)' : 'Akkusativ (direktes Objekt)', drill: 'accusative' },
     { id: 'article_dative', title: en ? 'Dative (Indirect object)' : 'Dativ (indirektes Objekt)', soon: true },
@@ -259,7 +310,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   // VIEW 1: GRAMMAR AREA HUB — the parts, each folding open to its exercises.
   // No level bar for now: the verbs are A1.
   if (!activeExerciseMode) {
-    const sections: { id: GrammarSection; title: string; exercises: { id: string; title: string; drill?: 'article' | 'accusative'; soon?: boolean }[] }[] = [
+    const sections: { id: GrammarSection; title: string; exercises: { id: string; title: string; drill?: GrammarDrill; soon?: boolean }[] }[] = [
       { id: 'verb', title: appLanguage === 'en' ? 'Verb' : 'Verben', exercises: verbExercises },
       { id: 'article', title: appLanguage === 'en' ? 'Article' : 'Artikel', exercises: articleExercises },
       { id: 'preposition', title: appLanguage === 'en' ? 'Preposition' : 'Präpositionen', exercises: [] },
@@ -289,7 +340,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
                   <span className="flex items-center gap-1.5">
                   {/* The part's own total, like the Grammar tile on Home, so it shows even when closed */}
                   {(() => {
-                    const drills = section.exercises.map((e) => e.drill).filter(Boolean) as ('article' | 'accusative')[];
+                    const drills = section.exercises.map((e) => e.drill).filter(Boolean) as (GrammarDrill)[];
                     const waiting = drills.reduce((n, d) => n + (drillBadges?.[d]?.waiting ?? 0), 0);
                     const due = drills.reduce((n, d) => n + (drillBadges?.[d]?.due ?? 0), 0);
                     return (
@@ -370,9 +421,37 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
     );
   }
 
+  // Sentence: Practice | Review
+  if (activeExerciseMode === 'sentence_stem') {
+    return (
+      <SentenceView
+        onCorrectAnswer={onCorrectAnswer}
+        onWrongAnswer={onWrongAnswer}
+        onRequestAbandon={onRequestAbandon}
+        onQuizActiveChange={onQuizActiveChange}
+        backHandlerRef={backHandlerRef}
+        appLanguage={appLanguage}
+      />
+    );
+  }
+
+  // Conjugation: Learn | Practice | Review, lesson by lesson
+  if (activeExerciseMode === 'table') {
+    return (
+      <ConjugationView
+        onCorrectAnswer={onCorrectAnswer}
+        onWrongAnswer={onWrongAnswer}
+        onRequestAbandon={onRequestAbandon}
+        onQuizActiveChange={onQuizActiveChange}
+        backHandlerRef={backHandlerRef}
+        appLanguage={appLanguage}
+      />
+    );
+  }
+
   // VIEW 2: ACTIVE EXERCISE SCREEN (No extra banner, fits fixed on screen)
   return (
-    <div className="w-full h-full flex flex-col justify-center py-1 sm:py-2 animate-fadeIn">
+    <div className="w-full h-full flex flex-col justify-start pt-0.5 sm:pt-1 pb-2 animate-fadeIn overflow-hidden">
       {/* MODE 1: FULL TABLE CONJUGATION */}
       {activeExerciseMode === 'table' && (
         <div className="max-w-xl mx-auto w-full bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3">
@@ -581,97 +660,6 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
         </div>
       )}
 
-      {/* MODE 3: SENTENCE WITH STEM */}
-      {activeExerciseMode === 'sentence_stem' && (
-        <div className="max-w-lg mx-auto w-full bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 text-center">
-          <div className="flex items-center justify-between text-xs font-bold text-zinc-400">
-            <span>
-              {appLanguage === 'en' ? 'Sentence' : 'Satz'}{' '}
-              {(stemIndex % SCHRITTE_SENTENCE_STEM_DRILLS.length) + 1}{' '}
-              {appLanguage === 'en' ? 'of' : 'von'} {SCHRITTE_SENTENCE_STEM_DRILLS.length}
-            </span>
-            <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 px-2 py-0.5 rounded-md text-[11px] font-bold border border-zinc-200 dark:border-zinc-700">
-              {appLanguage === 'en' ? 'Lesson' : 'Lektion'} {currentStemExercise.lektion}
-            </span>
-          </div>
-
-          <div className="py-2 space-y-1">
-            <span className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400">
-              {appLanguage === 'en'
-                ? 'Conjugate the verb in brackets:'
-                : 'Konjugiere das Verb in Klammern:'}
-            </span>
-            <h3 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 leading-relaxed tracking-tight">
-              {currentStemExercise.sentenceBefore} (<strong>{currentStemExercise.verbStem}</strong>){' '}
-              {currentStemExercise.sentenceAfter} {currentStemExercise.separableEnd || ''}
-            </h3>
-            <p className="text-xs font-semibold text-zinc-500">
-              👉 "{currentStemExercise.fullEnglish}"
-            </p>
-          </div>
-
-          <form onSubmit={handleStemSubmit} className="space-y-3.5">
-            <input
-              type="text"
-              value={stemInput}
-              disabled={stemChecked}
-              onChange={(e) => setStemInput(e.target.value)}
-              placeholder={
-                appLanguage === 'en'
-                  ? 'Type conjugated verb...'
-                  : 'Richtig konjugiertes Verb eingeben...'
-              }
-              className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 text-center font-bold text-sm focus:border-zinc-950 dark:focus:border-white outline-none text-zinc-900 dark:text-white"
-            />
-
-            {!stemChecked ? (
-              <button
-                type="submit"
-                disabled={!stemInput.trim()}
-                className="w-full py-3 bg-zinc-950 hover:bg-zinc-800 active:scale-98 text-white font-black text-xs rounded-2xl shadow-xs disabled:opacity-50 transition-all cursor-pointer"
-              >
-                {t.checkSentence}
-              </button>
-            ) : (
-              <div className="p-3.5 rounded-2xl border-2 space-y-2.5 bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700">
-                <div className="flex items-center justify-center gap-2">
-                  {stemInput.trim().toLowerCase() === currentStemExercise.expectedAnswer.toLowerCase() ? (
-                    <div className="w-5 h-5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center text-xs font-black">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-zinc-400 text-white flex items-center justify-center text-xs font-black">
-                      <X className="w-3 h-3 stroke-[3]" />
-                    </div>
-                  )}
-                  <p className="font-black text-sm text-zinc-900 dark:text-white">
-                    {stemInput.trim().toLowerCase() === currentStemExercise.expectedAnswer.toLowerCase()
-                      ? appLanguage === 'en'
-                        ? 'Correct conjugation!'
-                        : 'Richtig konjugiert!'
-                      : appLanguage === 'en'
-                      ? `Incorrect. Correct: ${currentStemExercise.expectedAnswer}`
-                      : `Falsch! Richtig: ${currentStemExercise.expectedAnswer}`}
-                  </p>
-                </div>
-                {currentStemExercise.hint && (
-                  <p className="text-[11px] text-zinc-500 font-semibold">
-                    💡 {appLanguage === 'en' ? 'Hint:' : 'Hinweis:'} {currentStemExercise.hint}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={handleNextStem}
-                  className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-all"
-                >
-                  <span>{t.nextSentence}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </form>
-        </div>
-      )}
     </div>
   );
 };

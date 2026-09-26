@@ -198,7 +198,7 @@ export const WritingView: React.FC<WritingViewProps> = ({
               </div>
 
               {/* The prompt, in the middle */}
-              <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col items-center justify-center gap-3 text-center flex-1 min-h-[120px] p-4 sm:p-6">
+              <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col items-center justify-center gap-3 text-center flex-1 min-h-[88px] p-4 sm:p-6">
                 <h3 className="font-black text-zinc-900 dark:text-zinc-100 tracking-tight text-xl sm:text-2xl leading-snug">
                   {translate ? translate.english : question?.question}
                 </h3>
@@ -238,6 +238,7 @@ export const WritingView: React.FC<WritingViewProps> = ({
                       autoFocus
                       autoComplete="off"
                       autoCorrect="off"
+                      autoCapitalize="off"
                       spellCheck={false}
                       enterKeyHint="done"
                       aria-label={en ? 'Your answer' : 'Deine Antwort'}

@@ -193,6 +193,12 @@ def main():
         }
         if sentence:
             entry["sentence"] = sentence
+        # Verbs: ich · du · er/sie/es · wir · ihr · sie/Sie ("-" where a form is not used)
+        present = cell(row, "present tense")
+        if present:
+            forms = [f.strip() for f in present.split("·")]
+            if len(forms) == 6:
+                entry["presentTense"] = forms
         if genders:
             entry["nounDetails"] = {
                 "gender": genders[0],
@@ -204,6 +210,8 @@ def main():
             plural_example = cell(row, "plural example")
             if singular_example:
                 entry["articleSentence"] = singular_example
+                if cell(row, "singular example english"):
+                    entry["articleSentenceEnglish"] = cell(row, "singular example english")
                 # the article becomes the blank: "Der Tisch ist aus Holz." → "___ Tisch ist aus Holz."
                 # The article in front of the noun, not the first article in
                 # the sentence: "Das ist das Ei." must blank the second "das",
@@ -218,6 +226,8 @@ def main():
             accusative_example = cell(row, "accusative example")
             if accusative_example:
                 entry["accusativeSentence"] = accusative_example
+                if cell(row, "accusative example english"):
+                    entry["accusativeSentenceEnglish"] = cell(row, "accusative example english")
                 # "Ich mag den Tisch." → "Ich mag {{blank}} Tisch." (den / die / das)
                 blanked = ""
                 for g in genders:
@@ -228,6 +238,9 @@ def main():
                     entry["accusativeSentenceBlank"] = blanked
             if plural_example:
                 entry["pluralSentence"] = plural_example
+                english = cell(row, "plural example english")
+                if english:
+                    entry["pluralSentenceEnglish"] = english
                 bare = re.sub(r"^die\s+", "", plural_variants[0] if plural_variants else "", flags=re.I).strip()
                 blanked = blank_out(plural_example, bare)
                 if blanked:
@@ -248,6 +261,7 @@ def main():
     print(f"article drill ready:   {sum(1 for w in nouns if w.get('articleSentenceBlank'))}")
     print(f"plural drill ready:    {sum(1 for w in nouns if w.get('pluralSentenceBlank'))}")
     print(f"accusative ready:      {sum(1 for w in nouns if w.get('accusativeSentenceBlank'))}")
+    print(f"verbs with present:    {sum(1 for w in words if w.get('presentTense'))}")
     print(f"Intro words:           {sum(1 for w in words if w['lektion'] == 0)}")
     print(f"written to {OUT.relative_to(OUT.parent.parent.parent)}  ({OUT.stat().st_size // 1024} KB)")
 

@@ -28,6 +28,7 @@ import {
   fillBlank,
   pluralSentence,
 } from '../data/nounDrillSentences';
+import { NounChangeLearn } from './NounChangeLearn';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
 import { checkEnglish, checkEnglishPair, checkGerman, englishSenses, meaningLines } from '../utils/answerCheck';
 import { highlightWord, stemLabel } from '../utils/sentenceParts';
@@ -109,7 +110,7 @@ const SentenceWithWord: React.FC<{ sentence: string; word: WordEntry; className?
  * gives it, most-used first. The "— picture labels (LWS 4)" tails are the
  * book's own cross-references and mean nothing here, so they are cut.
  */
-const lessonTopics = (words: WordEntry[], limit = 2): string => {
+export const lessonTopics = (words: WordEntry[], limit = 2): string => {
   const counts = new Map<string, number>();
   for (const word of words) {
     const group = word.category?.split('—')[0].trim();
@@ -527,7 +528,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // (nouns from lessons finished in Flashcard Practice, scheduled like Flashcard Review).
   /** Drill practice waits on its Start screen too, like Flashcard's. */
   const [drillStarted, setDrillStarted] = useState(false);
-  const [drillSubMode, setDrillSubMode] = useState<'practice' | 'review'>(() => {
+  // Accusative and Special Article also have Learn: the nouns that change (den Kollegen).
+  const [drillSubMode, setDrillSubMode] = useState<'learn' | 'practice' | 'review'>(() => {
     try {
       return localStorage.getItem('schritte_saved_drill_submode') === 'review' ? 'review' : 'practice';
     } catch {
@@ -560,6 +562,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       ? 'weak'
       : null;
   const isDrillReview = activeDrillSkill !== null && drillSubMode === 'review';
+  const drillHasLearn = activeDrillSkill === 'accusative' || activeDrillSkill === 'weak';
+  // Accusative and Special Article open on Learn, as Flashcard does; the others have none.
+  useEffect(() => {
+    if (drillHasLearn) setDrillSubMode('learn');
+    else setDrillSubMode((m) => (m === 'learn' ? 'practice' : m));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDrillSkill]);
 
   // One session engine for both modes, a fixed list picked when the session starts:
   // - Practice: every noun of the chosen lesson; mistakes come back until they're right. Finishing
@@ -622,7 +631,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // New session when the drill, the mode, or (in Practice) the chosen lesson changes — not on every answer.
   const practiceListKey = activeDrillSkill ? drillPracticeList(activeDrillSkill).map((w) => w.id).join(',') : '';
   useEffect(() => {
-    if (activeDrillSkill) startDrillSession(activeDrillSkill, drillSubMode);
+    if (activeDrillSkill) startDrillSession(activeDrillSkill, drillSubMode === 'review' ? 'review' : 'practice');
     setDrillStarted(false); // back to the Start screen whenever the session is rebuilt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDrillSkill, drillSubMode, practiceListKey]);
@@ -980,6 +989,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   const handleNextFlashcard = () => {
     playSound('tap');
+    cancelFlip();
     setPracticeFeedback(null);
     setPracticeTypeInput('');
     setPracticeTypeInput2('');
@@ -998,6 +1008,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   const handlePrevFlashcard = () => {
     playSound('tap');
+    cancelFlip();
     setPracticeFeedback(null);
     setPracticeTypeInput('');
     setPracticeTypeInput2('');
@@ -1089,14 +1100,54 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     },
   };
 
+  // Learn: the card turns over like a real one. It rotates edge-on (90°), the
+  // other side is put in while nobody can see it, and it comes round from -90°
+  // to face you — so no side is ever shown mirrored. A tap mid-turn finishes
+  // that turn at once and starts the next, so fast tapping never waits.
+  const FLIP_MS = 130;
+  const [flip, setFlip] = useState<{ deg: number; animate: boolean }>({ deg: 0, animate: false });
+  const flipTimer = useRef<number | null>(null);
+  const cancelFlip = () => {
+    if (flipTimer.current !== null) window.clearTimeout(flipTimer.current);
+    flipTimer.current = null;
+    setFlip({ deg: 0, animate: false });
+  };
+  const flipCard = () => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (flipTimer.current !== null) {
+      // Mid-turn: land that turn now, then do this one.
+      window.clearTimeout(flipTimer.current);
+      flipTimer.current = null;
+      setIsCardFlipped((f) => !f);
+    }
+    if (reduceMotion) {
+      setIsCardFlipped((f) => !f);
+      return;
+    }
+    setFlip({ deg: 90, animate: true });
+    flipTimer.current = window.setTimeout(() => {
+      flipTimer.current = null;
+      setIsCardFlipped((f) => !f);
+      setFlip({ deg: -90, animate: false });
+      requestAnimationFrame(() => requestAnimationFrame(() => setFlip({ deg: 0, animate: true })));
+    }, FLIP_MS);
+  };
+  const flipTransform = `perspective(900px) rotateY(${flip.deg}deg)`;
+
   const cardSlideStyle: React.CSSProperties =
     cardSlide.phase === 'out'
       ? { transform: `translateX(${cardSlide.dir * 110}%)`, opacity: 0, transition: `transform ${SLIDE_MS}ms ease-in, opacity ${SLIDE_MS}ms ease-in` }
       : cardSlide.phase === 'in'
       ? { transform: `translateX(${-cardSlide.dir * 110}%)`, opacity: 0, transition: 'none' }
       : {
-          transform: `translateX(${cardDragX}px) rotate(${cardDragX / 40}deg)`,
-          transition: cardDragStart.current ? 'none' : `transform ${SLIDE_MS}ms ease-out, opacity ${SLIDE_MS}ms ease-out`,
+          transform: `translateX(${cardDragX}px) rotate(${cardDragX / 40}deg) ${flipTransform}`,
+          transition: cardDragStart.current
+            ? 'none'
+            : flip.deg !== 0 || flip.animate
+            ? flip.animate
+              ? `transform ${FLIP_MS}ms ${flip.deg === 0 ? 'ease-out' : 'ease-in'}`
+              : 'none'
+            : `transform ${SLIDE_MS}ms ease-out, opacity ${SLIDE_MS}ms ease-out`,
         };
 
   /**
@@ -1177,7 +1228,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const leaveDrillSession = () => {
     pluralRecognitionRef.current?.stop();
     setIsPluralListening(false);
-    if (activeDrillSkill) startDrillSession(activeDrillSkill, drillSubMode);
+    if (activeDrillSkill) startDrillSession(activeDrillSkill, drillSubMode === 'review' ? 'review' : 'practice');
     setDrillStarted(false);
   };
 
@@ -1330,7 +1381,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         if (matchesKey(hotkeys.flip)) {
           e.preventDefault();
           playSound('tap');
-          setIsCardFlipped((prev) => !prev);
+          flipCard();
         } else if (matchesKey(hotkeys.next)) {
           e.preventDefault();
           handleNextFlashcard();
@@ -1614,15 +1665,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const availableExercises = [
     {
       id: 'explorer',
-      title: 'Flashcard',
+      title: 'Words',
     },
     {
       id: 'plural_drill',
       title: 'Plural',
-    },
-    {
-      id: 'weak_nouns',
-      title: 'Weak Nouns',
     },
   ];
 
@@ -1632,7 +1679,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       <div className="w-full h-full flex flex-col justify-center items-center gap-4 py-2 animate-fadeIn overflow-hidden">
         {/* Available Exercises Grid (Exactly 3 Boxes - 1 Word/Title Each) */}
         {/* Der / Die / Das lives in Grammar now, as Article · Nominative */}
-        <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
+        <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
           {availableExercises.map((ex) => (
             <button
               key={ex.id}
@@ -2043,7 +2090,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
           : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
       }`;
-    const choose = (mode: 'practice' | 'review') => {
+    const choose = (mode: 'learn' | 'practice' | 'review') => {
       if (mode === drillSubMode) return;
       playSound('tap');
       setBlitzFeedback(null);
@@ -2053,7 +2100,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     };
     return (
       <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
-        <div className="grid grid-cols-2 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
+        <div
+          className={`grid ${drillHasLearn ? 'grid-cols-3' : 'grid-cols-2'} gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs`}
+        >
+          {drillHasLearn && (
+            <button type="button" onClick={() => choose('learn')} className={pill(drillSubMode === 'learn')}>
+              <span>{appLanguage === 'en' ? 'Learn' : 'Lernen'}</span>
+            </button>
+          )}
           <button type="button" onClick={() => choose('practice')} className={pill(drillSubMode === 'practice')}>
             <span>{appLanguage === 'en' ? 'Practice' : 'Üben'}</span>
             {waiting > 0 && (
@@ -2354,7 +2408,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 /* LEARN SUB-MODE: Layout adhering to reference card specification */
                 <>
                   {/* Top Info Bar: Progress Counter & Direction Toggle (styled matching Practice & Review) */}
-                <div className="flex items-center justify-between text-xs font-bold text-zinc-400 mb-2 shrink-0">
+                {/* Direction on the left, the counter in the middle (the lesson bar above says which lesson) */}
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-bold text-zinc-400 mb-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -2362,7 +2417,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       setIsCardFlipped(false);
                       setLearnDirection((prev) => (prev === 'DE_TO_EN' ? 'EN_TO_DE' : 'DE_TO_EN'));
                     }}
-                    className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer active:scale-95 transition-all"
+                    className="justify-self-start px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer active:scale-95 transition-all"
                     title={
                       learnDirection === 'DE_TO_EN'
                         ? (appLanguage === 'en' ? 'Click to switch to EN → DE' : 'Klicken für EN → DE')
@@ -2375,6 +2430,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
                     {flashcardIndex + 1} / {filteredWords.length}
                   </span>
+                  <span />
                 </div>
 
                 {/* Interactive Flip Card */}
@@ -2391,7 +2447,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           return; // that was a swipe, not a tap
                         }
                         playSound('tap');
-                        setIsCardFlipped(!isCardFlipped);
+                        flipCard();
                       }}
                       style={{ ...cardSlideStyle, touchAction: 'pan-y' }}
                       className="flex-1 min-h-[220px] sm:min-h-[260px] p-5 sm:p-7 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-between cursor-pointer hover:border-zinc-950 dark:hover:border-white select-none group"
@@ -3294,12 +3350,22 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 cards are up it is the header, the card and the answers — the
                 back arrow takes you out to the Start screen again. Review with
                 nothing to review never starts, so it keeps its bars. */}
-            {(!drillStarted || emptyPractice || (isDrillReview && drillQueue.length === 0)) && (
+            {(drillSubMode === 'learn' || !drillStarted || emptyPractice || (isDrillReview && drillQueue.length === 0)) && (
               <>
                 {renderDrillModeSwitch()}
-                {drillSubMode === 'practice' && renderVocabFilterBar()}
+                {drillSubMode !== 'review' && renderVocabFilterBar()}
               </>
             )}
+            {drillSubMode === 'learn' ? (
+              <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <NounChangeLearn
+                  nouns={weakNouns}
+                  where={`${selectedLevel}${typeof selectedLektion === 'number' ? ` · ${selectedLektion === 0 ? 'Intro' : `L${selectedLektion}`}` : ''}`}
+                  onGoToPractice={() => setDrillSubMode('practice')}
+                  appLanguage={appLanguage}
+                />
+              </div>
+            ) : (
             <form
               onSubmit={(e) => {
                 if (isArticle) e.preventDefault();
@@ -3328,7 +3394,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             : isArticle
                             ? appLanguage === 'en' ? 'Der, die or das' : 'Der, die oder das'
                             : isWeakDrill
-                            ? appLanguage === 'en' ? 'Weak nouns' : 'n-Deklination'
+                            ? appLanguage === 'en' ? 'Special article' : 'Besonderer Artikel'
                             : appLanguage === 'en' ? 'Plurals' : 'Pluralformen')}
                     </p>
                     <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
@@ -3419,6 +3485,25 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       </span>
                       {after}
                     </p>
+                    {/* The sentence's English, as Sentence shows it (Plural, Nominative, Accusative) */}
+                    {(() => {
+                      const english =
+                        activeDrillSkill === 'plural'
+                          ? noun?.pluralSentenceEnglish
+                          : activeDrillSkill === 'article'
+                          ? noun?.articleSentenceEnglish
+                          : activeDrillSkill === 'accusative'
+                          ? noun?.accusativeSentenceEnglish
+                          : undefined;
+                      // Only when the drill shows the word list's own sentence, which is what was translated
+                      const own =
+                        activeDrillSkill === 'article'
+                          ? !!noun?.articleSentenceBlank && sentence === noun.articleSentenceBlank
+                          : true;
+                      return english && own ? (
+                        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 text-center">({english})</p>
+                      ) : null;
+                    })()}
                     {answered && noun && (
                       <button
                         type="button"
@@ -3516,6 +3601,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </>
               ))}
             </form>
+            )}
           </div>
         );
       })()}

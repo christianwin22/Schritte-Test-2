@@ -11,6 +11,12 @@ interface DuolingoTopBarProps {
   onBack?: () => void;
   onGoHome?: () => void;
   title?: string;
+  /**
+   * The title as tappable parts: "Grammar • Conjugation" — Grammar goes to the
+   * Grammar page, Conjugation to that exercise's own page. Each part grows a
+   * little under the pointer. Without an onClick a part is plain text.
+   */
+  crumbs?: { label: string; onClick?: () => void }[];
   appLanguage?: AppLanguage;
   currentTab?: string;
   /** Rendered on the right, before Back/Profile (the 'note an idea' button). */
@@ -23,6 +29,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
   onBack,
   onGoHome,
   title,
+  crumbs,
   appLanguage = 'en',
   currentTab = 'home',
   extraAction,
@@ -53,9 +60,36 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
 
         {/* Center: the title sits in the middle of the bar, whatever is beside it */}
         <div className="absolute left-1/2 -translate-x-1/2 max-w-[55%] px-2 text-center pointer-events-none">
-          <span className="block truncate text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-            {title || 'Deutsche Meister'}
-          </span>
+          {crumbs && crumbs.length > 0 ? (
+            <span className="flex items-center justify-center gap-1 min-w-0 text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+              {crumbs.map((crumb, i) => (
+                <React.Fragment key={`${crumb.label}-${i}`}>
+                  {i > 0 && <span className="text-zinc-400 shrink-0">•</span>}
+                  {crumb.onClick ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('tap');
+                        crumb.onClick?.();
+                      }}
+                      // The section name stays whole; a long exercise name is the one that shortens.
+                      className={`pointer-events-auto cursor-pointer rounded-md px-0.5 transition-transform duration-150 hover:scale-110 active:scale-95 focus-visible:outline-2 focus-visible:outline-zinc-400 ${
+                        i === 0 ? 'shrink-0' : 'truncate min-w-0'
+                      }`}
+                    >
+                      {crumb.label}
+                    </button>
+                  ) : (
+                    <span className="truncate">{crumb.label}</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </span>
+          ) : (
+            <span className="block truncate text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+              {title || 'Deutsche Meister'}
+            </span>
+          )}
         </div>
 
         {/* Right: Profile on Main Home page; Back button inside any section */}

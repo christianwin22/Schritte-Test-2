@@ -34,6 +34,9 @@ const GRAMMAR_ARTICLE_DRILLS: Record<string, string> = {
   article_accusative: 'accusative_drill',
 };
 
+/** Pages inside pages: back (and the middle of the title) goes to the one above. */
+const EXERCISE_PARENT: Record<string, string> = {};
+
 const VOCAB_STORAGE_KEY = 'deutschmeister_custom_vocab_v2';
 const STREAK_STORAGE_KEY = 'deutschmeister_streak_v2';
 const XP_STORAGE_KEY = 'deutschmeister_xp_v2';
@@ -191,7 +194,7 @@ export default function App() {
   const globalDueCount = useMemo(() => {
     const flashcards = INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id])).length;
     const drills = Object.keys(fsrsRecords).filter(
-      (id) => /^(plural|weak):/.test(id) && isCardDueForReview(fsrsRecords[id])
+      (id) => /^plural:/.test(id) && isCardDueForReview(fsrsRecords[id])
     ).length;
     return flashcards + drills;
   }, [fsrsRecords]);
@@ -203,9 +206,15 @@ export default function App() {
     return {
       article: { due: due('article'), waiting: readyLessons(drillPractice, 'article').length },
       accusative: { due: due('accusative'), waiting: readyLessons(drillPractice, 'accusative').length },
+      conj: { due: due('conj'), waiting: 0 },
+      sentence: { due: due('sentence'), waiting: 0 },
     };
   }, [fsrsRecords, drillPractice]);
-  const grammarDueCount = grammarDrillBadges.article.due + grammarDrillBadges.accusative.due;
+  const grammarDueCount =
+    grammarDrillBadges.article.due +
+    grammarDrillBadges.accusative.due +
+    grammarDrillBadges.conj.due +
+    grammarDrillBadges.sentence.due;
 
   // Persist State Changes
   useEffect(() => {
@@ -374,12 +383,17 @@ export default function App() {
   // Top Bar Back button handler
   const handleTopBack = () => {
     if (activeExerciseMode && exerciseBackRef.current?.()) return;
+    const up = activeExerciseMode ? EXERCISE_PARENT[activeExerciseMode] ?? null : null;
     if (isQuizActive) {
       setPendingAbandonCallback(() => () => {
         setIsQuizActive(false);
-        setActiveExerciseMode(null);
+        setActiveExerciseMode(up);
       });
       setIsAbandonModalOpen(true);
+      return;
+    }
+    if (up) {
+      setActiveExerciseMode(up);
       return;
     }
     if (activeExerciseMode) {
@@ -398,6 +412,54 @@ export default function App() {
       setCurrentTab('home');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  // The top bar's title, part by part. "Grammar" leaves the exercise for the
+  // Grammar page; "Conjugation" goes to that exercise's own (Start) page. Both
+  // ask first exactly when the back arrow would.
+  const handleCrumbToSection = () => {
+    if (!activeExerciseMode) return;
+    if (isQuizActive) {
+      setPendingAbandonCallback(() => () => {
+        setIsQuizActive(false);
+        setActiveExerciseMode(null);
+      });
+      setIsAbandonModalOpen(true);
+      return;
+    }
+    setActiveExerciseMode(null);
+  };
+  const handleCrumbToExercise = () => {
+    exerciseBackRef.current?.(); // nothing to do when already on its page
+  };
+  const getTopBarCrumbs = () => {
+    const title = getTopBarTitle();
+    if (!title) return undefined;
+    const parts = title.split(' • ');
+    const parent = activeExerciseMode ? EXERCISE_PARENT[activeExerciseMode] : undefined;
+    const toParent = () => {
+      if (!parent) return;
+      if (isQuizActive) {
+        setPendingAbandonCallback(() => () => {
+          setIsQuizActive(false);
+          setActiveExerciseMode(parent);
+        });
+        setIsAbandonModalOpen(true);
+        return;
+      }
+      setActiveExerciseMode(parent);
+    };
+    return parts.map((label, i) => ({
+      label,
+      onClick:
+        parts.length === 1
+          ? undefined
+          : i === 0
+          ? handleCrumbToSection
+          : i < parts.length - 1
+          ? toParent
+          : handleCrumbToExercise,
+    }));
   };
 
   const handleRequestAbandon = (onConfirmLeave: () => void) => {
@@ -425,16 +487,15 @@ export default function App() {
   const getTopBarTitle = () => {
     if (activeExerciseMode) {
       if (currentTab === 'vocab') {
-        if (activeExerciseMode === 'explorer') return 'Vocabulary • Flashcard';
+        if (activeExerciseMode === 'explorer') return 'Vocabulary • Words';
         if (activeExerciseMode === 'gender_blitz') return 'Vocabulary • Der / Die / Das';
         if (activeExerciseMode === 'plural_drill') return 'Vocabulary • Plural';
-        if (activeExerciseMode === 'weak_nouns') return 'Vocabulary • Weak Nouns';
         return 'Vocabulary';
       }
       if (currentTab === 'grammar') {
         if (activeExerciseMode === 'table') return 'Grammar • Conjugation';
         if (activeExerciseMode === 'single_pronoun') return 'Grammar • Single Conjugation';
-        if (activeExerciseMode === 'sentence_stem') return 'Grammar • Sentence with Verb Stem';
+        if (activeExerciseMode === 'sentence_stem') return 'Grammar • Sentence';
         if (activeExerciseMode === 'article_nominative') return 'Grammar • Nominative';
         if (activeExerciseMode === 'article_accusative') return 'Grammar • Accusative';
         return 'Grammar';
@@ -482,6 +543,7 @@ export default function App() {
         onBack={handleTopBack}
         onGoHome={handleGoHome}
         title={getTopBarTitle()}
+        crumbs={getTopBarCrumbs()}
         extraAction={
           // Inside an exercise there is no spare room, so the button rides in the top bar.
           roomForFloatingButton ? undefined : (
@@ -520,9 +582,11 @@ export default function App() {
               gems={gems}
               vocabCount={vocabulary.length}
               dueReviewCount={globalDueCount}
-              lessonsToPractiseCount={readyLessons(drillPractice, 'plural').length + readyLessons(drillPractice, 'weak').length}
+              lessonsToPractiseCount={readyLessons(drillPractice, 'plural').length}
               grammarDueCount={grammarDueCount}
-              grammarLessonsToPractiseCount={grammarDrillBadges.article.waiting + grammarDrillBadges.accusative.waiting}
+              grammarLessonsToPractiseCount={
+                grammarDrillBadges.article.waiting + grammarDrillBadges.accusative.waiting
+              }
               appLanguage={appLanguage}
             />
           )}
@@ -566,14 +630,15 @@ export default function App() {
           {currentTab === 'grammar' && !GRAMMAR_ARTICLE_DRILLS[activeExerciseMode ?? ''] && (
             <SchritteGrammarView
               drillBadges={grammarDrillBadges}
+              backHandlerRef={exerciseBackRef}
               onCorrectAnswer={handleCorrectAnswer}
               onWrongAnswer={handleWrongAnswer}
               activeExerciseMode={activeExerciseMode}
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
-              onQuizActiveChange={(active) => {
+              onQuizActiveChange={(active, saved) => {
                 setIsQuizActive(active);
-                setQuizProgressSaved(false);
+                setQuizProgressSaved(!!saved);
               }}
               appLanguage={appLanguage}
             />

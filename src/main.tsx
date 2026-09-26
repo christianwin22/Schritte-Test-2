@@ -15,9 +15,20 @@ import { forgetStoredSessions } from './lib/knownAccounts';
  */
 function trackVisibleHeight(): void {
   const vv = window.visualViewport;
+  // The tallest the screen has been in this orientation: the height with no keyboard.
+  let fullHeight = vv?.height ?? window.innerHeight;
   const apply = () => {
     const height = vv?.height ?? window.innerHeight;
+    fullHeight = Math.max(fullHeight, height);
     document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
+    /*
+     * An on-screen keyboard is up when a text box has focus and the screen has
+     * lost a keyboard's worth of height. A hardware keyboard (Mac, or an iPad
+     * with one attached) takes no room — at most a thin shortcut bar — so it
+     * never counts, and those keep the roomy layout.
+     */
+    const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName ?? '');
+    document.documentElement.dataset.keyboard = typing && fullHeight - height > 150 ? '1' : '0';
     /*
      * Two steps, not one. Short of room, the bars shrink but stay readable —
      * which mode you are in is worth keeping in view. Only when even that will
@@ -33,7 +44,15 @@ function trackVisibleHeight(): void {
   apply();
   vv?.addEventListener('resize', apply);
   vv?.addEventListener('scroll', apply);
-  window.addEventListener('orientationchange', () => setTimeout(apply, 250));
+  window.addEventListener('orientationchange', () =>
+    setTimeout(() => {
+      fullHeight = vv?.height ?? window.innerHeight; // a new orientation, a new full height
+      apply();
+    }, 250)
+  );
+  // Focus moving in or out of a box can raise or drop the keyboard.
+  document.addEventListener('focusin', () => setTimeout(apply, 50));
+  document.addEventListener('focusout', () => setTimeout(apply, 50));
 }
 
 trackVisibleHeight();

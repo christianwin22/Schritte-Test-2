@@ -62,12 +62,20 @@ export interface WordEntry {
   /** Der/Die/Das drill: the sentence, and the same with {{blank}} in place of the article. */
   articleSentence?: string;
   articleSentenceBlank?: string;
+  /** Its English ("The table is new."). */
+  articleSentenceEnglish?: string;
+  /** Verbs: ich, du, er/sie/es, wir, ihr, sie/Sie — "-" where a form is not used (es regnet). */
+  presentTense?: string[];
   /** Accusative drill: the sentence, and the same with {{blank}} in place of den / die / das. */
   accusativeSentence?: string;
   accusativeSentenceBlank?: string;
+  /** Its English ("I like the table."). */
+  accusativeSentenceEnglish?: string;
   /** Plural drill: the sentence, and the same with {{blank}} in place of the plural. */
   pluralSentence?: string;
   pluralSentenceBlank?: string;
+  /** Its English, shown under the sentence ("Where are the pictures?"). */
+  pluralSentenceEnglish?: string;
   lemma: string; // e.g. "Zug", "ankommen", "schön"
   translation: string; // English translation
   level: CEFRLevel;
