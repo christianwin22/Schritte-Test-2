@@ -210,5 +210,27 @@ check('your real progress is back', storage.getItem(STREAK) === '7');
 check('...all of it', storage.getItem(REVIEW) === BIG);
 check('the sandbox copy is the thing dropped', storage.getItem('cpa_sandbox_data') === null);
 
+console.log('\nSigning in on a second device is not undone by an old "Keep this one"');
+reset();
+storage.quota = Infinity;
+table.clear();
+// Device A chose "Keep this one" long ago; that note sits in the synced progress.
+table.set('u-take', {
+  data: { deutschmeister_active_device_v1: JSON.stringify({ device: 'device-A', at: Date.now() - 86_400_000 }) },
+  updated_at: new Date().toISOString(),
+});
+storage.setItem('cpa_device_id', 'device-B');
+await sync.restoreForUser('u-take'); // device B signs in now
+check('an old claim does not sign the new device out', (await sync.wasTakenOver('u-take')) === false);
+// An old-style note with no time is ignored too.
+table.get('u-take')!.data.deutschmeister_active_device_v1 = 'device-A';
+check('an old note with no time never signs anyone out', (await sync.wasTakenOver('u-take')) === false);
+// Device A presses "Keep this one" *after* B signed in: now B should leave.
+table.get('u-take')!.data.deutschmeister_active_device_v1 = JSON.stringify({ device: 'device-A', at: Date.now() + 1000 });
+check('a claim made after this sign-in still takes over', (await sync.wasTakenOver('u-take')) === true);
+// The device that claimed is never thrown out by its own claim.
+storage.setItem('cpa_device_id', 'device-A');
+check('the claiming device stays', (await sync.wasTakenOver('u-take')) === false);
+
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

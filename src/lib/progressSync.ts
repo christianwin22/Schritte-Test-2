@@ -32,19 +32,41 @@ export function deviceId(): string {
   return id;
 }
 
+/**
+ * When this browser signed in (not synced). A claim only counts if it was made
+ * after this — so the note "device X is in charge", which stays in the synced
+ * progress, can't sign out every device that logs in later. That was the bug:
+ * a new sign-in copied the old note down and was thrown out within seconds,
+ * over and over.
+ */
+const SIGNED_IN_AT_KEY = 'cpa_signed_in_at';
+
+function signedInAt(): number {
+  const at = Number(localStorage.getItem(SIGNED_IN_AT_KEY));
+  return Number.isFinite(at) && at > 0 ? at : 0;
+}
+
 /** Marks this device as the one in charge, and saves that with the progress. */
 export async function claimAccount(userId: string): Promise<boolean> {
-  localStorage.setItem(ACTIVE_DEVICE_KEY, deviceId());
+  localStorage.setItem(ACTIVE_DEVICE_KEY, JSON.stringify({ device: deviceId(), at: Date.now() }));
   return pushSnapshot(userId, takeSnapshot());
 }
 
-/** True when another device has claimed the account since. */
+/** True when another device has claimed the account since this one signed in. */
 export async function wasTakenOver(userId: string): Promise<boolean> {
   if (!client) return false;
   try {
     const { snapshot } = await pullRemote(userId);
-    const active = snapshot?.[ACTIVE_DEVICE_KEY];
-    return !!active && active !== deviceId();
+    const raw = snapshot?.[ACTIVE_DEVICE_KEY];
+    if (!raw) return false;
+    let claim: { device?: string; at?: number } = {};
+    try {
+      claim = JSON.parse(raw);
+    } catch {
+      return false; // an old-style note, with no time: never grounds for signing anyone out
+    }
+    if (!claim.device || claim.device === deviceId()) return false;
+    return typeof claim.at === 'number' && claim.at > signedInAt();
   } catch {
     return false;
   }
@@ -202,6 +224,8 @@ export async function restoreForUser(userId: string): Promise<void> {
   }
 
   localStorage.setItem(OWNER_KEY, userId);
+  // First time this browser has this account: remember when (see SIGNED_IN_AT_KEY).
+  if (!signedInAt() || belongsToSomeoneElse) localStorage.setItem(SIGNED_IN_AT_KEY, String(Date.now()));
 }
 
 /** What the app is told when a second device turns out to have been used. */
@@ -286,6 +310,7 @@ export async function signOutAndClear(userId: string): Promise<boolean> {
   clearAppData();
   localStorage.removeItem(OWNER_KEY);
   localStorage.removeItem(DIRTY_KEY);
+  localStorage.removeItem(SIGNED_IN_AT_KEY);
   // Local only: this device forgets you. A global sign-out would also revoke
   // the tokens on your other phone or laptop, which is not what Log out here
   // should mean — and it would kill a session kept for switching accounts.
