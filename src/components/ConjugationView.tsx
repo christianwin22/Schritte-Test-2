@@ -14,6 +14,7 @@ import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
 import { lessonTopics } from './SchritteVocabView';
 import { LearnPager } from './LearnPager';
+import { LessonFilter, LessonPick, inPick, parsePick, pickLabel } from './LessonFilter';
 import { useAuth } from './AuthGate';
 import { loadExerciseReady, markExerciseDone, readyKey, readyLessonKeys } from '../utils/exerciseReady';
 
@@ -183,25 +184,20 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   const [level, setLevel] = useState<CEFRLevel>(() =>
     readStored<CEFRLevel>('schritte_conj_level', 'A1', (v) => (['A1', 'A2', 'B1'].includes(v) ? (v as CEFRLevel) : null))
   );
-  // Every lesson of the level is listed; the ones without verbs are greyed and can't be picked.
-  const allLessonsOfLevel = useMemo(
-    () => [...new Set(INITIAL_VOCABULARY.filter((w) => w.level === level).map((w) => w.lektion ?? 0))].sort((a, b) => a - b),
-    [level]
-  );
+  // Lessons with verbs in this tense; the rest are greyed in the filter and can't be picked.
+  const lessonsWithVerbs = useMemo(() => new Set(TENSE_VERBS.map((v) => readyKey(v.level, v.lektion ?? 0))), [TENSE_VERBS]);
   const lessonsOfLevel = useMemo(
     () => [...new Set(TENSE_VERBS.filter((v) => v.level === level).map((v) => v.lektion ?? 0))].sort((a, b) => a - b),
     [level, TENSE_VERBS]
   );
-  // Lessons waiting here since their Words Practice (amber)
+  // Lessons waiting here since their Words Practice (amber), and the ones done here (grey)
   const [ready, setReady] = useState(() => loadExerciseReady());
   const readyKeys = useMemo(() => new Set(readyLessonKeys(ready, readyExercise)), [ready, readyExercise]);
-  const [lesson, setLesson] = useState<number>(() =>
-    readStored<number>('schritte_conj_lesson', 1, (v) => (Number.isFinite(Number(v)) ? Number(v) : null))
-  );
-  const activeLesson =
+  const [lesson, setLesson] = useState<LessonPick>(() => readStored<LessonPick>('schritte_conj_lesson', 1, parsePick));
+  const activeLesson: LessonPick =
     isSandbox && lesson === TEST_LESSON
       ? TEST_LESSON
-      : lessonsOfLevel.includes(lesson)
+      : typeof lesson !== 'number' || lessonsOfLevel.includes(lesson)
       ? lesson
       : lessonsOfLevel.find((l) => l > 0) ?? lessonsOfLevel[0] ?? 1;
   useEffect(() => {
@@ -212,7 +208,6 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
       // ignore
     }
   }, [level, activeLesson]);
-  const [isLessonOpen, setIsLessonOpen] = useState(false);
 
   const lessonVerbs = useMemo(
     () =>
@@ -220,7 +215,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
         ? fixedVerbs
         : activeLesson === TEST_LESSON
         ? longestTen(tense)
-        : TENSE_VERBS.filter((v) => v.level === level && (v.lektion ?? 0) === activeLesson),
+        : TENSE_VERBS.filter((v) => v.level === level && inPick(v.lektion ?? 0, activeLesson)),
     [fixedVerbs, level, activeLesson, TENSE_VERBS, tense]
   );
 
@@ -416,7 +411,9 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
       const ids = sessionVerbs.map((v) => cardId(v.id));
       updateRecords((prev) => unlockWordsAfterPractice(ids, prev));
       // A lesson practised here is done: its amber notice goes.
-      if (!fixed && activeLesson !== TEST_LESSON) setReady(markExerciseDone(readyExercise, [readyKey(level, activeLesson)]));
+      // (A1.1, A1.2 or All: every lesson in it)
+      if (!fixed && activeLesson !== TEST_LESSON)
+        setReady(markExerciseDone(readyExercise, [...new Set(sessionVerbs.map((v) => readyKey(v.level, v.lektion ?? 0)))]));
     }
   };
 
@@ -473,8 +470,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   }, [autoplayVerb]);
 
   // --- Pieces ------------------------------------------------------------------------
-  const lessonLabel = (l: number) =>
-    l === TEST_LESSON ? (en ? 'Test · 10 longest' : 'Test · 10 längste') : l === 0 ? 'Intro' : `${en ? 'Lesson' : 'Lektion'} ${l}`;
+  const lessonLabel = (l: LessonPick) => (l === TEST_LESSON ? (en ? 'Test · 10 longest' : 'Test · 10 längste') : pickLabel(l, level, en));
   const pill = (active: boolean) =>
     `py-1.5 px-2 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
       active
@@ -507,104 +503,39 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     </div>
   );
 
+  // The same level + lesson filter as everywhere else
   const filterBar = (
-    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2">
-      <div className="flex flex-row items-center justify-between gap-1 sm:gap-2">
-        <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shrink-0">
-          {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
-            <button
-              key={lvl}
-              type="button"
-              onClick={() => {
-                playSound('tap');
-                setLevel(lvl);
-              }}
-              className={`relative px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                level === lvl
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                  : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
-              }`}
-            >
-              {lvl}
-              {[...readyKeys].some((k) => k.startsWith(`${lvl}-`)) && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white dark:ring-zinc-900" />
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              playSound('tap');
-              setIsLessonOpen((o) => !o);
-            }}
-            className={`px-2.5 sm:px-3 py-1 font-black text-xs rounded-xl shadow-xs border flex items-center gap-1.5 transition-all cursor-pointer ${
-              readyKeys.has(readyKey(level, activeLesson))
-                ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border-amber-500'
-                : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700'
-            }`}
-          >
-            <span>{lessonLabel(activeLesson)}</span>
-            <ChevronDown className={`w-3 h-3 text-zinc-500 transition-transform ${isLessonOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {isLessonOpen && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={() => setIsLessonOpen(false)} />
-              <div className="absolute right-0 mt-1.5 z-30 w-72 bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 animate-fadeIn">
-                {isSandbox && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('tap');
-                      setLesson(TEST_LESSON);
-                      setIsLessonOpen(false);
-                    }}
-                    className={`w-full mb-2 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer border border-dashed ${
-                      activeLesson === TEST_LESSON
-                        ? 'bg-amber-400 text-amber-950 border-amber-500'
-                        : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-                    }`}
-                  >
-                    {lessonLabel(TEST_LESSON)}
-                  </button>
-                )}
-                <div className="grid grid-cols-7 gap-1.5">
-                  {allLessonsOfLevel.map((l) => {
-                    // No verbs in this lesson: greyed, and it can't be picked
-                    const has = lessonsOfLevel.includes(l);
-                    const waiting = readyKeys.has(readyKey(level, l));
-                    return (
-                      <button
-                        key={l}
-                        type="button"
-                        disabled={!has}
-                        onClick={() => {
-                          playSound('tap');
-                          setLesson(l);
-                          setIsLessonOpen(false);
-                        }}
-                        className={`py-1.5 rounded-lg text-xs font-black transition-all ${l === 0 ? 'col-span-2' : ''} ${
-                          !has
-                            ? 'bg-zinc-50 dark:bg-zinc-800/40 text-zinc-300 dark:text-zinc-600 cursor-not-allowed'
-                            : l === activeLesson
-                            ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs cursor-pointer ${waiting ? 'ring-2 ring-amber-400' : ''}`
-                            : waiting
-                            ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 cursor-pointer'
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer'
-                        }`}
-                      >
-                        {l === 0 ? 'Intro' : l}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+    <LessonFilter
+      level={level}
+      pick={activeLesson}
+      onLevel={setLevel}
+      onPick={setLesson}
+      hasItems={(lvl, l) => lessonsWithVerbs.has(readyKey(lvl, l))}
+      isWaiting={(lvl, l) => readyKeys.has(readyKey(lvl, l))}
+      isDone={(lvl, l) => ready[readyExercise]?.[readyKey(lvl, l)] === 'done'}
+      extra={
+        isSandbox
+          ? (close) => (
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('tap');
+                  setLesson(TEST_LESSON);
+                  close();
+                }}
+                className={`w-full py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer border border-dashed ${
+                  activeLesson === TEST_LESSON
+                    ? 'bg-amber-400 text-amber-950 border-amber-500'
+                    : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                }`}
+              >
+                {lessonLabel(TEST_LESSON)}
+              </button>
+            )
+          : undefined
+      }
+      en={en}
+    />
   );
 
   /** The six forms by person: singular | plural. */

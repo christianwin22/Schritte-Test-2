@@ -30,6 +30,7 @@ import {
   pluralSentence,
 } from '../data/nounDrillSentences';
 import { NounChangeLearn } from './NounChangeLearn';
+import { LessonFilter } from './LessonFilter';
 import { markReadyAfterWords } from '../utils/exerciseReady';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
 import { checkEnglish, checkEnglishPair, checkGerman, englishSenses, meaningLines } from '../utils/answerCheck';
@@ -1770,6 +1771,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   ];
 
   // VIEW 1: VOCABULARY AREA HUB (3 Exercises Only - Clean & Centered)
+  // Before the menu's early return: a hook must run on every render.
+  /** Lessons (level-lektion) that have something for the exercise that is open; the rest are greyed. */
+  const lessonsWithItems = useMemo(() => {
+    const keys = new Set<string>();
+    for (const w of INITIAL_VOCABULARY) {
+      if (activeDrillSkill && !isDrillable(activeDrillSkill, w)) continue;
+      keys.add(`${w.level}-${w.lektion ?? 0}`);
+    }
+    return keys;
+  }, [activeDrillSkill]);
   if (!activeExerciseMode) {
     return (
       <div className="w-full h-full flex flex-col justify-center items-center gap-4 py-2 animate-fadeIn overflow-hidden">
@@ -1864,254 +1875,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // Banner 1: Filter Selector (Level & Lesson)
   // `waiting`: lessons ready to practise in Der/Die/Das or Plural, highlighted in amber.
   // Flashcard passes nothing, so its filter looks as before.
-  /** Lessons (level-lektion) that have something for the exercise that is open; the rest are greyed. */
-  const lessonsWithItems = useMemo(() => {
-    const keys = new Set<string>();
-    for (const w of INITIAL_VOCABULARY) {
-      if (activeDrillSkill && !isDrillable(activeDrillSkill, w)) continue;
-      keys.add(`${w.level}-${w.lektion ?? 0}`);
-    }
-    return keys;
-  }, [activeDrillSkill]);
   const lessonHasItems = (level: string, lektion: number) => lessonsWithItems.has(`${level}-${lektion}`);
 
-  const renderFilterBanner = (waiting: { level: string; lektion: number }[] = []) => {
-    // The Intro button only where this exercise has something in it
-    const hasIntro = INITIAL_VOCABULARY.some((w) => w.level === selectedLevel && w.lektion === 0) && lessonHasItems(selectedLevel, 0);
-    const introWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === 0);
-    const introDone = isLessonFullyCompleted(selectedLevel, 0);
-    return (
-    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2">
-      <div className="flex flex-row items-center justify-between gap-1 sm:gap-2">
-        {/* Filter 1: A1 / A2 / B1 Level Selector */}
-        <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shrink-0">
-          {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
-            <button
-              key={lvl}
-              onClick={() => {
-                playSound('tap');
-                handleFilterChange(lvl);
-              }}
-              className={`relative px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                selectedLevel === lvl
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                  : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
-              }`}
-            >
-              {lvl}
-              {waiting.some((l) => l.level === lvl) && (
-                <span
-                  aria-label={appLanguage === 'en' ? 'has a lesson to practise' : 'hat eine Lektion zum Üben'}
-                  className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white dark:ring-zinc-900"
-                />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Filter 2: Lesson Selector Button / Dropdown */}
-        <div className="relative shrink-0">
-          <button
-            id="lesson-filter-button"
-            onClick={() => {
-              playSound('tap');
-              setIsLessonDropdownOpen(!isLessonDropdownOpen);
-            }}
-            className={`px-2.5 sm:px-3 py-1 active:scale-98 font-black text-xs rounded-xl shadow-xs border flex items-center gap-1.5 transition-all cursor-pointer ${
-              typeof selectedLektion === 'number' && waiting.some((l) => l.level === selectedLevel && l.lektion === selectedLektion)
-                ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border-amber-500'
-                : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700'
-            }`}
-          >
-            <span>
-              {selectedLektion === 'ALL'
-                ? (appLanguage === 'en' ? 'All' : 'Alle')
-                : selectedLektion === 0
-                ? 'Intro'
-                : selectedLektion === 'PART_1'
-                ? `${selectedLevel}.1`
-                : selectedLektion === 'PART_2'
-                ? `${selectedLevel}.2`
-                : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}
-            </span>
-            <ChevronDown
-              className={`w-3 h-3 text-zinc-500 transition-transform ${
-                isLessonDropdownOpen ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {/* Dropdown Popover for Lessons & Ranges */}
-          {isLessonDropdownOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-20"
-                onClick={() => setIsLessonDropdownOpen(false)}
-              />
-              <div className="absolute right-0 mt-1.5 z-30 w-80 sm:w-[360px] bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 space-y-2.5 animate-fadeIn">
-                {/* Header with All Button */}
-                <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100 dark:border-zinc-800">
-                  <span className="text-[11px] font-black text-zinc-500 dark:text-zinc-400">
-                    {appLanguage === 'en' ? 'Lesson Filter:' : 'Lektionsfilter:'}
-                  </span>
-
-                  <div className="flex items-center gap-1.5">
-                    {/* Only A1.1 has an Intro (the Vorkurs), so the button shows there */}
-                    {hasIntro && (
-                      <button
-                        onClick={() => {
-                          playSound('tap');
-                          handleFilterChange(undefined, 0);
-                        }}
-                        title={appLanguage === 'en' ? 'Intro (before Lesson 1)' : 'Intro (vor Lektion 1)'}
-                        className={`text-[11px] font-black px-2.5 py-0.5 rounded-lg transition-all cursor-pointer ${
-                          selectedLektion === 0
-                            ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ${
-                                introWaiting ? 'ring-amber-400' : 'ring-zinc-400/80 dark:ring-zinc-500/80'
-                              }`
-                            : introWaiting
-                            ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500'
-                            : introDone
-                            ? 'bg-zinc-400 hover:bg-zinc-450 text-zinc-950 dark:bg-zinc-500 dark:text-zinc-950 border border-zinc-500/70'
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                        }`}
-                      >
-                        Intro
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        playSound('tap');
-                        handleFilterChange(undefined, 'ALL');
-                      }}
-                      className={`text-[11px] font-black px-2.5 py-0.5 rounded-lg transition-all cursor-pointer ${
-                        selectedLektion === 'ALL'
-                          ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                          : 'text-zinc-500 hover:text-zinc-950 dark:hover:text-white'
-                      }`}
-                    >
-                      {appLanguage === 'en' ? 'All' : 'Alle'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Grid: Row 1 = 1 to 7 + Level.1, Row 2 = 8 to 14 + Level.2 */}
-                <div className="space-y-1.5 p-0.5">
-                  <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.35fr)] gap-1.5">
-                    {[1, 2, 3, 4, 5, 6, 7].map((num) => {
-                      const isDone = isLessonFullyCompleted(selectedLevel, num);
-                      const isSelected = selectedLektion === num;
-                      const isWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === num);
-                      // Nothing in this lesson for this exercise: greyed, and it can't be picked
-                      const isEmpty = !lessonHasItems(selectedLevel, num);
-                      return (
-                        <button
-                          key={num}
-                          disabled={isEmpty}
-                          onClick={() => {
-                            if (isEmpty) return;
-                            playSound('tap');
-                            handleFilterChange(undefined, num);
-                          }}
-                          title={
-                            isDone
-                              ? (appLanguage === 'en' ? `Lesson ${num}: Completed` : `Lektion ${num}: Abgeschlossen`)
-                              : (appLanguage === 'en' ? `Lesson ${num}` : `Lektion ${num}`)
-                          }
-                          className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
-                            isEmpty
-                              ? 'bg-zinc-50 dark:bg-zinc-800/40 text-zinc-300 dark:text-zinc-600 cursor-not-allowed'
-                              : isSelected
-                              ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ${isWaiting ? 'ring-amber-400' : 'ring-zinc-400/80 dark:ring-zinc-500/80'}`
-                              : isWaiting
-                              ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 shadow-2xs'
-                              : isDone
-                              ? 'bg-zinc-400 hover:bg-zinc-450 text-zinc-950 dark:bg-zinc-500 dark:hover:bg-zinc-450 dark:text-zinc-950 border border-zinc-500/70 dark:border-zinc-400/70 shadow-2xs'
-                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                          }`}
-                        >
-                          {num}
-                        </button>
-                      );
-                    })}
-                    {/* Level.1 button e.g. A1.1, A2.1, B1.1 */}
-                    <button
-                      onClick={() => {
-                        playSound('tap');
-                        handleFilterChange(undefined, 'PART_1');
-                      }}
-                      className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
-                        selectedLektion === 'PART_1'
-                          ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                          : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-250 dark:hover:bg-zinc-650'
-                      }`}
-                    >
-                      {selectedLevel}.1
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_minmax(0,1.35fr)] gap-1.5">
-                    {[8, 9, 10, 11, 12, 13, 14].map((num) => {
-                      const isDone = isLessonFullyCompleted(selectedLevel, num);
-                      const isSelected = selectedLektion === num;
-                      const isWaiting = waiting.some((l) => l.level === selectedLevel && l.lektion === num);
-                      // Nothing in this lesson for this exercise: greyed, and it can't be picked
-                      const isEmpty = !lessonHasItems(selectedLevel, num);
-                      return (
-                        <button
-                          key={num}
-                          disabled={isEmpty}
-                          onClick={() => {
-                            if (isEmpty) return;
-                            playSound('tap');
-                            handleFilterChange(undefined, num);
-                          }}
-                          title={
-                            isDone
-                              ? (appLanguage === 'en' ? `Lesson ${num}: Completed` : `Lektion ${num}: Abgeschlossen`)
-                              : (appLanguage === 'en' ? `Lesson ${num}` : `Lektion ${num}`)
-                          }
-                          className={`py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
-                            isEmpty
-                              ? 'bg-zinc-50 dark:bg-zinc-800/40 text-zinc-300 dark:text-zinc-600 cursor-not-allowed'
-                              : isSelected
-                              ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs ring-2 ${isWaiting ? 'ring-amber-400' : 'ring-zinc-400/80 dark:ring-zinc-500/80'}`
-                              : isWaiting
-                              ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 shadow-2xs'
-                              : isDone
-                              ? 'bg-zinc-400 hover:bg-zinc-450 text-zinc-950 dark:bg-zinc-500 dark:hover:bg-zinc-450 dark:text-zinc-950 border border-zinc-500/70 dark:border-zinc-400/70 shadow-2xs'
-                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                          }`}
-                        >
-                          {num}
-                        </button>
-                      );
-                    })}
-                    {/* Level.2 button e.g. A1.2, A2.2, B1.2 */}
-                    <button
-                      onClick={() => {
-                        playSound('tap');
-                        handleFilterChange(undefined, 'PART_2');
-                      }}
-                      className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
-                        selectedLektion === 'PART_2'
-                          ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                          : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-250 dark:hover:bg-zinc-650'
-                      }`}
-                    >
-                      {selectedLevel}.2
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-    );
-  };
+  const renderFilterBanner = (waiting: { level: string; lektion: number }[] = []) => (
+    <LessonFilter
+      level={selectedLevel}
+      pick={selectedLektion}
+      onLevel={(lvl) => handleFilterChange(lvl)}
+      onPick={(p) => handleFilterChange(undefined, p)}
+      hasItems={lessonHasItems}
+      isWaiting={(lvl, l) => waiting.some((x) => x.level === lvl && x.lektion === l)}
+      isDone={(lvl, l) => isLessonFullyCompleted(lvl, l)}
+      en={appLanguage === 'en'}
+    />
+  );
 
   {/* Banner 2: Flashcard Sub-Mode Selector (Learn, Practice, Review) */}
   const renderModeBanner = () => (

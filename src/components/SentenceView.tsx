@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Volume2, X } from 'lucide-react';
+import { Check, Volume2, X } from 'lucide-react';
 import { CEFRLevel, FSRSCardRecord } from '../types';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import { SENTENCES, SentenceItem, SentenceTense, sentenceAnswer, sentenceText } from '../data/sentenceExercises';
@@ -15,7 +15,8 @@ import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
 import { lessonTopics } from './SchritteVocabView';
 import { useAuth } from './AuthGate';
-import { loadExerciseReady, markExerciseDone, readyKey, readyLessonKeys, SENTENCE_READY } from '../utils/exerciseReady';
+import { LessonFilter, LessonPick, inPick, parsePick, pickLabel } from './LessonFilter';
+import { loadExerciseReady, markExerciseDone, readyKey, SENTENCE_READY } from '../utils/exerciseReady';
 
 /**
  * Grammar · Sentence — every verb of every lesson in a sentence, in Present,
@@ -87,48 +88,38 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
   const en = appLanguage === 'en';
   const isSandbox = useAuth()?.isSandbox ?? false;
 
-  // --- Tense, level and lesson, kept for next time ------------------------------------
-  const [tense, setTense] = useState<SentenceTense>(() =>
-    readStored<SentenceTense>('schritte_sentence_tense', 'present', (v) =>
-      ['present', 'past', 'perfect'].includes(v) ? (v as SentenceTense) : null
-    )
-  );
+  // --- Level and lesson, kept for next time ---------------------------------------
   const [level, setLevel] = useState<CEFRLevel>(() =>
     readStored<CEFRLevel>('schritte_sentence_level', 'A1', (v) => (['A1', 'A2', 'B1'].includes(v) ? (v as CEFRLevel) : null))
   );
-  const [lesson, setLesson] = useState<number>(() =>
-    readStored<number>('schritte_sentence_lesson', 1, (v) => (Number.isFinite(Number(v)) ? Number(v) : null))
-  );
-  const TENSE_SENTENCES = useMemo(() => SENTENCES.filter((s) => s.tense === tense), [tense]);
-  // Every lesson of the level is listed; the ones without verbs are greyed and can't be picked.
-  const allLessonsOfLevel = useMemo(
-    () => [...new Set(INITIAL_VOCABULARY.filter((w) => w.level === level).map((w) => w.lektion ?? 0))].sort((a, b) => a - b),
+  const [lesson, setLesson] = useState<LessonPick>(() => readStored<LessonPick>('schritte_sentence_lesson', 1, parsePick));
+  const lessonsWithVerbs = useMemo(() => new Set(SENTENCES.map((s) => readyKey(s.level, s.lektion))), []);
+  const lessonsOfLevel = useMemo(
+    () => [...new Set(SENTENCES.filter((s) => s.level === level).map((s) => s.lektion))].sort((a, b) => a - b),
     [level]
   );
-  const lessonsOfLevel = useMemo(
-    () => [...new Set(TENSE_SENTENCES.filter((s) => s.level === level).map((s) => s.lektion))].sort((a, b) => a - b),
-    [level, TENSE_SENTENCES]
-  );
-  const activeLesson = lessonsOfLevel.includes(lesson) ? lesson : lessonsOfLevel.find((l) => l > 0) ?? lessonsOfLevel[0] ?? 1;
+  const activeLesson: LessonPick =
+    typeof lesson !== 'number' || lessonsOfLevel.includes(lesson) ? lesson : lessonsOfLevel.find((l) => l > 0) ?? lessonsOfLevel[0] ?? 1;
   useEffect(() => {
     try {
-      localStorage.setItem('schritte_sentence_tense', tense);
       localStorage.setItem('schritte_sentence_level', level);
       localStorage.setItem('schritte_sentence_lesson', String(activeLesson));
     } catch {
       // ignore
     }
-  }, [tense, level, activeLesson]);
-  const [isLessonOpen, setIsLessonOpen] = useState(false);
+  }, [level, activeLesson]);
+  // All three tenses together, the tense named on each card
   const lessonSentences = useMemo(
-    () => TENSE_SENTENCES.filter((s) => s.level === level && s.lektion === activeLesson),
-    [TENSE_SENTENCES, level, activeLesson]
+    () => SENTENCES.filter((s) => s.level === level && inPick(s.lektion, activeLesson)),
+    [level, activeLesson]
   );
 
-  // Lessons waiting here, per tense, since that tense's Practice (amber)
+  // A lesson waits here (amber) once any of its tenses' Practice is finished; done here (grey) once practised
   const [ready, setReady] = useState(() => loadExerciseReady());
-  const readyKeysOf = (t: SentenceTense) => new Set(readyLessonKeys(ready, SENTENCE_READY[t]));
-  const readyKeys = useMemo(() => readyKeysOf(tense), [ready, tense]); // eslint-disable-line react-hooks/exhaustive-deps
+  const SENT = Object.values(SENTENCE_READY);
+  const isWaiting = (lvl: string, l: number) => SENT.some((ex) => ready[ex]?.[readyKey(lvl, l)] === 'ready');
+  const isDone = (lvl: string, l: number) =>
+    !isWaiting(lvl, l) && SENT.some((ex) => ready[ex]?.[readyKey(lvl, l)] === 'done');
 
   // --- Review records ----------------------------------------------------------------
   const [records, setRecords] = useState<Record<string, FSRSCardRecord>>(() => loadAllFSRSRecords());
@@ -142,17 +133,15 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     const r = records[sentenceCardId(s.id)];
     return !!r?.isUnlocked && r.status === 'review';
   };
-  const unlocked = useMemo(() => TENSE_SENTENCES.filter(isUnlocked), [records, TENSE_SENTENCES]); // eslint-disable-line react-hooks/exhaustive-deps
+  const unlocked = useMemo(() => SENTENCES.filter(isUnlocked), [records]); // eslint-disable-line react-hooks/exhaustive-deps
   const due = useMemo(() => unlocked.filter((s) => isCardDueForReview(records[sentenceCardId(s.id)])), [unlocked, records]);
-  const dueOf = (t: SentenceTense) =>
-    SENTENCES.filter((s) => s.tense === t && isUnlocked(s) && isCardDueForReview(records[sentenceCardId(s.id)])).length;
 
   // Sandbox only: an empty Review gets five test sentences, due now, so Review can be
   // tried today instead of after a lesson's Practice and a day's wait.
   useEffect(() => {
     if (!isSandbox || unlocked.length > 0) return;
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const five = TENSE_SENTENCES.filter((s) => s.level === 'A1').slice(0, 5);
+    const five = SENTENCES.filter((s) => s.level === 'A1' && s.lektion === 1);
     updateRecords((prev) => {
       const next = { ...prev };
       for (const s of five) {
@@ -173,7 +162,7 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSandbox, tense]);
+  }, [isSandbox]);
 
   // --- Session -----------------------------------------------------------------------
   const [mode, setMode] = useState<Mode>('practice');
@@ -207,7 +196,7 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     setStarted(false);
     build(mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, tense, level, activeLesson]);
+  }, [mode, level, activeLesson]);
 
   const current = queue[index];
   const inProgress = started && !done && (index > 0 || round > 1 || result !== null);
@@ -300,8 +289,11 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     if (mode === 'practice') {
       const ids = sessionItems.map((x) => sentenceCardId(x.id));
       updateRecords((prev) => unlockWordsAfterPractice(ids, prev));
-      // The lesson practised in this tense is done here: its amber notice goes.
-      setReady(markExerciseDone(SENTENCE_READY[tense], [readyKey(level, activeLesson)]));
+      // The lessons practised are done here, in every tense: their amber notice goes.
+      const keys = [...new Set(sessionItems.map((x) => readyKey(x.level, x.lektion)))];
+      let state = ready;
+      for (const ex of SENT) state = markExerciseDone(ex, keys);
+      setReady(state);
     }
   };
 
@@ -347,44 +339,12 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     const x = TENSES.find((y) => y.id === t)!;
     return en ? x.en : x.de;
   };
-  const lessonLabel = (l: number) => (l === 0 ? 'Intro' : `${en ? 'Lesson' : 'Lektion'} ${l}`);
   const pill = (active: boolean) =>
     `py-1.5 px-2 sm:px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
       active
         ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
         : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
     }`;
-  const dot = <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white dark:ring-zinc-900" />;
-
-  const tenseBar = (
-    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
-      <div className="grid grid-cols-3 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
-        {TENSES.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => {
-              if (t.id === tense) return;
-              playSound('tap');
-              setTense(t.id);
-            }}
-            className={`${pill(tense === t.id)} relative whitespace-nowrap`}
-          >
-            {en ? t.en : t.de}
-            {/* Red: due in Review there. Amber: a lesson waiting there. In the corner, so the name keeps one line. */}
-            {dueOf(t.id) > 0 ? (
-              <span className="absolute -top-1.5 -right-1 min-w-[16px] px-1 rounded-full text-[9px] font-black leading-4 text-center bg-rose-500 text-white ring-2 ring-white dark:ring-zinc-900">
-                {dueOf(t.id)}
-              </span>
-            ) : (
-              readyKeysOf(t.id).size > 0 && dot
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
   const modeBar = (
     <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
       <div className="grid grid-cols-2 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
@@ -407,85 +367,18 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     </div>
   );
 
+  // The same level + lesson filter as everywhere else
   const filterBar = (
-    <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2">
-      <div className="flex flex-row items-center justify-between gap-1 sm:gap-2">
-        <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shrink-0">
-          {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
-            <button
-              key={lvl}
-              type="button"
-              onClick={() => {
-                playSound('tap');
-                setLevel(lvl);
-              }}
-              className={`relative px-2 sm:px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                level === lvl
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                  : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
-              }`}
-            >
-              {lvl}
-              {[...readyKeys].some((k) => k.startsWith(`${lvl}-`)) && dot}
-            </button>
-          ))}
-        </div>
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              playSound('tap');
-              setIsLessonOpen((o) => !o);
-            }}
-            className={`px-2.5 sm:px-3 py-1 font-black text-xs rounded-xl shadow-xs border flex items-center gap-1.5 transition-all cursor-pointer ${
-              readyKeys.has(readyKey(level, activeLesson))
-                ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border-amber-500'
-                : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700'
-            }`}
-          >
-            <span>{lessonLabel(activeLesson)}</span>
-            <ChevronDown className={`w-3 h-3 text-zinc-500 transition-transform ${isLessonOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {isLessonOpen && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={() => setIsLessonOpen(false)} />
-              <div className="absolute right-0 mt-1.5 z-30 w-72 bg-white dark:bg-zinc-900 rounded-2xl p-3 shadow-xl border-2 border-zinc-200 dark:border-zinc-700 animate-fadeIn">
-                <div className="grid grid-cols-7 gap-1.5">
-                  {allLessonsOfLevel.map((l) => {
-                    // No verbs in this lesson: greyed, and it can't be picked
-                    const has = lessonsOfLevel.includes(l);
-                    const waiting = readyKeys.has(readyKey(level, l));
-                    return (
-                      <button
-                        key={l}
-                        type="button"
-                        disabled={!has}
-                        onClick={() => {
-                          playSound('tap');
-                          setLesson(l);
-                          setIsLessonOpen(false);
-                        }}
-                        className={`py-1.5 rounded-lg text-xs font-black transition-all ${l === 0 ? 'col-span-2' : ''} ${
-                          !has
-                            ? 'bg-zinc-50 dark:bg-zinc-800/40 text-zinc-300 dark:text-zinc-600 cursor-not-allowed'
-                            : l === activeLesson
-                            ? `bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs cursor-pointer ${waiting ? 'ring-2 ring-amber-400' : ''}`
-                            : waiting
-                            ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500 cursor-pointer'
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer'
-                        }`}
-                      >
-                        {l === 0 ? 'Intro' : l}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+    <LessonFilter
+      level={level}
+      pick={activeLesson}
+      onLevel={setLevel}
+      onPick={setLesson}
+      hasItems={(lvl, l) => lessonsWithVerbs.has(readyKey(lvl, l))}
+      isWaiting={isWaiting}
+      isDone={isDone}
+      en={en}
+    />
   );
 
   const primaryButton =
@@ -516,7 +409,7 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
             {mode === 'practice' ? (
               <>
                 <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
-                  {level} · {lessonLabel(activeLesson)} · {tenseName(tense)}
+                  {level} · {pickLabel(activeLesson, level, en)}
                 </p>
                 <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
                   {lessonTopics(lessonWords) || (en ? 'Sentence' : 'Satz')}
@@ -524,7 +417,6 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
               </>
             ) : (
               <>
-                <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">{tenseName(tense)}</p>
                 <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">{en ? 'Review' : 'Wiederholen'}</p>
               </>
             )}
@@ -712,7 +604,6 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
         {/* As everywhere: the bars belong to the Start screen, not to a running session */}
         {!started && (
           <>
-            {tenseBar}
             {modeBar}
             {mode === 'practice' && filterBar}
           </>
