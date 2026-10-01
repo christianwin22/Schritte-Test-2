@@ -174,6 +174,14 @@ def main():
         plural_variants = [p.strip() for p in plural_display.split("/") if p.strip()]
         # what Learn shows: the textbook sentence, else the app example, else (nouns) the singular example
         sentence = cell(row, "example sentence") or cell(row, "app example") or cell(row, "singular example")
+        # its English, where the list has one (textbook sentences have none yet)
+        sentence_english = (
+            ""
+            if cell(row, "example sentence")
+            else cell(row, "app example english")
+            if cell(row, "app example")
+            else cell(row, "singular example english")
+        )
 
         entry = {
             "id": word_id,
@@ -189,7 +197,7 @@ def main():
             "wordType": cell(row, "word type"),
             "isStem": display.rstrip().endswith("-"),
             "answers": answers,                      # accepted German answers (EN → DE)
-            "exampleSentences": [{"id": f"{word_id}_ex", "german": sentence, "english": ""}] if sentence else [],
+            "exampleSentences": [{"id": f"{word_id}_ex", "german": sentence, "english": sentence_english}] if sentence else [],
         }
         if sentence:
             entry["sentence"] = sentence
