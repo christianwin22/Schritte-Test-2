@@ -52,8 +52,8 @@ export const AbandonExerciseModal: React.FC<AbandonExerciseModalProps> = ({
         >
           {progressIsSaved
             ? appLanguage === 'en'
-              ? 'Leave this review?'
-              : 'Wiederholung verlassen?'
+              ? 'Leave for now?'
+              : 'Jetzt verlassen?'
             : t.abandonTitle}
         </h3>
 

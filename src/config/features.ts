@@ -10,7 +10,7 @@ import { DuolingoTab } from '../types';
  *
  * To open an area, delete its line — nothing else needs to change.
  */
-export const LOCKED_TABS: DuolingoTab[] = ['listening', 'speaking', 'reading'];
+export const LOCKED_TABS: DuolingoTab[] = ['listening', 'reading'];
 
 export function isTabLocked(tab: 'home' | DuolingoTab, isSandbox = false): boolean {
   if (isSandbox) return false;

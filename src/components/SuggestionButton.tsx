@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Lightbulb, X, Check, ImagePlus, Trash2, CloudOff } from 'lucide-react';
 import { PendingMedia, readFileAsMedia, saveSuggestion } from '../lib/suggestions';
 import { AppLanguage } from '../utils/translations';
+import { setSpeechMuted } from '../utils/speech';
 
 interface SuggestionButtonProps {
   /** Where you are, e.g. "Vocabulary · Flashcard". Saved with the note. */
@@ -39,6 +40,38 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  // While the box is open the app stays quiet.
+  useEffect(() => {
+    setSpeechMuted(open);
+    return () => setSpeechMuted(false);
+  }, [open]);
+
+  /** Closing throws the draft away: next time the box opens empty. */
+  const close = useCallback(() => {
+    setOpen(false);
+    setText('');
+    setMedia([]);
+    setStatus('idle');
+  }, []);
+
+  // On a phone the keyboard covers the bottom of the screen. The box sits on
+  // the part you can still see, right above the keyboard.
+  const [visible, setVisible] = useState<{ top: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setVisible({ top: vv.offsetTop, height: vv.height });
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      setVisible(null);
+    };
+  }, [open]);
+
   const addFiles = useCallback(async (files: File[]) => {
     const images = files.filter((f) => f.type.startsWith('image/'));
     if (!images.length) return;
@@ -54,19 +87,20 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
     setStatus(result);
     setText('');
     setMedia([]);
-    setTimeout(() => {
-      setStatus('idle');
-      setOpen(false);
-    }, result === 'saved' ? 900 : 1600);
-  }, [text, status, where, onScreen, media]);
+    setTimeout(close, result === 'saved' ? 900 : 1600);
+  }, [text, status, where, onScreen, media, close]);
+
+  // Keys typed in the box stay in the box: the exercise underneath never sees
+  // them (Space would otherwise turn a card or play a word).
+  const onDialogKey = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') close();
+    // ⌘/Ctrl + Enter saves, so you can stay on the keyboard
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void submit();
+  };
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-      // ⌘/Ctrl + Enter saves, so you can stay on the keyboard
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void submit();
-    };
     // ⌘/Ctrl + V anywhere in the dialog attaches a copied screenshot
     const onPaste = (e: ClipboardEvent) => {
       const files = Array.from(e.clipboardData?.files ?? []);
@@ -75,13 +109,11 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
         void addFiles(files);
       }
     };
-    window.addEventListener('keydown', onKey);
     window.addEventListener('paste', onPaste);
     return () => {
-      window.removeEventListener('keydown', onKey);
       window.removeEventListener('paste', onPaste);
     };
-  }, [open, submit, addFiles]);
+  }, [open, addFiles]);
 
   return (
     <>
@@ -105,7 +137,12 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
 
       {/* Into <body>: the top bar's blur would otherwise trap this overlay inside the bar */}
       {open && createPortal(
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-3 pb-3 sm:pb-0">
+        <div
+          data-note-dialog
+          onKeyDown={onDialogKey}
+          style={visible ? { top: visible.top, height: visible.height, bottom: 'auto' } : undefined}
+          className="fixed inset-x-0 top-0 bottom-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-3 pb-3 sm:pb-0"
+        >
           <div className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 shadow-xl p-5 space-y-3 animate-fadeIn">
             <div className="flex items-center justify-between">
               <h2 className="font-black text-base text-zinc-900 dark:text-zinc-100">
@@ -113,7 +150,7 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
               </h2>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 aria-label={en ? 'Close' : 'Schließen'}
                 className="p-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 cursor-pointer"
               >

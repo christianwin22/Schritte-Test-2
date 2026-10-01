@@ -198,8 +198,9 @@ export default function App() {
   // Everything due in Vocabulary: Flashcard reviews plus Plural and Weak Nouns reviews.
   const globalDueCount = useMemo(() => {
     const flashcards = INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id])).length;
+    // Words' plural cards ("wpl:") and the Plural drill
     const drills = Object.keys(fsrsRecords).filter(
-      (id) => /^plural:/.test(id) && isCardDueForReview(fsrsRecords[id])
+      (id) => /^(plural|wpl):/.test(id) && isCardDueForReview(fsrsRecords[id])
     ).length;
     return flashcards + drills;
   }, [fsrsRecords]);
@@ -524,7 +525,7 @@ export default function App() {
         return 'Grammar';
       }
       if (currentTab === 'listening') return 'Listening • Audio Practice';
-      if (currentTab === 'speaking') return 'Speaking • Pronunciation';
+      if (currentTab === 'speaking') return 'Speaking • Words';
       if (currentTab === 'reading') return 'Reading • Story & Quiz';
       if (currentTab === 'writing') {
         if (activeExerciseMode === 'writing_translate') return 'Writing • Translate';
@@ -686,15 +687,20 @@ export default function App() {
             />
           )}
 
-          {/* TAB 4: SPRECHEN / SPEAKING */}
+          {/* TAB 4: SPRECHEN / SPEAKING — Words Practice and Review, answered out loud */}
           {currentTab === 'speaking' && (
-            <SkillsView
-              skillType="speaking"
+            <SchritteVocabView
+              speakOnly
               onCorrectAnswer={handleCorrectAnswer}
               onWrongAnswer={handleWrongAnswer}
               activeExerciseMode={activeExerciseMode}
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
+              backHandlerRef={exerciseBackRef}
+              onQuizActiveChange={(active, saved) => {
+                setIsQuizActive(active);
+                setQuizProgressSaved(!!saved);
+              }}
               appLanguage={appLanguage}
             />
           )}

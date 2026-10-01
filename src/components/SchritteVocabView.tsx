@@ -35,9 +35,21 @@ import { markReadyAfterWords } from '../utils/exerciseReady';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
 import { checkEnglish, checkEnglishPair, checkGerman, englishSenses, meaningLines } from '../utils/answerCheck';
 import { highlightWord, stemLabel } from '../utils/sentenceParts';
-
-/** Where a half-finished Review session waits. Synced with the rest of the progress. */
-const REVIEW_SESSION_KEY = 'schritte_review_session_v1';
+import { genderButton, genderText, accusativeGender } from '../utils/genderColors';
+import {
+  WordCard,
+  cardsFor,
+  germanOf,
+  exampleOf,
+  pluralOf,
+  genderMark,
+  hasNumberSwitch,
+  checkCardGerman,
+  checkCardEnglish,
+  asListedEnglish,
+  GenderChoice,
+  NumberChoice,
+} from '../utils/wordCards';
 import { speakGerman, speakGermanSequence, listenToGermanSpeech, isSpeechRecognitionSupported } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
@@ -84,6 +96,18 @@ const DEFAULT_HOTKEYS: FlashcardHotkeys = {
   practiceCheck: 'Enter',
   practiceAudio: ' ',
 };
+
+type Direction = 'DE_TO_EN' | 'EN_TO_DE';
+
+/** A lesson's progress. The four direction stops are new; the two old flags are kept in step. */
+interface LessonProgress {
+  learnCompleted: boolean;
+  practiceCompleted: boolean;
+  learnDe?: boolean;
+  learnEn?: boolean;
+  practiceDe?: boolean;
+  practiceEn?: boolean;
+}
 
 /** The sentence with the word in bold, and a stem like "besonder-" named above it. */
 const SentenceWithWord: React.FC<{ sentence: string; word: WordEntry; className?: string }> = ({
@@ -166,6 +190,11 @@ interface SchritteVocabViewProps {
    */
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
   appLanguage?: AppLanguage;
+  /**
+   * Speaking: the same Words Practice and Review, answered out loud only — no
+   * typing, no Learn. It keeps its own schedule and progress ("speak:" cards).
+   */
+  speakOnly?: boolean;
 }
 
 export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
@@ -177,8 +206,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   onQuizActiveChange,
   backHandlerRef,
   appLanguage = 'en',
+  speakOnly = false,
 }) => {
   const t = getTranslation(appLanguage);
+  // Speaking keeps everything apart from Words: its cards, its sessions, its progress.
+  const CARD_PREFIX = speakOnly ? 'speak:' : '';
+  /** Where a half-finished Review / Practice waits. Synced with the rest of the progress. */
+  const REVIEW_SESSION_KEY = speakOnly ? 'schritte_speak_review_session_v1' : 'schritte_review_session_v1';
+  const PRACTICE_SESSION_KEY = speakOnly ? 'schritte_speak_practice_session_v1' : 'schritte_practice_session_v1';
+  const LESSON_PROGRESS_KEY = speakOnly ? 'schritte_speak_lesson_progress_v1' : 'schritte_lesson_progress_v2';
 
   // Filter 1: CEFR Level (A1, A2, B1) - Persisted
   const [selectedLevel, setSelectedLevel] = useState<CEFRLevel>(() => {
@@ -205,14 +241,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   // Lesson Completion Tracking (requires completing at least 1 round of Learn AND 1 round of Practice)
   // Pre-seeded with Lesson 1 (A1_L1) completed for immediate testing and verification
-  const [lessonProgress, setLessonProgress] = useState<
-    Record<string, { learnCompleted: boolean; practiceCompleted: boolean }>
-  >(() => {
-    const DEFAULT_LESSON_PROGRESS: Record<string, { learnCompleted: boolean; practiceCompleted: boolean }> = {
-      'A1_L1': { learnCompleted: true, practiceCompleted: true },
-    };
+  const [lessonProgress, setLessonProgress] = useState<Record<string, LessonProgress>>(() => {
+    const DEFAULT_LESSON_PROGRESS: Record<string, LessonProgress> = speakOnly
+      ? {}
+      : { 'A1_L1': { learnCompleted: true, practiceCompleted: true } };
     try {
-      const saved = localStorage.getItem('schritte_lesson_progress_v2');
+      const saved = localStorage.getItem(LESSON_PROGRESS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         return { ...DEFAULT_LESSON_PROGRESS, ...parsed };
@@ -223,7 +257,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem('schritte_lesson_progress_v2', JSON.stringify(lessonProgress));
+      localStorage.setItem(LESSON_PROGRESS_KEY, JSON.stringify(lessonProgress));
     } catch {}
   }, [lessonProgress]);
 
@@ -231,62 +265,65 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   const getLessonKey = (level: string, lektion: number | string) => `${level}_L${lektion}`;
 
+  /**
+   * The four stops of a lesson: Learn and Practice, each DE → EN and EN → DE.
+   * A lesson finished before the directions were split counts both.
+   */
+  const lessonStops = (level: string, lektion: number) => {
+    const p = lessonProgress[getLessonKey(level, lektion)];
+    return {
+      learnDe: Boolean(p?.learnDe ?? p?.learnCompleted),
+      learnEn: Boolean(p?.learnEn ?? p?.learnCompleted),
+      practiceDe: Boolean(p?.practiceDe ?? p?.practiceCompleted),
+      practiceEn: Boolean(p?.practiceEn ?? p?.practiceCompleted),
+    };
+  };
+
+  const isOneLessonDone = (level: string, lektion: number) => {
+    const s = lessonStops(level, lektion);
+    // Speaking has no Learn
+    return (speakOnly || (s.learnDe && s.learnEn)) && s.practiceDe && s.practiceEn;
+  };
+
   const isLessonFullyCompleted = (level: string, lektion: number | 'ALL' | 'PART_1' | 'PART_2') => {
-    if (typeof lektion === 'number') {
-      const prog = lessonProgress[getLessonKey(level, lektion)];
-      return Boolean(prog?.learnCompleted && prog?.practiceCompleted);
-    }
-    if (lektion === 'PART_1') {
-      return [1, 2, 3, 4, 5, 6, 7].every((num) => {
-        const p = lessonProgress[getLessonKey(level, num)];
-        return Boolean(p?.learnCompleted && p?.practiceCompleted);
-      });
-    }
-    if (lektion === 'PART_2') {
-      return [8, 9, 10, 11, 12, 13, 14].every((num) => {
-        const p = lessonProgress[getLessonKey(level, num)];
-        return Boolean(p?.learnCompleted && p?.practiceCompleted);
-      });
-    }
+    if (typeof lektion === 'number') return isOneLessonDone(level, lektion);
+    if (lektion === 'PART_1') return [1, 2, 3, 4, 5, 6, 7].every((num) => isOneLessonDone(level, num));
+    if (lektion === 'PART_2') return [8, 9, 10, 11, 12, 13, 14].every((num) => isOneLessonDone(level, num));
     return false;
   };
 
-  const isLessonPracticeDone = (level: string, lektion: number) => {
-    return Boolean(lessonProgress[getLessonKey(level, lektion)]?.practiceCompleted);
-  };
-
-  const isLessonLearnDone = (level: string, lektion: number) => {
-    return Boolean(lessonProgress[getLessonKey(level, lektion)]?.learnCompleted);
-  };
-
-  const recordLessonLearnCompleted = (level: string, lektion: number) => {
+  const recordLessonStop = (level: string, lektion: number, stop: 'learn' | 'practice', dir: Direction) => {
     const key = getLessonKey(level, lektion);
-    setLessonProgress((prev) => ({
-      ...prev,
-      [key]: {
-        learnCompleted: true,
-        practiceCompleted: prev[key]?.practiceCompleted || false,
-      },
-    }));
-  };
-
-  const recordLessonPracticeCompleted = (level: string, lektion: number) => {
-    const key = getLessonKey(level, lektion);
-    setLessonProgress((prev) => ({
-      ...prev,
-      [key]: {
-        learnCompleted: prev[key]?.learnCompleted || false,
-        practiceCompleted: true,
-      },
-    }));
+    setLessonProgress((prev) => {
+      const old = prev[key] ?? { learnCompleted: false, practiceCompleted: false };
+      // Carry an old "done" over into both directions before adding this one.
+      const next: LessonProgress = {
+        ...old,
+        learnDe: old.learnDe ?? old.learnCompleted,
+        learnEn: old.learnEn ?? old.learnCompleted,
+        practiceDe: old.practiceDe ?? old.practiceCompleted,
+        practiceEn: old.practiceEn ?? old.practiceCompleted,
+      };
+      if (stop === 'learn') next[dir === 'DE_TO_EN' ? 'learnDe' : 'learnEn'] = true;
+      else next[dir === 'DE_TO_EN' ? 'practiceDe' : 'practiceEn'] = true;
+      next.learnCompleted = !!(next.learnDe && next.learnEn);
+      next.practiceCompleted = !!(next.practiceDe && next.practiceEn);
+      return { ...prev, [key]: next };
+    });
   };
 
   // Flashcard state
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
-  const [learnDirection, setLearnDirection] = useState<'DE_TO_EN' | 'EN_TO_DE'>(() => {
+  /**
+   * One direction at a time, chosen with the button: DE → EN unless you pick
+   * otherwise. Learn, Practice and Review all go through every card that way —
+   * no mixing — and each direction is its own stop in the lesson's progress.
+   */
+  const DIRECTION_KEY = speakOnly ? 'schritte_speak_direction' : 'schritte_saved_learn_direction';
+  const [learnDirection, setLearnDirection] = useState<Direction>(() => {
     try {
-      const saved = localStorage.getItem('schritte_saved_learn_direction');
+      const saved = localStorage.getItem(DIRECTION_KEY);
       if (saved === 'EN_TO_DE' || saved === 'DE_TO_EN') return saved;
     } catch {}
     return 'DE_TO_EN';
@@ -294,9 +331,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem('schritte_saved_learn_direction', learnDirection);
+      localStorage.setItem(DIRECTION_KEY, learnDirection);
     } catch {}
-  }, [learnDirection]);
+  }, [learnDirection, DIRECTION_KEY]);
 
   /**
    * Flashcard sub-mode: 'learn' (Flip), 'practice' or 'review'.
@@ -306,7 +343,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    * screen — so resuming straight into Practice would leave no way back to
    * them. Learn is where you choose, and the back arrow returns here.
    */
-  const [flashcardSubMode, setFlashcardSubMode] = useState<FlashcardSubMode>('learn');
+  const [flashcardSubMode, setFlashcardSubMode] = useState<FlashcardSubMode>(speakOnly ? 'practice' : 'learn');
   /**
    * Whether the cards are showing yet.
    *
@@ -325,20 +362,24 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     saveAllFSRSRecords(fsrsRecords);
   }, [fsrsRecords]);
 
-  // Practice & Review Redo Queue & Mistake Tracking state
-  const [practiceQueue, setPracticeQueue] = useState<WordEntry[]>([]);
+  // Practice & Review Redo Queue & Mistake Tracking state (all by card key)
+  const [practiceQueue, setPracticeQueue] = useState<WordCard[]>([]);
   const [practiceQueueIndex, setPracticeQueueIndex] = useState(0);
   const [sessionInitialCount, setSessionInitialCount] = useState(0);
   const [initialMistakeWordIds, setInitialMistakeWordIds] = useState<string[]>([]);
-  const [currentRedoBatch, setCurrentRedoBatch] = useState<WordEntry[]>([]);
+  const [currentRedoBatch, setCurrentRedoBatch] = useState<WordCard[]>([]);
   const [roundNumber, setRoundNumber] = useState(1); // 1 = Initial round, 2 = 1st Redo, 3 = 2nd Redo...
   const [mistakeCounts, setMistakeCounts] = useState<Record<string, number>>({});
-  const [mistakeWords, setMistakeWords] = useState<WordEntry[]>([]);
+  const [mistakeWords, setMistakeWords] = useState<WordCard[]>([]);
   const [practiceScore, setPracticeScore] = useState(0);
-  // A Review session you walked out of, so it can be picked up where you left it.
+  // A Practice or Review you walked out of, picked up where you left it.
   const [resumedSession, setResumedSession] = useState(false);
   const [isPracticeComplete, setIsPracticeComplete] = useState(false);
-  const [practiceDirection, setPracticeDirection] = useState<'EN_TO_DE' | 'DE_TO_EN'>('EN_TO_DE');
+  // Practice and Review go the way the direction button says.
+  const practiceDirection = learnDirection;
+  // DE → EN: the two little switches beside the answer box (M / F and S / P).
+  const [genderPick, setGenderPick] = useState<GenderChoice>('M');
+  const [numberPick, setNumberPick] = useState<NumberChoice>('S');
   const [practiceTypeInput, setPracticeTypeInput] = useState('');
   // Words with two numbered meanings are asked for both (DE → EN only).
   const [practiceTypeInput2, setPracticeTypeInput2] = useState('');
@@ -348,6 +389,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     correct: boolean;
     userText?: string;
     expected: string;
+    /** DE → EN: the switches the card wanted (e.g. F, P) and the ones you set. */
+    marks?: string[];
+    userMarks?: string[];
   } | null>(null);
   const activeRecognitionRef = useRef<{ stop: () => void } | null>(null);
 
@@ -370,12 +414,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     } catch {}
   }, [flashcardSubMode]);
 
-  // Auto-focus input when in practice or review mode
+  // Auto-focus input when in practice or review mode (Speaking has no box)
   useEffect(() => {
+    if (speakOnly) return;
     if ((flashcardSubMode === 'practice' || flashcardSubMode === 'review') && !practiceFeedback && !isPracticeComplete) {
       practiceTypeInputRef.current?.focus();
     }
-  }, [practiceQueueIndex, flashcardSubMode, practiceFeedback, practiceDirection, isPracticeComplete]);
+  }, [practiceQueueIndex, flashcardSubMode, practiceFeedback, practiceDirection, isPracticeComplete, speakOnly]);
 
   // Gender Blitz state
   const [blitzIndex, setBlitzIndex] = useState(0);
@@ -422,18 +467,21 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     return list;
   }, [selectedLevel, selectedLektion]);
 
-  // Global due words across all lessons in the app (decoupled from lesson selector!)
+  // One card per thing to learn: a noun with a plural is two ("der Student", "die Studenten").
+  const filteredCards = useMemo(() => cardsFor(filteredWords, CARD_PREFIX), [filteredWords, CARD_PREFIX]);
+  const allCards = useMemo(() => cardsFor(INITIAL_VOCABULARY, CARD_PREFIX), [CARD_PREFIX]);
+  const cardByKey = useMemo(() => new Map(allCards.map((c) => [c.key, c])), [allCards]);
+
+  // Global due cards across all lessons in the app (decoupled from lesson selector!)
   const globalDueWords = useMemo(() => {
-    return INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id]));
-  }, [fsrsRecords]);
+    return allCards.filter((c) => isCardDueForReview(fsrsRecords[c.key]));
+  }, [allCards, fsrsRecords]);
 
   const globalDueCount = globalDueWords.length;
 
   const globalUnlockedWords = useMemo(() => {
-    return INITIAL_VOCABULARY.filter(
-      (w) => fsrsRecords[w.id]?.isUnlocked && fsrsRecords[w.id]?.status === 'review'
-    );
-  }, [fsrsRecords]);
+    return allCards.filter((c) => fsrsRecords[c.key]?.isUnlocked && fsrsRecords[c.key]?.status === 'review');
+  }, [allCards, fsrsRecords]);
 
   // Due review words count (globally driven)
   const dueReviewCount = globalDueCount;
@@ -450,7 +498,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    * already scheduled the moment you give it, so the saved session is only the
    * queue and where you were in it — coming back cannot bend the algorithm.
    */
-  const saveReviewSession = (queue: WordEntry[], index: number, score: number, initial: number) => {
+  const saveReviewSession = (queue: WordCard[], index: number, score: number, initial: number) => {
     try {
       if (queue.length === 0 || index >= queue.length) {
         localStorage.removeItem(REVIEW_SESSION_KEY);
@@ -458,7 +506,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       }
       localStorage.setItem(
         REVIEW_SESSION_KEY,
-        JSON.stringify({ ids: queue.map((w) => w.id), index, score, initial, at: new Date().toISOString() })
+        JSON.stringify({ ids: queue.map((c) => c.key), index, score, initial, at: new Date().toISOString() })
       );
     } catch {
       // out of space: the session just won't be resumable
@@ -473,13 +521,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
   };
 
-  const loadReviewSession = (): { queue: WordEntry[]; index: number; score: number; initial: number } | null => {
+  const loadReviewSession = (): { queue: WordCard[]; index: number; score: number; initial: number } | null => {
     try {
       const raw = localStorage.getItem(REVIEW_SESSION_KEY);
       if (!raw) return null;
       const saved = JSON.parse(raw) as { ids?: string[]; index?: number; score?: number; initial?: number };
-      const byId = new Map(INITIAL_VOCABULARY.map((w) => [w.id, w]));
-      const queue = (saved.ids ?? []).map((id) => byId.get(id)).filter((w): w is WordEntry => !!w);
+      // Older sessions saved word ids, which are the singular cards' keys.
+      const queue = (saved.ids ?? []).map((id) => cardByKey.get(id)).filter((c): c is WordCard => !!c);
       const index = Math.min(Math.max(0, saved.index ?? 0), queue.length - 1);
       if (queue.length === 0 || index < 0) return null;
       return { queue, index, score: saved.score ?? 0, initial: saved.initial ?? queue.length };
@@ -487,6 +535,98 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       return null;
     }
   };
+
+  /**
+   * Practice keeps its place too: walk out halfway and the next visit carries
+   * on from the same card, mistakes and redo round included. One saved Practice
+   * at a time, for one lesson and one direction.
+   */
+  interface SavedPractice {
+    level: string;
+    lektion: number | string;
+    dir: Direction;
+    keys: string[];
+    index: number;
+    redo: string[];
+    round: number;
+    score: number;
+    mistakes: Record<string, number>;
+    firstMistakes: string[];
+    initial: number;
+  }
+  const savePracticeSession = (data: SavedPractice | null) => {
+    try {
+      if (!data) localStorage.removeItem(PRACTICE_SESSION_KEY);
+      else localStorage.setItem(PRACTICE_SESSION_KEY, JSON.stringify({ ...data, at: new Date().toISOString() }));
+    } catch {
+      // out of space: the session just won't be resumable
+    }
+  };
+  const loadPracticeSession = (level: string, lektion: number | string, dir: Direction): SavedPractice | null => {
+    try {
+      const raw = localStorage.getItem(PRACTICE_SESSION_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw) as SavedPractice;
+      if (saved.level !== level || String(saved.lektion) !== String(lektion) || saved.dir !== dir) return null;
+      return saved;
+    } catch {
+      return null;
+    }
+  };
+
+  /** A fresh run, or the saved one for this lesson and direction. Practice only. */
+  const startPracticeRun = (cards: WordCard[], level: string, lektion: number | string, dir: Direction) => {
+    const saved = loadPracticeSession(level, lektion, dir);
+    const toCards = (keys: string[]) => keys.map((k) => cardByKey.get(k)).filter((c): c is WordCard => !!c);
+    const queue = saved ? toCards(saved.keys) : [];
+    if (saved && queue.length > 0 && saved.index < queue.length) {
+      setPracticeQueue(queue);
+      setPracticeQueueIndex(saved.index);
+      setCurrentRedoBatch(toCards(saved.redo));
+      setRoundNumber(saved.round);
+      setPracticeScore(saved.score);
+      setMistakeCounts(saved.mistakes);
+      setMistakeWords(toCards(Object.keys(saved.mistakes)));
+      setInitialMistakeWordIds(saved.firstMistakes);
+      setSessionInitialCount(saved.initial);
+      setResumedSession(true);
+      return;
+    }
+    // A new order each time, so a second run through a lesson is not the first one from memory.
+    setPracticeQueue(shuffled(cards));
+    setSessionInitialCount(cards.length);
+    setPracticeQueueIndex(0);
+    setCurrentRedoBatch([]);
+    setRoundNumber(1);
+    setPracticeScore(0);
+    setMistakeCounts({});
+    setMistakeWords([]);
+    setInitialMistakeWordIds([]);
+    setResumedSession(false);
+  };
+
+  // Keep the saved Practice in step with where you are, once it has begun.
+  useEffect(() => {
+    if (flashcardSubMode !== 'practice' || !sessionStarted || isPracticeComplete || practiceQueue.length === 0) return;
+    // An answered card counts as done: coming back starts on the next one —
+    // or on the redo round, when that card ended the round.
+    const atEnd = practiceFeedback !== null && practiceQueueIndex + 1 >= practiceQueue.length;
+    const intoRedo = atEnd && currentRedoBatch.length > 0;
+    savePracticeSession({
+      level: selectedLevel,
+      lektion: selectedLektion,
+      dir: practiceDirection,
+      keys: (intoRedo ? currentRedoBatch : practiceQueue).map((c) => c.key),
+      index: intoRedo ? 0 : practiceFeedback && !atEnd ? practiceQueueIndex + 1 : practiceQueueIndex,
+      redo: intoRedo ? [] : currentRedoBatch.map((c) => c.key),
+      round: intoRedo ? roundNumber + 1 : roundNumber,
+      score: practiceScore,
+      mistakes: mistakeCounts,
+      firstMistakes: initialMistakeWordIds,
+      initial: sessionInitialCount,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashcardSubMode, sessionStarted, isPracticeComplete, practiceQueue, practiceQueueIndex, practiceFeedback, currentRedoBatch, roundNumber, practiceScore, mistakeCounts, initialMistakeWordIds]);
 
   // Sync practiceQueue when filteredWords changes or when queue is empty
   useEffect(() => {
@@ -504,27 +644,25 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         const targetQueue = globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords;
         setPracticeQueue(shuffled(targetQueue));
         setSessionInitialCount(targetQueue.length);
-      } else if (filteredWords.length > 0) {
-        // A new order each time, so a second run through a lesson is not the
-        // first one from memory.
-        setPracticeQueue(shuffled(filteredWords));
-        setSessionInitialCount(filteredWords.length);
+      } else if (filteredCards.length > 0) {
+        startPracticeRun(filteredCards, selectedLevel, selectedLektion, practiceDirection);
       }
     }
-  }, [filteredWords, practiceQueue.length, flashcardSubMode, globalDueWords, globalUnlockedWords]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredCards, practiceQueue.length, flashcardSubMode, globalDueWords, globalUnlockedWords]);
 
   // Nouns only for blitz and plural exercises
   const nounWords = useMemo(() => {
     return filteredWords.filter((w) => w.nounDetails && w.nounDetails.gender);
   }, [filteredWords]);
 
-  const currentPracticeWord = (practiceQueue.length > 0 ? practiceQueue : filteredWords)[
-    practiceQueueIndex % ((practiceQueue.length > 0 ? practiceQueue : filteredWords).length || 1)
+  const currentPracticeCard: WordCard | undefined = (practiceQueue.length > 0 ? practiceQueue : filteredCards)[
+    practiceQueueIndex % ((practiceQueue.length > 0 ? practiceQueue : filteredCards).length || 1)
   ];
-  const currentFlashcard =
-    flashcardSubMode === 'practice' || flashcardSubMode === 'review'
-      ? currentPracticeWord
-      : filteredWords[flashcardIndex % (filteredWords.length || 1)];
+  const currentPracticeWord = currentPracticeCard?.word;
+  const currentLearnCard: WordCard | undefined = filteredCards[flashcardIndex % (filteredCards.length || 1)];
+  const currentCard = flashcardSubMode === 'practice' || flashcardSubMode === 'review' ? currentPracticeCard : currentLearnCard;
+  const currentFlashcard = currentCard?.word;
   const currentBlitzNoun = nounWords[blitzIndex % (nounWords.length || 1)];
   const pluralNouns = useMemo(() => nounWords.filter((w) => isDrillable('plural', w)), [nounWords]);
   const currentPluralNoun = pluralNouns[pluralIndex % (pluralNouns.length || 1)];
@@ -695,122 +833,94 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
   };
 
-  // Does this word ask for two meanings? Only DE → EN, and only the 146 with two.
+  // Does this word ask for two meanings? Only typed DE → EN, and only the 146 with two.
+  // Speaking takes one spoken meaning.
   const twoMeanings = (card: WordEntry | null | undefined) =>
-    !!card && practiceDirection === 'DE_TO_EN' && englishSenses(card).length > 1;
+    !speakOnly && !!card && practiceDirection === 'DE_TO_EN' && englishSenses(card).length > 1;
+
+  /** The switches a typed DE → EN card asks for: M / F for a person word, S / P for a noun. */
+  const wantedMarks = (card?: WordCard | null): { gender: GenderChoice | null; number: NumberChoice | null } => {
+    if (!card || speakOnly || practiceDirection !== 'DE_TO_EN') return { gender: null, number: null };
+    return {
+      gender: genderMark(card.word, INITIAL_VOCABULARY),
+      number: hasNumberSwitch(card) ? (card.plural ? 'P' : 'S') : null,
+    };
+  };
 
   // Helper to evaluate answer for practice & review
-  const evaluateAnswer = (
-    inputVal: string,
-    card: WordEntry,
-    direction: 'EN_TO_DE' | 'DE_TO_EN',
-    secondVal = ''
-  ) => {
+  const evaluateAnswer = (inputVal: string, card: WordCard, direction: Direction, secondVal = '') => {
     if (direction === 'EN_TO_DE') {
-      const { isCorrect, expected } = checkGerman(inputVal, card);
-      return { isCorrect, expectedDisplay: expected };
+      const { isCorrect, expected } = checkCardGerman(inputVal, card);
+      return { isCorrect, expectedDisplay: expected, marks: [] as string[], userMarks: [] as string[] };
     }
-    const expectedDisplay = meaningLines(card).join(' · ');
-    if (englishSenses(card).length > 1) {
-      const both = checkEnglishPair([inputVal, secondVal], card);
-      return { isCorrect: both.every(Boolean), expectedDisplay };
+    const word = card.word;
+    const expectedDisplay = meaningLines(word).join(' · ');
+    const textRight = twoMeanings(word)
+      ? checkEnglishPair([asListedEnglish(inputVal, card), asListedEnglish(secondVal, card)], word).every(Boolean)
+      : checkCardEnglish(inputVal, card);
+    const want = wantedMarks(card);
+    const marks = [want.gender, want.number].filter((m): m is GenderChoice | NumberChoice => !!m);
+    const userMarks = [want.gender ? genderPick : null, want.number ? numberPick : null].filter(
+      (m): m is GenderChoice | NumberChoice => !!m
+    );
+    const marksRight = marks.every((m, i) => userMarks[i] === m);
+    return { isCorrect: textRight && marksRight, expectedDisplay, marks, userMarks };
+  };
+
+  /** One answer into the review schedule, on that card's own key. */
+  const scheduleReview = (card: WordCard, passed: boolean) =>
+    setFsrsRecords((prev) => ({ ...prev, [card.key]: reviewCard(card.key, passed, prev[card.key]) }));
+
+  /** Right or wrong, the same bookkeeping whether the answer was typed or spoken. */
+  const recordPracticeAnswer = (card: WordCard, isCorrect: boolean) => {
+    if (isCorrect) {
+      playSound('correct');
+      setPracticeScore((prev) => prev + 1);
+      onCorrectAnswer?.(15, 5);
+    } else {
+      playSound('wrong');
+      onWrongAnswer?.();
+      // Record mistake on initial first attempt before redo
+      if (roundNumber === 1) {
+        setInitialMistakeWordIds((prev) => (prev.includes(card.key) ? prev : [...prev, card.key]));
+      }
+      setMistakeCounts((prev) => ({ ...prev, [card.key]: (prev[card.key] || 0) + 1 }));
+      setMistakeWords((prev) => (prev.some((c) => c.key === card.key) ? prev : [...prev, card]));
+      setCurrentRedoBatch((prev) => (prev.some((c) => c.key === card.key) ? prev : [...prev, card]));
     }
-    return { isCorrect: checkEnglish(inputVal, card), expectedDisplay };
+    if (flashcardSubMode === 'review') scheduleReview(card, isCorrect);
   };
 
   // Flashcard Practice & Review - Check Handler
   const handlePracticeCheck = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!currentPracticeWord || practiceFeedback || !practiceTypeInput.trim()) return;
+    const card = currentPracticeCard;
+    if (!card || practiceFeedback || !practiceTypeInput.trim()) return;
     // Both boxes have to be filled before a two-meaning word can be checked.
-    if (twoMeanings(currentPracticeWord) && !practiceTypeInput2.trim()) return;
+    if (twoMeanings(card.word) && !practiceTypeInput2.trim()) return;
 
-    const { isCorrect, expectedDisplay } = evaluateAnswer(
+    const { isCorrect, expectedDisplay, marks, userMarks } = evaluateAnswer(
       practiceTypeInput,
-      currentPracticeWord,
+      card,
       practiceDirection,
       practiceTypeInput2
     );
-
-    if (isCorrect) {
-      playSound('correct');
-      setPracticeScore((prev) => prev + 1);
-      if (onCorrectAnswer) {
-        onCorrectAnswer(15, 5);
-      }
-    } else {
-      playSound('wrong');
-      if (onWrongAnswer) {
-        onWrongAnswer();
-      }
-      // Record mistake on initial first attempt before redo
-      if (roundNumber === 1) {
-        setInitialMistakeWordIds((prev) =>
-          prev.includes(currentPracticeWord.id) ? prev : [...prev, currentPracticeWord.id]
-        );
-      }
-      setMistakeCounts((prev) => ({
-        ...prev,
-        [currentPracticeWord.id]: (prev[currentPracticeWord.id] || 0) + 1,
-      }));
-      setMistakeWords((prev) => {
-        if (prev.some((w) => w.id === currentPracticeWord.id)) return prev;
-        return [...prev, currentPracticeWord];
-      });
-      setCurrentRedoBatch((prev) => {
-        if (prev.some((w) => w.id === currentPracticeWord.id)) return prev;
-        return [...prev, currentPracticeWord];
-      });
-    }
-
-    // Process FSRS review algorithm if in Review mode
-    if (flashcardSubMode === 'review') {
-      const existing = fsrsRecords[currentPracticeWord.id] || {
-        wordId: currentPracticeWord.id,
-        status: 'review' as const,
-        isUnlocked: true,
-        stability: 1.0,
-        difficulty: 5.0,
-        intervalDays: 1,
-        nextReviewDate: new Date().toISOString(),
-      };
-
-      const lastReviewedTime = existing.lastReviewedAt ? new Date(existing.lastReviewedAt).getTime() : Date.now();
-      const daysElapsed = Math.max(0, (Date.now() - lastReviewedTime) / (1000 * 60 * 60 * 24));
-
-      const fsrsResult = processFSRSReview(
-        isCorrect,
-        existing.stability,
-        existing.difficulty,
-        daysElapsed
-      );
-
-      setFsrsRecords((prev) => ({
-        ...prev,
-        [currentPracticeWord.id]: {
-          ...existing,
-          status: 'review',
-          isUnlocked: true,
-          stability: fsrsResult.newStability,
-          difficulty: fsrsResult.newDifficulty,
-          intervalDays: fsrsResult.nextInterval,
-          nextReviewDate: fsrsResult.nextReviewDate,
-          lastReviewedAt: new Date().toISOString(),
-          repetitionCount: (existing.repetitionCount || 0) + 1,
-        },
-      }));
-    }
-
+    recordPracticeAnswer(card, isCorrect);
     setPracticeFeedback({
       correct: isCorrect,
-      userText: twoMeanings(currentPracticeWord)
+      userText: twoMeanings(card.word)
         ? [practiceTypeInput.trim(), practiceTypeInput2.trim()].filter(Boolean).join(' · ')
         : practiceTypeInput.trim(),
       expected: expectedDisplay,
+      marks,
+      userMarks,
     });
   };
 
-  // Flashcard Practice & Review - Voice / Speech Recognition Handler
+  /**
+   * Speaking: tap Speak and say it. What was heard is checked at once, right or
+   * wrong. Nothing heard for ten seconds and the button comes back by itself.
+   */
   const handleStartListening = () => {
     if (isListening) {
       activeRecognitionRef.current?.stop();
@@ -818,10 +928,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       return;
     }
 
-    if (!currentPracticeWord || practiceFeedback) return;
-    playSound('tap');
-    // You are talking, not typing: the keyboard can go.
-    practiceTypeInputRef.current?.blur();
+    const card = currentPracticeCard;
+    if (!card || practiceFeedback) return;
     setIsListening(true);
 
     const lang = practiceDirection === 'EN_TO_DE' ? 'de-DE' : 'en-US';
@@ -829,67 +937,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     const rec = listenToGermanSpeech(
       (transcript) => {
         setIsListening(false);
-        const trimmedTranscript = transcript.trim();
-        setPracticeTypeInput(trimmedTranscript);
-
-        // A two-meaning word needs the second box as well, so speaking only fills the first.
-        if (twoMeanings(currentPracticeWord)) return;
-
-        const { isCorrect, expectedDisplay } = evaluateAnswer(trimmedTranscript, currentPracticeWord, practiceDirection);
-
-        if (isCorrect) {
-          playSound('correct');
-          setPracticeScore((prev) => prev + 1);
-          if (onCorrectAnswer) {
-            onCorrectAnswer(15, 5);
-          }
-          // Process FSRS review algorithm if in Review mode
-          if (flashcardSubMode === 'review') {
-            const existing = fsrsRecords[currentPracticeWord.id] || {
-              wordId: currentPracticeWord.id,
-              status: 'review' as const,
-              isUnlocked: true,
-              stability: 1.0,
-              difficulty: 5.0,
-              intervalDays: 1,
-              nextReviewDate: new Date().toISOString(),
-            };
-
-            const lastReviewedTime = existing.lastReviewedAt ? new Date(existing.lastReviewedAt).getTime() : Date.now();
-            const daysElapsed = Math.max(0, (Date.now() - lastReviewedTime) / (1000 * 60 * 60 * 24));
-
-            const fsrsResult = processFSRSReview(
-              true,
-              existing.stability,
-              existing.difficulty,
-              daysElapsed
-            );
-
-            setFsrsRecords((prev) => ({
-              ...prev,
-              [currentPracticeWord.id]: {
-                ...existing,
-                status: 'review',
-                isUnlocked: true,
-                stability: fsrsResult.newStability,
-                difficulty: fsrsResult.newDifficulty,
-                intervalDays: fsrsResult.nextInterval,
-                nextReviewDate: fsrsResult.nextReviewDate,
-                lastReviewedAt: new Date().toISOString(),
-                repetitionCount: (existing.repetitionCount || 0) + 1,
-              },
-            }));
-          }
-
-          setPracticeFeedback({
-            correct: true,
-            userText: trimmedTranscript,
-            expected: expectedDisplay,
-          });
-        } else {
-          // Focus input so user can edit, backspace, or re-speak
-          practiceTypeInputRef.current?.focus();
-        }
+        const said = transcript.trim().replace(/[.!?,]+$/, '');
+        if (!said) return;
+        setPracticeTypeInput(said);
+        const { isCorrect, expectedDisplay } = evaluateAnswer(said, card, practiceDirection);
+        recordPracticeAnswer(card, isCorrect);
+        setPracticeFeedback({ correct: isCorrect, userText: said, expected: expectedDisplay });
       },
       (err) => {
         setIsListening(false);
@@ -904,60 +957,56 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     activeRecognitionRef.current = rec;
   };
 
+  /** Clears the answer area for the next card. */
+  const clearAnswer = () => {
+    setPracticeFeedback(null);
+    setPracticeTypeInput('');
+    setPracticeTypeInput2('');
+    setGenderPick('M');
+    setNumberPick('S');
+    activeRecognitionRef.current?.stop();
+    setIsListening(false);
+  };
+
   const handleNextPractice = () => {
     playSound('tap');
     // Inside the tap, so iOS keeps the keyboard up for the next card.
-    practiceTypeInputRef.current?.focus();
-    const activeQueue = practiceQueue.length > 0 ? practiceQueue : filteredWords;
+    if (!speakOnly) practiceTypeInputRef.current?.focus();
+    const activeQueue = practiceQueue.length > 0 ? practiceQueue : filteredCards;
 
     if (practiceQueueIndex + 1 < activeQueue.length) {
       // Continue through current queue
-      setPracticeFeedback(null);
-      setPracticeTypeInput('');
-    setPracticeTypeInput2('');
-      setIsListening(false);
-      setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
+      clearAnswer();
       setPracticeQueueIndex((prev) => prev + 1);
+    } else if (currentRedoBatch.length > 0) {
+      // Redo mistakes session!
+      setPracticeQueue([...currentRedoBatch]);
+      setPracticeQueueIndex(0);
+      setCurrentRedoBatch([]);
+      setRoundNumber((prev) => prev + 1);
+      clearAnswer();
     } else {
-      // Reached the end of the current queue!
-      if (currentRedoBatch.length > 0) {
-        // Redo mistakes session!
-        playSound('tap');
-        setPracticeQueue([...currentRedoBatch]);
-        setPracticeQueueIndex(0);
-        setCurrentRedoBatch([]);
-        setRoundNumber((prev) => prev + 1);
-        setPracticeFeedback(null);
-        setPracticeTypeInput('');
-    setPracticeTypeInput2('');
-        setIsListening(false);
-        setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
-      } else {
-        // All words answered correctly and all mistakes resolved!
-        playSound('correct');
-        clearReviewSession(); // finished, so there is nothing to come back to
-        setResumedSession(false);
-        setIsPracticeComplete(true);
-        setPracticeFeedback(null);
-        setPracticeTypeInput('');
-    setPracticeTypeInput2('');
-        setIsListening(false);
+      // All cards answered correctly and all mistakes resolved!
+      playSound('correct');
+      if (flashcardSubMode === 'review') clearReviewSession(); // finished, so there is nothing to come back to
+      else savePracticeSession(null);
+      setResumedSession(false);
+      setIsPracticeComplete(true);
+      clearAnswer();
 
-        // Activation Rule: When a user finishes the "Practice" session for a lesson,
-        // set isUnlocked: true and status: 'review' so those words enter Review pool starting the next day.
-        if (flashcardSubMode === 'practice') {
-          const completedWordIds = filteredWords.map((w) => w.id);
-          setFsrsRecords((prev) => unlockWordsAfterPractice(completedWordIds, prev));
-          // ...and the lesson is now ready to practise in Der/Die/Das and Plural (one notice per lesson).
-          if (typeof selectedLektion === 'number') {
+      // Activation Rule: when a lesson's Practice is finished (either direction),
+      // its cards enter Review starting the next day.
+      if (flashcardSubMode === 'practice') {
+        setFsrsRecords((prev) => unlockWordsAfterPractice(filteredCards.map((c) => c.key), prev));
+        if (typeof selectedLektion === 'number') {
+          recordLessonStop(selectedLevel, selectedLektion, 'practice', practiceDirection);
+          if (!speakOnly) {
             const level = selectedLevel;
             const lesson = selectedLektion;
+            // ...and the lesson is now ready to practise in Der/Die/Das and Plural (one notice per lesson).
             updateDrillPractice((prev) => markLessonReadyForDrills(prev, level, lesson, filteredWords));
             // …and in the three tenses that have something for it (Sentence waits for those)
             markReadyAfterWords(level, lesson, filteredWords);
-          }
-          if (typeof selectedLektion === 'number') {
-            recordLessonPracticeCompleted(selectedLevel, selectedLektion);
           }
         }
       }
@@ -970,28 +1019,23 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   };
 
   const buildFreshPracticeRun = () => {
-    let freshQueue: WordEntry[] = [];
     if (flashcardSubMode === 'review') {
-      freshQueue = globalDueWords.length > 0 ? [...globalDueWords] : [...globalUnlockedWords];
+      const freshQueue = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
+      setPracticeQueue(freshQueue);
+      setSessionInitialCount(freshQueue.length);
+      setInitialMistakeWordIds([]);
+      setPracticeQueueIndex(0);
+      setCurrentRedoBatch([]);
+      setRoundNumber(1);
+      setMistakeCounts({});
+      setMistakeWords([]);
+      setPracticeScore(0);
     } else {
-      freshQueue = shuffled(filteredWords);
+      savePracticeSession(null); // a deliberate fresh start
+      startPracticeRun(filteredCards, selectedLevel, selectedLektion, practiceDirection);
     }
-
-    setPracticeQueue(freshQueue);
-    setSessionInitialCount(freshQueue.length);
-    setInitialMistakeWordIds([]);
-    setPracticeQueueIndex(0);
-    setCurrentRedoBatch([]);
-    setRoundNumber(1);
-    setMistakeCounts({});
-    setMistakeWords([]);
-    setPracticeScore(0);
     setIsPracticeComplete(false);
-    setPracticeFeedback(null);
-    setPracticeTypeInput('');
-    setPracticeTypeInput2('');
-    setIsListening(false);
-    setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
+    clearAnswer();
   };
 
   /** Learn: is the English side of the card showing? It has nothing to hear, so only the arrows. */
@@ -1005,9 +1049,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setPracticeTypeInput2('');
     setIsCardFlipped(false);
     setIsListening(false);
-    if (flashcardIndex + 1 >= (filteredWords.length || 1)) {
+    if (flashcardIndex + 1 >= (filteredCards.length || 1)) {
       if (typeof selectedLektion === 'number') {
-        recordLessonLearnCompleted(selectedLevel, selectedLektion);
+        recordLessonStop(selectedLevel, selectedLektion, 'learn', learnDirection);
       }
       setIsLearnComplete(true);
       playSound('correct');
@@ -1026,10 +1070,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setIsListening(false);
     if (isLearnComplete) {
       setIsLearnComplete(false);
-      setFlashcardIndex(Math.max(0, (filteredWords.length || 1) - 1));
+      setFlashcardIndex(Math.max(0, (filteredCards.length || 1) - 1));
       return;
     }
-    setFlashcardIndex((prev) => (prev > 0 ? prev - 1 : (filteredWords.length || 1) - 1));
+    setFlashcardIndex((prev) => (prev > 0 ? prev - 1 : (filteredCards.length || 1) - 1));
   };
 
   // Learn: swipe left = next card, swipe right = previous, with a slide. The card slides out
@@ -1040,7 +1084,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const cardDragStart = useRef<{ x: number; y: number; id: number } | null>(null);
   const cardWasDragged = useRef(false);
   const SWIPE_DISTANCE = 60;
-  const SLIDE_MS = 180;
+  // Slow enough to see the card go — at 180 ms it looked like it just changed.
+  const SLIDE_MS = 260;
 
   /** dir -1 = next (card leaves to the left), +1 = previous (leaves to the right). */
   const slideTimer = useRef<number | null>(null);
@@ -1060,12 +1105,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       navigate();
       setCardDragX(0);
       setCardSlide({ phase: 'idle', dir });
-      return;
-    }
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) {
-      setCardDragX(0);
-      navigate();
       return;
     }
     setCardSlide({ phase: 'out', dir });
@@ -1114,7 +1153,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // other side is put in while nobody can see it, and it comes round from -90°
   // to face you — so no side is ever shown mirrored. A tap mid-turn finishes
   // that turn at once and starts the next, so fast tapping never waits.
-  const FLIP_MS = 130;
+  const FLIP_MS = 220;
   const [flip, setFlip] = useState<{ deg: number; animate: boolean }>({ deg: 0, animate: false });
   const flipTimer = useRef<number | null>(null);
   const cancelFlip = () => {
@@ -1122,17 +1161,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     flipTimer.current = null;
     setFlip({ deg: 0, animate: false });
   };
+  // The turn always shows, even with the phone's Reduce Motion on: it is how
+  // you see the card has two sides.
   const flipCard = () => {
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (flipTimer.current !== null) {
       // Mid-turn: land that turn now, then do this one.
       window.clearTimeout(flipTimer.current);
       flipTimer.current = null;
       setIsCardFlipped((f) => !f);
-    }
-    if (reduceMotion) {
-      setIsCardFlipped((f) => !f);
-      return;
     }
     setFlip({ deg: 90, animate: true });
     flipTimer.current = window.setTimeout(() => {
@@ -1175,12 +1211,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     activeRecognitionRef.current?.stop();
     activeRecognitionRef.current = null;
     setIsListening(false);
-    setFlashcardSubMode('learn');
+    setFlashcardSubMode(speakOnly ? 'practice' : 'learn');
     setSessionStarted(false);
     setDrillSubMode('practice');
     setDrillStarted(false);
-    // Practice keeps nothing when you walk out, so none of it should be
-    // waiting when you come back. The next run starts from the top, shuffled.
+    // Practice saves its place on the device; the screen itself starts clean
+    // and picks the saved run up again on the way back in.
     setPracticeQueue([]);
     setPracticeQueueIndex(0);
     setPracticeFeedback(null);
@@ -1217,21 +1253,29 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       // nothing — the question asked on the way out says so.
       onQuizActiveChange(
         isPracticeInProgress || isDrillInProgress,
-        isDrillInProgress ? isDrillReview : flashcardSubMode === 'review'
+        // Words Practice and Review both save their place now
+        isDrillInProgress ? isDrillReview : true
       );
     }
   }, [isPracticeInProgress, isDrillInProgress, isDrillReview, flashcardSubMode, onQuizActiveChange]);
 
-  /** Out of a running Practice or Review, back to its Start screen. */
+  /** Out of a running Practice or Review, back to its Start screen. Both keep their place. */
   const leaveFlashcardSession = () => {
-    activeRecognitionRef.current?.stop();
-    setIsListening(false);
-    setPracticeFeedback(null);
-    setPracticeTypeInput('');
-    setPracticeTypeInput2('');
-    // Review keeps its place (every answer is already scheduled), unless it was finished.
-    // Practice keeps nothing, so the next run starts fresh.
-    if (flashcardSubMode === 'practice' || isPracticeComplete) buildFreshPracticeRun();
+    const answered = practiceFeedback !== null;
+    clearAnswer();
+    if (isPracticeComplete) buildFreshPracticeRun();
+    // The answered card is done: the Start screen offers the next one.
+    else if (answered) {
+      const activeQueue = practiceQueue.length > 0 ? practiceQueue : filteredCards;
+      if (practiceQueueIndex + 1 < activeQueue.length) setPracticeQueueIndex((i) => i + 1);
+      else if (currentRedoBatch.length > 0) {
+        setPracticeQueue([...currentRedoBatch]);
+        setPracticeQueueIndex(0);
+        setCurrentRedoBatch([]);
+        setRoundNumber((r) => r + 1);
+      }
+    }
+    setResumedSession(true);
     setSessionStarted(false);
   };
 
@@ -1253,8 +1297,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       return true;
     }
     if (activeExerciseMode === 'explorer' && flashcardSubMode !== 'learn' && sessionStarted) {
-      if (isPracticeInProgress) onRequestAbandon(leaveFlashcardSession);
-      else leaveFlashcardSession();
+      // Practice and Review both keep their place, so there is nothing to confirm.
+      leaveFlashcardSession();
       return true;
     }
     if (activeDrillSkill && drillStarted) {
@@ -1265,29 +1309,24 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     return false;
   };
   // --- Audio that plays by itself (German only — never the English) -----------------
-  /** "das Foto", then "die Fotos" when it has a plural. */
-  const germanWordLines = (card?: WordEntry | null): string[] => {
-    if (!card) return [];
-    const word = card.nounDetails?.gender ? `${card.nounDetails.gender} ${card.lemma}` : card.lemma;
-    const plural = card.nounDetails?.gender ? getCleanPluralString(card) : null;
-    const hasPlural = !!plural && !/\(Sg\.?\)|^die\s*-?$/i.test(plural.trim());
-    return hasPlural ? [word, plural!] : [word];
-  };
-  const germanSentenceLines = (card?: WordEntry | null): string[] => {
-    const sentence = card ? getExampleSentence(card).german : '';
+  // Each card plays only itself: "der Service" on the singular card, "die
+  // Services" on the plural one — then, once turned over or answered, its sentence.
+  const germanWordLines = (card?: WordCard | null): string[] => (card ? [germanOf(card)] : []);
+  const germanSentenceLines = (card?: WordCard | null): string[] => {
+    const sentence = card ? exampleOf(card)?.german : '';
     return sentence ? [sentence] : [];
   };
 
-  // Words · Learn — DE → EN: the German side plays the word (and plural); turned
-  // over, the German sentence. EN → DE: the English side is silent; turned over,
-  // word (and plural), then the sentence.
+  // Words · Learn — DE → EN: the German side plays the word; turned over, the
+  // German sentence. EN → DE: the English side is silent; turned over, the word,
+  // then the sentence.
   const learnAudioKey =
-    activeExerciseMode === 'explorer' && flashcardSubMode === 'learn' && sessionStarted && !isLearnComplete && currentFlashcard
-      ? `${currentFlashcard.id}|${learnDirection}|${isCardFlipped}`
+    activeExerciseMode === 'explorer' && flashcardSubMode === 'learn' && sessionStarted && !isLearnComplete && currentLearnCard
+      ? `${currentLearnCard.key}|${learnDirection}|${isCardFlipped}`
       : '';
   useEffect(() => {
     if (!learnAudioKey) return;
-    const card = currentFlashcard;
+    const card = currentLearnCard;
     const lines =
       learnDirection === 'DE_TO_EN'
         ? isCardFlipped
@@ -1300,20 +1339,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [learnAudioKey]);
 
-  // Words · Practice and Review — DE → EN: the question (German) plays the word and
-  // plural; once answered, the sentence. EN → DE: silent until answered, then word,
-  // plural and sentence.
+  // Words · Practice and Review — DE → EN: the question (German) plays the word;
+  // once answered, the sentence. EN → DE: silent until answered, then the word
+  // and the sentence.
   const practiceAudioKey =
     activeExerciseMode === 'explorer' &&
     flashcardSubMode !== 'learn' &&
     sessionStarted &&
     !isPracticeComplete &&
-    currentPracticeWord
-      ? `${currentPracticeWord.id}|${practiceQueueIndex}|${roundNumber}|${practiceDirection}|${practiceFeedback !== null}`
+    currentPracticeCard
+      ? `${currentPracticeCard.key}|${practiceQueueIndex}|${roundNumber}|${practiceDirection}|${practiceFeedback !== null}`
       : '';
   useEffect(() => {
     if (!practiceAudioKey) return;
-    const card = currentPracticeWord;
+    const card = currentPracticeCard;
     const answered = practiceFeedback !== null;
     const lines =
       practiceDirection === 'DE_TO_EN'
@@ -1379,24 +1418,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         const q = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
         setPracticeQueue(q);
         setSessionInitialCount(q.length);
+        setInitialMistakeWordIds([]);
+        setPracticeQueueIndex(0);
+        setCurrentRedoBatch([]);
+        setRoundNumber(1);
+        setMistakeCounts({});
+        setMistakeWords([]);
+        setPracticeScore(0);
       } else {
-        setPracticeQueue(shuffled(list));
-        setSessionInitialCount(list.length);
+        startPracticeRun(cardsFor(list, CARD_PREFIX), updatedLevel, updatedLektion, practiceDirection);
       }
 
-      setInitialMistakeWordIds([]);
-      setPracticeQueueIndex(0);
-      setCurrentRedoBatch([]);
-      setRoundNumber(1);
-      setMistakeCounts({});
-      setMistakeWords([]);
-      setPracticeScore(0);
       setIsPracticeComplete(false);
       setIsLearnComplete(false);
-      setPracticeFeedback(null);
-      setPracticeTypeInput('');
-    setPracticeTypeInput2('');
-      setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
+      clearAnswer();
       setBlitzIndex(0);
       setPluralIndex(0);
       setBlitzFeedback(null);
@@ -1427,30 +1462,44 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       setMistakeWords([]);
       setInitialMistakeWordIds([]);
       setPracticeScore(0);
-      setPracticeFeedback(null);
-      setPracticeTypeInput('');
-    setPracticeTypeInput2('');
-      setIsListening(false);
+      setResumedSession(false);
+      clearAnswer();
 
       if (mode === 'learn') {
         setIsCardFlipped(false);
       } else if (mode === 'practice') {
-        setPracticeQueue(shuffled(filteredWords));
-        setSessionInitialCount(filteredWords.length);
-        setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
+        startPracticeRun(filteredCards, selectedLevel, selectedLektion, practiceDirection);
       } else if (mode === 'review') {
-        const q = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
-        setPracticeQueue(q);
-        setSessionInitialCount(q.length);
-        setPracticeDirection(Math.random() < 0.5 ? 'EN_TO_DE' : 'DE_TO_EN');
+        const saved = loadReviewSession();
+        if (saved) {
+          setPracticeQueue(saved.queue);
+          setPracticeQueueIndex(saved.index);
+          setPracticeScore(saved.score);
+          setSessionInitialCount(saved.initial);
+          setResumedSession(true);
+        } else {
+          const q = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
+          setPracticeQueue(q);
+          setSessionInitialCount(q.length);
+        }
       }
     };
 
-    if (isPracticeInProgress && onRequestAbandon) {
-      onRequestAbandon(doSwitch);
-    } else {
-      doSwitch();
-    }
+    // Practice and Review keep their place, so switching away loses nothing.
+    doSwitch();
+  };
+
+  /** The direction button: DE → EN or EN → DE. Practice picks up that direction's own saved run. */
+  const changeDirection = (dir: Direction) => {
+    if (dir === learnDirection) return;
+    playSound('tap');
+    setLearnDirection(dir);
+    setIsCardFlipped(false);
+    setIsLearnComplete(false);
+    setFlashcardIndex(0);
+    clearAnswer();
+    setIsPracticeComplete(false);
+    if (flashcardSubMode === 'practice') startPracticeRun(filteredCards, selectedLevel, selectedLektion, dir);
   };
 
   // Keyboard Hotkey Listener for Flashcards (Learn & Practice)
@@ -1460,8 +1509,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Typing a note: none of this is for the cards.
+      if ((e.target as HTMLElement)?.closest?.('[data-note-dialog]')) return;
       const targetTag = (e.target as HTMLElement)?.tagName;
       const isInput = targetTag === 'INPUT' || targetTag === 'TEXTAREA' || targetTag === 'SELECT';
+      if (targetTag === 'TEXTAREA') return;
 
       const matchesKey = (configKey: string) => {
         if (!configKey) return false;
@@ -1487,16 +1539,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         } else if (matchesKey(hotkeys.singularAudio)) {
           e.preventDefault();
           playSound('tap');
-          if (currentFlashcard) {
-            speakGerman(
-              currentFlashcard.nounDetails?.gender
-                ? `${currentFlashcard.nounDetails.gender} ${currentFlashcard.lemma}`
-                : currentFlashcard.lemma
-            );
-          }
+          if (currentLearnCard) speakGerman(germanOf(currentLearnCard));
         } else if (matchesKey(hotkeys.pluralAudio)) {
           e.preventDefault();
-          const pluralStr = getCleanPluralString(currentFlashcard);
+          const pluralStr = currentFlashcard ? pluralOf(currentFlashcard) : null;
           if (pluralStr) {
             playSound('tap');
             speakGerman(pluralStr);
@@ -1506,8 +1552,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           (hotkeys.exampleAudio === 'Meta' && (e.key === 'Meta' || e.key === 'Control' || e.metaKey || e.ctrlKey))
         ) {
           e.preventDefault();
-          if (currentFlashcard) {
-            const example = getExampleSentence(currentFlashcard);
+          const example = currentLearnCard ? exampleOf(currentLearnCard) : null;
+          if (example) {
             playSound('tap');
             speakGerman(example.german);
           }
@@ -1528,14 +1574,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           } else if (matchesKey(hotkeys.practiceAudio) || e.code === 'Space' || e.key === ' ') {
             e.preventDefault();
             playSound('tap');
-            if (practiceFeedback.expected && practiceDirection === 'EN_TO_DE') {
-              speakGerman(practiceFeedback.expected);
-            }
+            if (currentPracticeCard) speakGerman(germanOf(currentPracticeCard));
           }
         } else {
-          // Unanswered state in practice
+          // Unanswered state in practice: Space speaks in Speaking; typing has its box
           if (matchesKey(hotkeys.practiceAudio) || e.code === 'Space') {
-            if (!isInput) {
+            if (!isInput && speakOnly) {
               e.preventDefault();
               handleStartListening();
             }
@@ -1563,6 +1607,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     isPracticeComplete,
     practiceQueueIndex,
     practiceTypeInput,
+    practiceTypeInput2,
+    genderPick,
+    numberPick,
+    currentPracticeCard,
   ]);
 
   // Hotkey recording listener when user clicks to change a hotkey in modal
@@ -1759,16 +1807,18 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   };
 
   // 3 exercises (only 1 word / title)
-  const availableExercises = [
-    {
-      id: 'explorer',
-      title: 'Words',
-    },
-    {
-      id: 'plural_drill',
-      title: 'Plural',
-    },
-  ];
+  const availableExercises = speakOnly
+    ? [{ id: 'explorer', title: 'Words' }]
+    : [
+        {
+          id: 'explorer',
+          title: 'Words',
+        },
+        {
+          id: 'plural_drill',
+          title: 'Plural',
+        },
+      ];
 
   // VIEW 1: VOCABULARY AREA HUB (3 Exercises Only - Clean & Centered)
   // Before the menu's early return: a hook must run on every render.
@@ -1842,18 +1892,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     );
   }
 
-  const getNounColorClass = (gender?: Gender) => {
-    switch (gender) {
-      case 'der':
-        return 'text-blue-600 dark:text-blue-400';
-      case 'die':
-        return 'text-pink-600 dark:text-pink-400';
-      case 'das':
-        return 'text-[#8B4513] dark:text-[#E0A066]';
-      default:
-        return 'text-zinc-900 dark:text-zinc-100';
-    }
-  };
+  const getNounColorClass = (gender?: Gender) => genderText(gender);
 
   const getCleanPluralString = (word?: WordEntry | null) => {
     if (!word?.nounDetails?.plural) return null;
@@ -1893,8 +1932,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   {/* Banner 2: Flashcard Sub-Mode Selector (Learn, Practice, Review) */}
   const renderModeBanner = () => (
     <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-1.5 sm:p-2 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs mb-2.5">
-      <div className="grid grid-cols-3 gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs">
-        {/* Learn Button */}
+      <div className={`grid ${speakOnly ? 'grid-cols-2' : 'grid-cols-3'} gap-1 sm:gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xs`}>
+        {/* Learn Button (Speaking has none) */}
+        {!speakOnly && (
         <button
           type="button"
           onClick={() => handleSubModeChange('learn')}
@@ -1906,6 +1946,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         >
           <span>{appLanguage === 'en' ? 'Learn' : 'Lernen'}</span>
         </button>
+        )}
 
         {/* Practice Button */}
         <button
@@ -2158,702 +2199,549 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // VIEW 2: ACTIVE EXERCISE SCREEN (With Filter Bar inside each exercise)
   return (
     <div className="w-full h-full flex flex-col justify-start pt-0.5 sm:pt-1 pb-2 animate-fadeIn overflow-hidden">
-      {/* SUB-MODE 1: FLASHCARD DRILL */}
-      {activeExerciseMode === 'explorer' && (
-        <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
-          {/* Both bars belong to Learn. Practice and Review are the card, the
-              keyboard and the header — there is no room for anything else, and
-              nothing here needs changing mid-session. Back arrow to come out. */}
-          {/* The bars belong to Learn and to the Start screen. Once the cards
-              are up it is the header, the card and the keyboard. */}
-          {(flashcardSubMode === 'learn' || !sessionStarted) && (
-            <>
-              {renderModeBanner()}
-              {/* Review draws from every lesson, so there is nothing to filter */}
-              {flashcardSubMode !== 'review' && renderFilterBanner()}
-            </>
-          )}
+      {/* SUB-MODE 1: WORDS — Learn, Practice, Review (Speaking: Practice and Review, spoken) */}
+      {activeExerciseMode === 'explorer' && (() => {
+        const en = appLanguage === 'en';
+        const lessonName =
+          typeof selectedLektion === 'number'
+            ? selectedLektion === 0
+              ? 'Intro'
+              : `${en ? 'Lesson' : 'Lektion'} ${selectedLektion}`
+            : selectedLektion === 'PART_1'
+            ? `${selectedLevel}.1`
+            : selectedLektion === 'PART_2'
+            ? `${selectedLevel}.2`
+            : en
+            ? 'All Lessons'
+            : 'Alle Lektionen';
 
-          <div className="flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
-            {/* Learn, Practice and Review all wait on a Start page, so their audio never starts on its own */}
-            {!sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8">
-                <div className="space-y-3 max-w-xs">
-                  {flashcardSubMode !== 'review' ? (
-                    <>
-                      <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
-                        {selectedLevel}
-                        {typeof selectedLektion === 'number'
-                          ? ` · ${selectedLektion === 0 ? 'Intro' : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}`
-                          : ''}
-                      </p>
-                      <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
-                        {lessonTopics(filteredWords) || (appLanguage === 'en' ? 'Practice' : 'Üben')}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">
-                      {appLanguage === 'en' ? 'Review' : 'Wiederholen'}
-                    </p>
-                  )}
-                  <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
-                    {flashcardSubMode !== 'review'
-                      ? `${filteredWords.length} ${appLanguage === 'en' ? 'words' : 'Wörter'}`
-                      : `${practiceQueue.length} ${appLanguage === 'en' ? 'words due' : 'Wörter fällig'}`}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound('tap');
-                    setSessionStarted(true);
-                  }}
-                  className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
-                >
-                  {appLanguage === 'en' ? 'Start' : 'Starten'}
-                </button>
-              </div>
-            ) : flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
-              /* Review with nothing unlocked: say so, instead of showing words you have not met */
-              <div className="py-6 text-center">
-                <p className="font-black text-zinc-900 dark:text-zinc-100">
-                  {appLanguage === 'en' ? 'Nothing to review yet' : 'Noch nichts zu wiederholen'}
-                </p>
-              </div>
-            ) : filteredWords.length === 0 ? (
-              <div className="py-6 text-center space-y-3">
-                <p className="font-bold text-zinc-500">
-                  {appLanguage === 'en' ? 'No words found for this filter.' : 'Keine Wörter für diesen Filter gefunden.'}
-                </p>
-                <button
-                  onClick={() => {
-                    setSelectedLevel('A1');
-                    setSelectedLektion('ALL');
-                    setFlashcardIndex(0);
-                  }}
-                  className="px-4 py-2 bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl cursor-pointer"
-                >
-                  {appLanguage === 'en' ? 'Reset to A1 (All Lessons)' : 'Auf A1 (Alle Lektionen) zurücksetzen'}
-                </button>
-              </div>
-            ) : flashcardSubMode === 'learn' ? (
-              isLearnComplete ? (
-                /* LEARN ROUND COMPLETE VIEW */
-                <div className="flex-1 flex flex-col justify-between items-center text-center p-3 sm:p-5 animate-fadeIn w-full space-y-3 sm:space-y-4">
-                  <div className="text-center space-y-1 pt-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-black mb-1">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>{appLanguage === 'en' ? 'Learn Round Complete' : 'Lernrunde Abgeschlossen'}</span>
+        /** DE → EN | EN → DE, the button that sets the way every card goes. */
+        const directionSwitch = (
+          <div className="inline-grid grid-cols-2 gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+            {(['DE_TO_EN', 'EN_TO_DE'] as Direction[]).map((dir) => (
+              <button
+                key={dir}
+                type="button"
+                onClick={() => changeDirection(dir)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  learnDirection === dir
+                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                }`}
+              >
+                {dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
+              </button>
+            ))}
+          </div>
+        );
+
+        const pluralChip = (
+          <span className="inline-block text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-200/70 dark:bg-zinc-700/60 px-2 py-0.5 rounded-md">
+            Plural
+          </span>
+        );
+
+        /**
+         * "der Student" / "die Studenten": the article in its gender's colour, the
+         * noun in black. The plural "die" belongs to no gender, so it stays grey.
+         */
+        const germanWord = (card: WordCard, size = 'text-3xl sm:text-4xl') => {
+          const gender = card.word.nounDetails?.gender;
+          const articleTone = card.plural ? 'text-zinc-500 dark:text-zinc-400' : genderText(gender);
+          const text = germanOf(card);
+          const article = gender ? text.match(/^(der|die|das)\s+/i)?.[1] : undefined;
+          return (
+            <div className="flex flex-col items-center gap-1.5">
+              <h3 className={`${size} tracking-tight leading-tight`}>
+                {article ? (
+                  <>
+                    <span className={`font-normal ${articleTone}`}>{article}</span>{' '}
+                    <span className="font-black text-zinc-900 dark:text-zinc-100">{text.slice(article.length).trim()}</span>
+                  </>
+                ) : (
+                  <span className="font-black text-zinc-900 dark:text-zinc-100">{text}</span>
+                )}
+              </h3>
+              {card.plural && pluralChip}
+            </div>
+          );
+        };
+
+        /** The English: one line, or "1." and "2." each on its own line. */
+        const englishWord = (card: WordCard, size = 'text-2xl sm:text-3xl') => {
+          const lines = meaningLines(card.word);
+          return (
+            <div className="flex flex-col items-center gap-1.5">
+              {lines.length > 1 ? (
+                <div className="space-y-1">
+                  {lines.map((line, i) => (
+                    <div key={i} className={`${size} font-black text-zinc-950 dark:text-white leading-tight`}>
+                      <span className="text-zinc-400 font-bold mr-1">{i + 1}.</span>
+                      {line}
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                      {selectedLevel} • {typeof selectedLektion === 'number' ? `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}` : (selectedLektion === 'PART_1' ? `${selectedLevel}.1` : selectedLektion === 'PART_2' ? `${selectedLevel}.2` : (appLanguage === 'en' ? 'All Lessons' : 'Alle Lektionen'))}
-                    </h3>
-                    <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                      {appLanguage === 'en'
-                        ? `You have browsed all ${filteredWords.length} flashcards in this round.`
-                        : `Du hast alle ${filteredWords.length} Lernkarten in dieser Runde angesehen.`}
-                    </p>
-                  </div>
-
-                  {/* Lesson Mastery Card */}
-                  {typeof selectedLektion === 'number' && (
-                    <div className="w-full max-w-sm bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl p-3.5 border border-zinc-200 dark:border-zinc-700 space-y-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                        {appLanguage === 'en' ? 'Lesson Mastery Progress' : 'Lektions-Fortschritt'}
-                      </span>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60">
-                          <span className="font-bold text-emerald-800 dark:text-emerald-300">1. {appLanguage === 'en' ? 'Learn Cards' : 'Lernkarten'}</span>
-                          <span className="font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                            <Check className="w-3.5 h-3.5 stroke-[3]" /> {appLanguage === 'en' ? 'Completed' : 'Erledigt'}
-                          </span>
-                        </div>
-                        <div className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl border ${
-                          isLessonPracticeDone(selectedLevel, selectedLektion)
-                            ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
-                            : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400'
-                        }`}>
-                          <span className="font-bold">2. {appLanguage === 'en' ? 'Practice Drill' : 'Übungsrunde'}</span>
-                          <span className="font-black">
-                            {isLessonPracticeDone(selectedLevel, selectedLektion) ? (
-                              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                <Check className="w-3.5 h-3.5 stroke-[3]" /> {appLanguage === 'en' ? 'Completed' : 'Erledigt'}
-                              </span>
-                            ) : (
-                              <span className="text-amber-600 dark:text-amber-400">
-                                {appLanguage === 'en' ? 'Pending' : 'Ausstehend'}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      {isLessonFullyCompleted(selectedLevel, selectedLektion) ? (
-                        <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 pt-1">
-                          🌟 {appLanguage === 'en' ? 'Lesson Mastered! Sign of completion added to filter.' : 'Lektion gemeistert! Abzeichen im Filter freigeschaltet.'}
-                        </p>
-                      ) : (
-                        <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 pt-1">
-                          💡 {appLanguage === 'en' ? 'Complete 1 round of Practice to mark this lesson as completed in the lesson filter!' : 'Schließe 1 Übungsrunde ab, um diese Lektion im Filter als fertig zu markieren!'}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="w-full max-w-sm flex flex-col sm:flex-row items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsLearnComplete(false);
-                        setFlashcardIndex(0);
-                      }}
-                      className="w-full sm:flex-1 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95 transition-all"
-                    >
-                      {appLanguage === 'en' ? 'Review Cards Again' : 'Karten wiederholen'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSubModeChange('practice')}
-                      className="w-full sm:flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent shadow-xs cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <span>{appLanguage === 'en' ? 'Go to Practice' : 'Zu den Übungen'}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                  ))}
                 </div>
               ) : (
-                /* LEARN SUB-MODE: Layout adhering to reference card specification */
-                <>
-                  {/* Top Info Bar: Progress Counter & Direction Toggle (styled matching Practice & Review) */}
-                {/* Direction on the left, the counter in the middle (the lesson bar above says which lesson) */}
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-bold text-zinc-400 mb-2 shrink-0">
+                <h3 className={`${size} font-black text-zinc-950 dark:text-white tracking-tight leading-tight`}>{lines[0]}</h3>
+              )}
+              {card.plural && pluralChip}
+            </div>
+          );
+        };
+
+        /** The lower half of a card: the example, the same size as the word above it, its English under it. */
+        const exampleHalf = (card: WordCard) => {
+          const example = exampleOf(card);
+          if (!example) return null;
+          const shownWord = card.plural ? { ...card.word, lemma: (pluralOf(card.word) ?? card.word.lemma).replace(/^die\s+/i, '') } : card.word;
+          return (
+            <div className="flex-1 w-full flex flex-col items-center justify-center gap-1.5 px-1">
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
+                  <SentenceWithWord sentence={example.german} word={shownWord} />
+                </p>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    playSound('tap');
+                    speakGerman(example.german);
+                  }}
+                  title={en ? 'Listen to sentence' : 'Satz anhören'}
+                  className="p-1.5 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
+              {example.english && (
+                <p className="text-sm sm:text-base font-medium text-zinc-500 dark:text-zinc-400">{example.english}</p>
+              )}
+            </div>
+          );
+        };
+
+        /** A card face: the word fills it, or — once the example shows — the top half, a line, the example below. */
+        const cardFace = (top: React.ReactNode, card: WordCard | undefined, withExample: boolean) => {
+          const bottom = withExample && card ? exampleHalf(card) : null;
+          return bottom ? (
+            <div className="flex-1 w-full flex flex-col">
+              <div className="flex-1 flex flex-col items-center justify-center">{top}</div>
+              <div className="w-full border-t-2 border-zinc-200 dark:border-zinc-700 my-2" />
+              {bottom}
+            </div>
+          ) : (
+            <div className="flex-1 w-full flex flex-col items-center justify-center">{top}</div>
+          );
+        };
+
+        /** A small switch beside the answer box. */
+        const answerSwitch = (label: string, onTap: () => void, tone: string, title: string) => (
+          <button
+            type="button"
+            // Keeps the answer box focused, so the phone keyboard stays up
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => {
+              playSound('tap');
+              onTap();
+            }}
+            title={title}
+            aria-label={title}
+            className={`w-9 h-9 shrink-0 rounded-xl border-2 text-sm font-black flex items-center justify-center cursor-pointer active:scale-95 transition-all ${tone}`}
+          >
+            {label}
+          </button>
+        );
+        const markTone = (mark: string) =>
+          mark === 'M'
+            ? genderButton('der')
+            : mark === 'F'
+            ? genderButton('die')
+            : 'bg-zinc-100 border-zinc-300 text-zinc-800 dark:bg-zinc-800 dark:border-zinc-600 dark:text-zinc-100';
+        const markChips = (marks?: string[]) =>
+          marks && marks.length > 0 ? (
+            <span className="flex items-center gap-1 shrink-0">
+              {marks.map((m, i) => (
+                <span key={i} className={`w-7 h-7 rounded-lg border-2 text-xs font-black flex items-center justify-center ${markTone(m)}`}>
+                  {m}
+                </span>
+              ))}
+            </span>
+          ) : null;
+
+        /** Learn, Practice and Review: three lines, each with its stops. */
+        const renderLessonProgress = () => {
+          if (typeof selectedLektion !== 'number') return null;
+          const stops = lessonStops(selectedLevel, selectedLektion);
+          // Review: where this lesson's cards sit in the schedule — not yet in it, then each gap in days.
+          const gaps = new Map<number, number>();
+          let notYet = 0;
+          for (const card of filteredCards) {
+            const r = fsrsRecords[card.key];
+            if (!r?.isUnlocked) notYet++;
+            else {
+              const days = Math.max(1, Math.round(r.intervalDays || 1));
+              gaps.set(days, (gaps.get(days) ?? 0) + 1);
+            }
+          }
+          const reviewStations = [
+            { label: '0', done: notYet < filteredCards.length, count: notYet },
+            ...[...gaps.entries()].sort((a, b) => a[0] - b[0]).map(([days, count]) => ({
+              label: `${en ? 'Day' : 'Tag'} ${days}`,
+              done: true,
+              count,
+            })),
+          ];
+          const line = (title: string, stations: { label: string; done: boolean; count?: number }[]) => (
+            <div className="space-y-1.5">
+              <p className="text-xs font-black text-zinc-700 dark:text-zinc-300 text-left">{title}</p>
+              <div className="flex items-start">
+                {stations.map((st, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && (
+                      <div
+                        className={`flex-1 h-1 mt-[11px] rounded-full ${
+                          st.done ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-700'
+                        }`}
+                      />
+                    )}
+                    <div className="flex flex-col items-center gap-1 min-w-[44px]">
+                      <span
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-black ${
+                          st.done
+                            ? 'bg-emerald-500 border-emerald-500 text-white'
+                            : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-600 text-zinc-400'
+                        }`}
+                      >
+                        {st.count !== undefined ? st.count : st.done ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : ''}
+                      </span>
+                      <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{st.label}</span>
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          );
+          return (
+            <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl p-3 sm:p-3.5 border border-zinc-200 dark:border-zinc-700 space-y-3">
+              {!speakOnly &&
+                line(en ? 'Learn' : 'Lernen', [
+                  { label: 'DE → EN', done: stops.learnDe },
+                  { label: 'EN → DE', done: stops.learnEn },
+                ])}
+              {line(en ? 'Practice' : 'Üben', [
+                { label: 'DE → EN', done: stops.practiceDe },
+                { label: 'EN → DE', done: stops.practiceEn },
+              ])}
+              {line(en ? 'Review' : 'Wiederholen', reviewStations)}
+            </div>
+          );
+        };
+
+        const activeQueue = practiceQueue.length > 0 ? practiceQueue : filteredCards;
+        const position = (practiceQueueIndex % (activeQueue.length || 1)) + 1;
+        const want = wantedMarks(currentPracticeCard);
+        const canResume = flashcardSubMode !== 'learn' && resumedSession && (practiceQueueIndex > 0 || roundNumber > 1);
+
+        return (
+          <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
+            {/* The bars belong to Learn and to the Start screen. Once the cards
+                are up it is the header, the card and the answer. */}
+            {(flashcardSubMode === 'learn' || !sessionStarted) && (
+              <>
+                {renderModeBanner()}
+                {/* Review draws from every lesson, so there is nothing to filter */}
+                {flashcardSubMode !== 'review' && renderFilterBanner()}
+              </>
+            )}
+
+            <div className="flex-1 min-h-0 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
+              {/* Learn, Practice and Review all wait on a Start page, so their audio never starts on its own */}
+              {!sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-7 py-6">
+                  <div className="space-y-3 max-w-xs">
+                    {flashcardSubMode !== 'review' ? (
+                      <>
+                        <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                          {selectedLevel}
+                          {typeof selectedLektion === 'number' ? ` · ${lessonName}` : ''}
+                        </p>
+                        <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
+                          {lessonTopics(filteredWords) || (en ? 'Practice' : 'Üben')}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">{en ? 'Review' : 'Wiederholen'}</p>
+                    )}
+                    <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
+                      {canResume
+                        ? `${position} / ${activeQueue.length}`
+                        : flashcardSubMode !== 'review'
+                        ? `${filteredCards.length} ${en ? 'cards' : 'Karten'}`
+                        : `${practiceQueue.length} ${en ? 'cards due' : 'Karten fällig'}`}
+                    </p>
+                  </div>
+                  {directionSwitch}
                   <button
                     type="button"
                     onClick={() => {
                       playSound('tap');
-                      setIsCardFlipped(false);
-                      setLearnDirection((prev) => (prev === 'DE_TO_EN' ? 'EN_TO_DE' : 'DE_TO_EN'));
+                      setSessionStarted(true);
                     }}
-                    className="justify-self-start px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer active:scale-95 transition-all"
-                    title={
-                      learnDirection === 'DE_TO_EN'
-                        ? (appLanguage === 'en' ? 'Click to switch to EN → DE' : 'Klicken für EN → DE')
-                        : (appLanguage === 'en' ? 'Click to switch to DE → EN' : 'Klicken für DE → EN')
-                    }
+                    className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
                   >
-                    <span>{learnDirection === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}</span>
+                    {canResume ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
                   </button>
-
-                  <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
-                    {flashcardIndex + 1} / {filteredWords.length}
-                  </span>
-                  <span />
                 </div>
+              ) : flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
+                /* Review with nothing unlocked: say so, instead of showing words you have not met */
+                <div className="py-6 text-center">
+                  <p className="font-black text-zinc-900 dark:text-zinc-100">
+                    {en ? 'Nothing to review yet' : 'Noch nichts zu wiederholen'}
+                  </p>
+                </div>
+              ) : filteredCards.length === 0 && flashcardSubMode !== 'review' ? (
+                <div className="py-6 text-center space-y-3">
+                  <p className="font-bold text-zinc-500">
+                    {en ? 'No words found for this filter.' : 'Keine Wörter für diesen Filter gefunden.'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSelectedLevel('A1');
+                      setSelectedLektion('ALL');
+                      setFlashcardIndex(0);
+                    }}
+                    className="px-4 py-2 bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl cursor-pointer"
+                  >
+                    {en ? 'Reset to A1 (All Lessons)' : 'Auf A1 (Alle Lektionen) zurücksetzen'}
+                  </button>
+                </div>
+              ) : flashcardSubMode === 'learn' ? (
+                isLearnComplete ? (
+                  /* LEARN ROUND COMPLETE */
+                  <div className="flex-1 flex flex-col justify-between items-center text-center p-2 sm:p-4 animate-fadeIn w-full gap-3 sm:gap-4">
+                    <div className="text-center space-y-1 pt-1">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-black mb-1">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>{en ? 'Learn Round Complete' : 'Lernrunde Abgeschlossen'}</span>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+                        {selectedLevel} • {lessonName}
+                      </h3>
+                    </div>
 
-                {/* Interactive Flip Card */}
-                {(() => {
-                  const cleanPlural = getCleanPluralString(currentFlashcard);
-                  const example = currentFlashcard ? getExampleSentence(currentFlashcard) : null;
+                    {renderLessonProgress()}
 
-                  return (
-                    <div
-                      {...cardSwipeHandlers}
-                      onClick={() => {
-                        if (cardWasDragged.current) {
-                          cardWasDragged.current = false;
-                          return; // that was a swipe, not a tap
-                        }
-                        playSound('tap');
-                        flipCard();
-                      }}
-                      style={{ ...cardSlideStyle, touchAction: 'pan-y' }}
-                      className="flex-1 min-h-[220px] sm:min-h-[260px] p-5 sm:p-7 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-between cursor-pointer hover:border-zinc-950 dark:hover:border-white select-none group"
-                    >
-                      {/* Top spacer for optical centering */}
-                      <div className="w-full shrink-0" />
+                    <div className="w-full max-w-sm flex flex-col sm:flex-row items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLearnComplete(false);
+                          setFlashcardIndex(0);
+                        }}
+                        className="w-full sm:flex-1 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95 transition-all"
+                      >
+                        {en ? 'Review Cards Again' : 'Karten wiederholen'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSubModeChange('practice')}
+                        className="w-full sm:flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent shadow-xs cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <span>{en ? 'Go to Practice' : 'Zu den Übungen'}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* LEARN: the card turns over; swipe or the arrows for the next one */
+                  <>
+                    {/* Direction on the left, the counter in the middle (the lesson bar above says which lesson) */}
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-bold text-zinc-400 mb-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => changeDirection(learnDirection === 'DE_TO_EN' ? 'EN_TO_DE' : 'DE_TO_EN')}
+                        className="justify-self-start px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer active:scale-95 transition-all"
+                      >
+                        <span>{learnDirection === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}</span>
+                      </button>
+                      <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
+                        {flashcardIndex + 1} / {filteredCards.length}
+                      </span>
+                      <span />
+                    </div>
 
-                      {/* Card Center: Direction 1 (DE_TO_EN) or Direction 2 (EN_TO_DE) */}
-                      <div className="w-full flex flex-col items-center justify-center text-center">
-                        {learnDirection === 'DE_TO_EN' ? (
-                          !isCardFlipped ? (
-                            /* Direction 1 Front: German Singular + Plural directly underneath */
-                            <div className="space-y-1.5 w-full">
-                              {currentFlashcard?.nounDetails?.gender ? (
-                                <>
-                                  <h3 className="text-2xl sm:text-3xl tracking-tight flex items-baseline justify-center gap-2">
-                                    <span className={`font-normal font-sans ${getNounColorClass(currentFlashcard.nounDetails.gender)}`}>
-                                      {currentFlashcard.nounDetails.gender}
-                                    </span>
-                                    <span className="font-black text-zinc-900 dark:text-zinc-100">
-                                      {currentFlashcard.lemma}
-                                    </span>
-                                  </h3>
-
-                                  {/* Plural directly underneath singular with subtle Pl. indicator */}
-                                  {cleanPlural && (
-                                    <div className="flex items-center justify-center gap-2 mt-1">
-                                      <h4 className="text-xl sm:text-2xl tracking-tight flex items-baseline justify-center gap-2">
-                                        <span className="font-normal font-sans text-pink-600 dark:text-pink-400">
-                                          die
-                                        </span>
-                                        <span className="font-black text-zinc-900 dark:text-zinc-100">
-                                          {cleanPlural.replace(/^die\s+/i, '')}
-                                        </span>
-                                      </h4>
-                                      <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-200/70 dark:bg-zinc-700/60 px-2 py-0.5 rounded-md self-center whitespace-nowrap">
-                                        Plural
-                                      </span>
-                                    </div>
-                                  )}
-                                </>
-                              ) : (
-                                <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                                  {currentFlashcard?.lemma}
-                                </h3>
-                              )}
-                            </div>
-                          ) : (
-                            /* Direction 1 Back: English meaning directly without plural */
-                            <div className="space-y-1.5 text-center w-full">
-                              {(() => {
-                                const parts = formatTranslationList(currentFlashcard?.translation);
-                                if (parts.length > 1) {
-                                  return (
-                                    <div className="space-y-1.5 text-center">
-                                      {parts.map((p, idx) => (
-                                        <div key={idx} className="text-xl sm:text-2xl font-black text-zinc-950 dark:text-white">
-                                          <span className="text-zinc-400 font-bold mr-1.5 text-base sm:text-lg">{idx + 1}.</span>
-                                          {p}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  );
-                                }
-                                return (
-                                  <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">
-                                    {parts[0] || currentFlashcard?.translation}
-                                  </h3>
-                                );
-                              })()}
-                            </div>
-                          )
-                        ) : (
-                          /* Direction 2 (EN_TO_DE) */
-                          !isCardFlipped ? (
-                            /* Direction 2 Front: English meaning directly without plural */
-                            <div className="space-y-1.5 text-center w-full">
-                              {(() => {
-                                const parts = formatTranslationList(currentFlashcard?.translation);
-                                if (parts.length > 1) {
-                                  return (
-                                    <div className="space-y-1.5 text-center">
-                                      {parts.map((p, idx) => (
-                                        <div key={idx} className="text-xl sm:text-2xl font-black text-zinc-950 dark:text-white">
-                                          <span className="text-zinc-400 font-bold mr-1.5 text-base sm:text-lg">{idx + 1}.</span>
-                                          {p}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  );
-                                }
-                                return (
-                                  <h3 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight">
-                                    {parts[0] || currentFlashcard?.translation}
-                                  </h3>
-                                );
-                              })()}
-                            </div>
-                          ) : (
-                            /* Direction 2 Back: German Singular + Plural directly underneath */
-                            <div className="space-y-1.5 w-full">
-                              {currentFlashcard?.nounDetails?.gender ? (
-                                <>
-                                  <h3 className="text-2xl sm:text-3xl tracking-tight flex items-baseline justify-center gap-2">
-                                    <span className={`font-normal font-sans ${getNounColorClass(currentFlashcard.nounDetails.gender)}`}>
-                                      {currentFlashcard.nounDetails.gender}
-                                    </span>
-                                    <span className="font-black text-zinc-900 dark:text-zinc-100">
-                                      {currentFlashcard.lemma}
-                                    </span>
-                                  </h3>
-                                  {cleanPlural && (
-                                    <div className="flex items-center justify-center gap-2 mt-1">
-                                      <h4 className="text-xl sm:text-2xl tracking-tight flex items-baseline justify-center gap-2">
-                                        <span className="font-normal font-sans text-pink-600 dark:text-pink-400">
-                                          die
-                                        </span>
-                                        <span className="font-black text-zinc-900 dark:text-zinc-100">
-                                          {cleanPlural.replace(/^die\s+/i, '')}
-                                        </span>
-                                      </h4>
-                                      <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-200/70 dark:bg-zinc-700/60 px-2 py-0.5 rounded-md self-center whitespace-nowrap">
-                                        Plural
-                                      </span>
-                                    </div>
-                                  )}
-                                </>
-                              ) : (
-                                <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                                  {currentFlashcard?.lemma}
-                                </h3>
-                              )}
-                            </div>
-                          )
+                    {currentLearnCard && (
+                      <div
+                        {...cardSwipeHandlers}
+                        onClick={() => {
+                          if (cardWasDragged.current) {
+                            cardWasDragged.current = false;
+                            return; // that was a swipe, not a tap
+                          }
+                          playSound('tap');
+                          flipCard();
+                        }}
+                        style={{ ...cardSlideStyle, touchAction: 'pan-y' }}
+                        className="flex-1 min-h-[240px] sm:min-h-[280px] p-4 sm:p-6 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col cursor-pointer hover:border-zinc-950 dark:hover:border-white select-none"
+                      >
+                        {cardFace(
+                          // DE → EN shows German first; EN → DE shows English first. Turned over, the other.
+                          (learnDirection === 'DE_TO_EN') !== isCardFlipped
+                            ? germanWord(currentLearnCard, isCardFlipped ? 'text-2xl sm:text-3xl' : undefined)
+                            : englishWord(currentLearnCard),
+                          currentLearnCard,
+                          isCardFlipped
                         )}
                       </div>
+                    )}
 
-                      {/* Bottom of Card: Example sentence as shown in mockup */}
-                      {/* No line under the English side when there is no English sentence */}
-                      {example && (
-                        (learnDirection === 'DE_TO_EN' && isCardFlipped) ||
-                        (learnDirection === 'EN_TO_DE' && (isCardFlipped || !!example.english))
-                      ) ? (
-                        <div className="mt-4 pt-3 border-t border-zinc-200/80 dark:border-zinc-700/80 w-full max-w-sm mx-auto text-center space-y-1 shrink-0">
-                          {learnDirection === 'DE_TO_EN' && isCardFlipped ? (
-                            <>
-                              <div className="flex items-center justify-center gap-2">
-                                <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
-                                  {currentFlashcard && (
-                                    <SentenceWithWord sentence={example.german} word={currentFlashcard} />
-                                  )}
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    playSound('tap');
-                                    speakGerman(example.german);
-                                  }}
-                                  title={appLanguage === 'en' ? 'Listen to sentence' : 'Satz anhören'}
-                                  className="p-1 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
-                                >
-                                  <Volume2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                              {example.english && (
-                                <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                                  ({example.english})
-                                </p>
-                              )}
-                            </>
-                          ) : learnDirection === 'EN_TO_DE' && !isCardFlipped ? (
-                            example.english ? (
-                              <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                                ({example.english})
-                              </p>
-                            ) : null
-                          ) : (
-                            <>
-                              <div className="flex items-center justify-center gap-2">
-                                <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
-                                  {currentFlashcard && (
-                                    <SentenceWithWord sentence={example.german} word={currentFlashcard} />
-                                  )}
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    playSound('tap');
-                                    speakGerman(example.german);
-                                  }}
-                                  title={appLanguage === 'en' ? 'Listen to sentence' : 'Satz anhören'}
-                                  className="p-1 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
-                                >
-                                  <Volume2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                              {example.english && (
-                                <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                                  ({example.english})
-                                </p>
-                              )}
-                            </>
-                          )}
+                    {/* Prev, the word's sound, Next. On the English side there is
+                        nothing to hear, so the arrows grow into its room. */}
+                    <div className="flex items-center mt-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => goToCard(1)}
+                        style={{ flexGrow: englishSideUp ? 1 : 0, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
+                        className="p-3 mr-2 basis-auto shrink-0 flex justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95"
+                        title="Previous"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                      </button>
+                      <div
+                        inert={englishSideUp}
+                        aria-hidden={englishSideUp}
+                        style={{
+                          flexGrow: englishSideUp ? 0 : 1,
+                          opacity: englishSideUp ? 0 : 1,
+                          transition: 'flex-grow 180ms ease-out, opacity 150ms ease-out',
+                        }}
+                        className="basis-0 min-w-0 overflow-hidden"
+                      >
+                        <div className="flex items-center mr-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playSound('tap');
+                              if (currentLearnCard) speakGerman(germanOf(currentLearnCard));
+                            }}
+                            className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                            <span>{en ? 'Audio' : 'Aussprache'}</span>
+                          </button>
                         </div>
-                      ) : (
-                        <div className="w-full shrink-0 h-4" />
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* Action Buttons: Prev + Audio (1 or 2 buttons) + Next */}
-                {/* On the English side the sound buttons fold away and the arrows
-                    grow into their room — one smooth slide, not a jump. */}
-                <div className="flex items-center mt-3 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => goToCard(1)}
-                    style={{ flexGrow: englishSideUp ? 1 : 0, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
-                    className="p-3 mr-2 basis-auto shrink-0 flex justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95"
-                    title="Previous"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
-
-                  {/* Audio button(s): 2 buttons for noun with plural, 1 button for regular.
-                      The English side has nothing to hear: just the two arrows. */}
-                  <div
-                    inert={englishSideUp}
-                    aria-hidden={englishSideUp}
-                    style={{
-                      flexGrow: englishSideUp ? 0 : 1,
-                      opacity: englishSideUp ? 0 : 1,
-                      transition: 'flex-grow 180ms ease-out, opacity 150ms ease-out',
-                    }}
-                    className="basis-0 min-w-0 overflow-hidden"
-                  >
-                  <div className="flex items-center gap-1.5 mr-2">
-                  {currentFlashcard?.nounDetails?.gender && getCleanPluralString(currentFlashcard) ? (
-                    <div className="flex-1 flex items-center gap-1.5">
+                      </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          playSound('tap');
-                          if (currentFlashcard) {
-                            speakGerman(`${currentFlashcard.nounDetails!.gender} ${currentFlashcard.lemma}`);
-                          }
-                        }}
-                        className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                        onClick={() => goToCard(-1)}
+                        style={{ flexGrow: englishSideUp ? 1 : 0, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
+                        className="p-3 basis-auto shrink-0 flex justify-center bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent cursor-pointer active:scale-95"
+                        title="Next"
                       >
-                        <Volume2 className="w-3.5 h-3.5 text-zinc-500" />
-                        <span className="truncate">{appLanguage === 'en' ? 'Singular' : 'Singular'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playSound('tap');
-                          if (currentFlashcard) {
-                            speakGerman(getCleanPluralString(currentFlashcard)!);
-                          }
-                        }}
-                        className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-                      >
-                        <Volume2 className="w-3.5 h-3.5 text-zinc-500" />
-                        <span className="truncate">{appLanguage === 'en' ? 'Plural' : 'Plural'}</span>
+                        <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('tap');
-                        if (currentFlashcard) {
-                          speakGerman(
-                            currentFlashcard.nounDetails?.gender
-                              ? `${currentFlashcard.nounDetails.gender} ${currentFlashcard.lemma}`
-                              : currentFlashcard.lemma
-                          );
-                        }
-                      }}
-                      className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
-                    >
-                      <Volume2 className="w-4 h-4" />
-                      <span>{appLanguage === 'en' ? 'Audio' : 'Aussprache'}</span>
-                    </button>
-                  )}
-                  </div>
-                  </div>
+                  </>
+                )
+              ) : isPracticeComplete ? (
+                /* PRACTICE / REVIEW COMPLETE */
+                <div className="flex-1 min-h-0 flex flex-col justify-between items-center text-center p-1.5 sm:p-3 animate-fadeIn w-full gap-2.5 sm:gap-3">
+                  <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight pt-1">
+                    {flashcardSubMode === 'review' ? (en ? 'Review' : 'Wiederholen') : `${selectedLevel} • ${lessonName}`}
+                  </h3>
 
-                  <button
-                    type="button"
-                    onClick={() => goToCard(-1)}
-                    style={{ flexGrow: englishSideUp ? 1 : 0, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
-                    className="p-3 basis-auto shrink-0 flex justify-center bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent cursor-pointer active:scale-95"
-                    title="Next"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </>
-            )) : (
-              /* PRACTICE & REVIEW SUB-MODE: Unified Type & Speak input with Contextual Feedback */
-              isPracticeComplete ? (
-                /* Practice / Review Session Complete View */
-                <div className="flex-1 flex flex-col justify-between items-center text-center p-2.5 sm:p-3.5 animate-fadeIn w-full space-y-2.5 sm:space-y-3">
-                  {/* Top Level, Lesson, and Total Words Heading */}
-                  <div className="text-center space-y-0.5 pt-1">
-                    <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                      {selectedLevel} • {selectedLektion === 'ALL'
-                        ? (appLanguage === 'en' ? 'All Lessons' : 'Alle Lektionen')
-                        : selectedLektion === 'PART_1'
-                        ? `${selectedLevel}.1`
-                        : selectedLektion === 'PART_2'
-                        ? `${selectedLevel}.2`
-                        : `${appLanguage === 'en' ? 'Lesson' : 'Lektion'} ${selectedLektion}`}
-                    </h3>
-                    <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                      {flashcardSubMode === 'review'
-                        ? `${practiceQueue.length || filteredWords.length} ${appLanguage === 'en' ? 'reviewed words' : 'wiederholte Wörter'}`
-                        : `${filteredWords.length} ${appLanguage === 'en' ? (filteredWords.length === 1 ? 'total word' : 'total words') : 'Wörter insgesamt'}`}
-                    </p>
-                  </div>
-
-                  {/* Accuracy, Correct Words, Incorrect Words Stats Grid */}
                   {(() => {
-                    const totalWords = sessionInitialCount || (flashcardSubMode === 'review' ? (practiceQueue.length || 10) : filteredWords.length) || 1;
+                    const totalWords = sessionInitialCount || activeQueue.length || 1;
                     const initialMistakesCount = initialMistakeWordIds.length;
                     const initialCorrectCount = Math.max(0, totalWords - initialMistakesCount);
                     const accuracy = Math.round((initialCorrectCount / (totalWords || 1)) * 100);
-                    const sortedMistakes = [...mistakeWords].sort((a, b) => (mistakeCounts[b.id] || 1) - (mistakeCounts[a.id] || 1));
-
+                    const sortedMistakes = [...mistakeWords].sort((a, b) => (mistakeCounts[b.key] || 1) - (mistakeCounts[a.key] || 1));
+                    const stat = (label: string, value: React.ReactNode, tone: string) => (
+                      <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">{label}</span>
+                        <p className={`text-lg sm:text-xl font-black ${tone}`}>{value}</p>
+                      </div>
+                    );
                     return (
                       <>
                         <div className="grid grid-cols-3 gap-2 w-full">
-                          <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                              {appLanguage === 'en' ? 'Accuracy' : 'Genauigkeit'}
-                            </span>
-                            <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
-                              {accuracy}%
-                            </p>
-                          </div>
-
-                          <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                              {appLanguage === 'en' ? 'Correct' : 'Richtig'}
-                            </span>
-                            <p className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100">
-                              {initialCorrectCount}
-                            </p>
-                          </div>
-
-                          <div className="bg-zinc-50 dark:bg-zinc-800/80 p-2.5 sm:p-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-center">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                              {appLanguage === 'en' ? 'Incorrect' : 'Falsch'}
-                            </span>
-                            <p className="text-lg sm:text-xl font-black text-red-600 dark:text-red-400">
-                              {initialMistakesCount}
-                            </p>
-                          </div>
+                          {stat(en ? 'Accuracy' : 'Genauigkeit', `${accuracy}%`, 'text-emerald-600 dark:text-emerald-400')}
+                          {stat(en ? 'Correct' : 'Richtig', initialCorrectCount, 'text-zinc-900 dark:text-zinc-100')}
+                          {stat(en ? 'Incorrect' : 'Falsch', initialMistakesCount, 'text-red-600 dark:text-red-400')}
                         </div>
 
-                        {/* Lesson Mastery Banner when in Practice mode */}
-                        {flashcardSubMode === 'practice' && typeof selectedLektion === 'number' && (
-                          <div className="w-full flex items-center justify-between p-2 sm:p-2.5 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700">
-                            <div className="flex items-center gap-2">
-                              <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
-                                ✓
-                              </span>
-                              <span className="text-xs font-black text-zinc-900 dark:text-zinc-100">
-                                {appLanguage === 'en' ? `Lesson ${selectedLektion} Practice Round Complete` : `Lektion ${selectedLektion} Übungsrunde abgeschlossen`}
-                              </span>
+                        {flashcardSubMode === 'practice' && renderLessonProgress()}
+
+                        {sortedMistakes.length > 0 && (
+                          <div className="w-full flex-1 min-h-0 flex flex-col bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-2.5 sm:p-3 gap-2">
+                            <div className="flex items-center justify-between px-1">
+                              <span className="text-xs font-black text-zinc-700 dark:text-zinc-300">{en ? 'Mistakes' : 'Fehler'}</span>
+                              <span className="text-[11px] font-bold text-zinc-400">{sortedMistakes.length}</span>
                             </div>
-                            <span className="text-xs font-black">
-                              {isLessonFullyCompleted(selectedLevel, selectedLektion) ? (
-                                <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                  <Check className="w-3.5 h-3.5 stroke-[3]" /> {appLanguage === 'en' ? 'Mastered ✓' : 'Gemeistert ✓'}
-                                </span>
-                              ) : (
-                                <span className="text-amber-600 dark:text-amber-400">
-                                  {appLanguage === 'en' ? 'Learn round pending' : 'Lernrunde noch offen'}
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Box Container with Mistakes List Line-by-Line & Mistake Count on the Right */}
-                        <div className="w-full flex-1 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-2.5 sm:p-3 space-y-2">
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-xs font-black text-zinc-700 dark:text-zinc-300">
-                              {appLanguage === 'en' ? 'Mistakes' : 'Fehler'}
-                            </span>
-                            <span className="text-[11px] font-bold text-zinc-400">
-                              {sortedMistakes.length > 0
-                                ? `${sortedMistakes.length} ${appLanguage === 'en' ? (sortedMistakes.length === 1 ? 'word' : 'words') : 'Wörter'}`
-                                : (appLanguage === 'en' ? '0' : '0')}
-                            </span>
-                          </div>
-
-                          <div className="flex-1 overflow-y-auto max-h-44 sm:max-h-52 space-y-1.5 pr-0.5 custom-scrollbar">
-                            {sortedMistakes.length > 0 ? (
-                              sortedMistakes.map((word) => {
-                                const count = mistakeCounts[word.id] || 1;
-                                const displayGerman = word.nounDetails?.gender
-                                  ? `${word.nounDetails.gender} ${word.lemma}`
-                                  : word.lemma;
-
-                                return (
-                                  <div
-                                    key={word.id}
-                                    className="flex items-center justify-between p-2 sm:p-2.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 shadow-2xs gap-2"
-                                  >
-                                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          playSound('tap');
-                                          speakGerman(displayGerman);
-                                        }}
-                                        className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer shrink-0 active:scale-95"
-                                        title={appLanguage === 'en' ? 'Listen' : 'Anhören'}
-                                      >
-                                        <Volume2 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <div className="min-w-0 flex-1 text-left">
-                                        <p className="font-black text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                                          {displayGerman}
-                                        </p>
-                                        <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate">
-                                          {word.translation}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    {/* Right: Mistake count badge (e.g. 2×, 1× without extra text) */}
-                                    <div className="shrink-0 px-2 py-0.5 bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg text-xs font-black">
-                                      <span>{count}×</span>
+                            <div className="flex-1 overflow-y-auto max-h-40 sm:max-h-52 space-y-1.5 pr-0.5 custom-scrollbar">
+                              {sortedMistakes.map((card) => (
+                                <div
+                                  key={card.key}
+                                  className="flex items-center justify-between p-2 sm:p-2.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 shadow-2xs gap-2"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        playSound('tap');
+                                        speakGerman(germanOf(card));
+                                      }}
+                                      className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-all cursor-pointer shrink-0 active:scale-95"
+                                      title={en ? 'Listen' : 'Anhören'}
+                                    >
+                                      <Volume2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <div className="min-w-0 flex-1 text-left">
+                                      <p className="font-black text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 truncate">{germanOf(card)}</p>
+                                      <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate">
+                                        {meaningLines(card.word).join(' · ')}
+                                      </p>
                                     </div>
                                   </div>
-                                );
-                              })
-                            ) : (
-                              <div className="py-5 text-center space-y-1">
-                                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                                  {appLanguage === 'en' ? 'Perfect! No mistakes.' : 'Perfekt! Keine Fehler.'}
-                                </p>
-                                <p className="text-xs font-medium text-zinc-400">
-                                  {appLanguage === 'en' ? 'All words were answered correctly on the 1st try!' : 'Alle Wörter im ersten Versuch richtig beantwortet!'}
-                                </p>
-                              </div>
-                            )}
+                                  <div className="shrink-0 px-2 py-0.5 bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg text-xs font-black">
+                                    {mistakeCounts[card.key] || 1}×
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </>
                     );
                   })()}
 
-                  {/* Actions: Back to Learn & Practice/Review Again */}
                   <div className="w-full flex items-center gap-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSubModeChange('learn')}
-                      className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-xs cursor-pointer active:scale-95 transition-all"
-                    >
-                      {appLanguage === 'en' ? 'Back to Learn' : 'Zurück zum Lernen'}
-                    </button>
+                    {!speakOnly && (
+                      <button
+                        type="button"
+                        onClick={() => handleSubModeChange('learn')}
+                        className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-xs cursor-pointer active:scale-95 transition-all"
+                      >
+                        {en ? 'Back to Learn' : 'Zurück zum Lernen'}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={restartPracticeSession}
                       className="flex-1 py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
                     >
                       {flashcardSubMode === 'review'
-                        ? (appLanguage === 'en' ? 'Review Again' : 'Erneut wiederholen')
-                        : (appLanguage === 'en' ? 'Practice Again' : 'Erneut üben')}
+                        ? en ? 'Review Again' : 'Erneut wiederholen'
+                        : en ? 'Practice Again' : 'Erneut üben'}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-bold text-zinc-400">
-                    {/* Left: which way this card goes — same pill as Learn, but only a label: picked at
-                        random per card, and it ignores taps entirely. */}
-                    {/* Which lesson this came from, as in the drills */}
-                    <span className="justify-self-start text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                /* PRACTICE & REVIEW: the card, then the answer — typed in Words, spoken in Speaking */
+                <div className="flex-1 min-h-0 flex flex-col justify-between gap-3">
+                  {/* Where the card is from · which way · how far. Nothing touches. */}
+                  <div className="flex items-center justify-between gap-2 text-xs font-bold text-zinc-400">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
                       {currentPracticeWord
                         ? `${currentPracticeWord.level}${
                             typeof currentPracticeWord.lektion === 'number'
@@ -2862,259 +2750,181 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           }`
                         : ''}
                     </span>
-                    {/* Picked up where you left off */}
-                    {resumedSession && flashcardSubMode === 'review' && (
-                      <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                        {appLanguage === 'en' ? 'Resumed' : 'Fortgesetzt'}
-                      </span>
-                    )}
-                    {/* Review draws from every lesson, so each card says where it
-                        is from, in the middle. That used to be a bar of its own. */}
-                    <span
-                      aria-label={practiceDirection === 'EN_TO_DE' ? 'English to German' : 'German to English'}
-                      className="pointer-events-none select-none justify-self-center px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 shadow-2xs"
-                    >
+                    <span className="pointer-events-none select-none px-2 py-1 rounded-xl text-[11px] font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 whitespace-nowrap">
                       {practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}
                     </span>
-                    {/* Right: card counter & redo-round indicator, as in Learn */}
-                    <span className="text-right">
                     {roundNumber > 1 ? (
-                      <div className="px-3 py-1 rounded-xl text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-2xs flex items-center space-x-2.5">
-                        <span>{appLanguage === 'en' ? `Redo ${roundNumber - 1}` : `Wiederholung ${roundNumber - 1}`}</span>
-                        <span className="text-amber-500/70 text-[10px] font-bold">•</span>
-                        <span>
-                          {(practiceQueueIndex % ((practiceQueue.length > 0 ? practiceQueue : filteredWords).length || 1)) + 1} / {(practiceQueue.length > 0 ? practiceQueue : filteredWords).length}
-                        </span>
-                      </div>
+                      <span className="px-2 py-1 rounded-xl text-[11px] font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 whitespace-nowrap">
+                        {en ? `Redo ${roundNumber - 1}` : `Wdh. ${roundNumber - 1}`} · {position}/{activeQueue.length}
+                      </span>
                     ) : (
-                      <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
-                        {(practiceQueueIndex % ((practiceQueue.length > 0 ? practiceQueue : filteredWords).length || 1)) + 1} / {(practiceQueue.length > 0 ? practiceQueue : filteredWords).length}
+                      <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider whitespace-nowrap">
+                        {position} / {activeQueue.length}
                       </span>
                     )}
-                    </span>
                   </div>
 
-                  {/* Question Box: the word in the middle; once answered, its sentence
-                      at the foot behind a line — the same block as the back of a Learn card. */}
-                  {(() => {
-                    const example = currentPracticeWord ? getExampleSentence(currentPracticeWord) : null;
-                    const germanWord = currentPracticeWord?.nounDetails?.gender
-                      ? `${currentPracticeWord.nounDetails.gender} ${currentPracticeWord.lemma}`
-                      : currentPracticeWord?.lemma ?? '';
-                    return (
-                      <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col items-center text-center flex-1 min-h-[88px] sm:min-h-[160px] p-4 sm:p-6">
-                        <div className="flex-1 w-full flex flex-col items-center justify-center gap-3">
-                          <h3 className="font-black text-zinc-900 dark:text-zinc-100 tracking-tight text-2xl sm:text-3xl">
-                            {practiceDirection === 'EN_TO_DE'
-                              ? currentPracticeWord && meaningLines(currentPracticeWord).length > 1
-                                ? meaningLines(currentPracticeWord).map((line, i) => (
-                                    <span key={i} className="block">{`${i + 1}. ${line}`}</span>
-                                  ))
-                                : currentPracticeWord && meaningLines(currentPracticeWord)[0]
-                              : germanWord}
-                          </h3>
-                          {/* DE → EN: the German word can be heard, as in Der/Die/Das and Plural */}
-                          {practiceDirection === 'DE_TO_EN' && germanWord && (
+                  {/* The question; once answered, a line across the middle and the example below it */}
+                  {currentPracticeCard && (
+                    <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col text-center flex-1 min-h-[120px] sm:min-h-[180px] p-3 sm:p-5">
+                      {cardFace(
+                        practiceDirection === 'EN_TO_DE' ? (
+                          englishWord(currentPracticeCard, practiceFeedback ? 'text-xl sm:text-2xl' : undefined)
+                        ) : (
+                          <div className="flex items-center justify-center gap-2.5">
+                            {germanWord(currentPracticeCard, practiceFeedback ? 'text-2xl sm:text-3xl' : undefined)}
                             <button
                               type="button"
                               onClick={() => {
                                 playSound('tap');
-                                speakGerman(germanWord);
+                                speakGerman(germanOf(currentPracticeCard));
                               }}
-                              title={appLanguage === 'en' ? 'Listen' : 'Anhören'}
-                              aria-label={appLanguage === 'en' ? 'Listen' : 'Anhören'}
-                              className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer active:scale-95"
-                            >
-                              <Volume2 className="w-5 h-5" />
-                            </button>
-                          )}
-                        </div>
-
-                        {practiceFeedback && currentPracticeWord && example?.german && (
-                          <div className="mt-4 pt-3 border-t border-zinc-200/80 dark:border-zinc-700/80 w-full max-w-sm mx-auto text-center space-y-1 shrink-0">
-                            <div className="flex items-center justify-center gap-2">
-                              <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 leading-snug">
-                                <SentenceWithWord sentence={example.german} word={currentPracticeWord} />
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  playSound('tap');
-                                  speakGerman(example.german);
-                                }}
-                                title={appLanguage === 'en' ? 'Listen to sentence' : 'Satz anhören'}
-                                className="p-1 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
-                              >
-                                <Volume2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                            {example.english && (
-                              <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                                ({example.english})
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Practice Answer & Action Area */}
-                  {!practiceFeedback ? (
-                    <form onSubmit={handlePracticeCheck} className="w-full space-y-3">
-                      {/* Answer Input Box (fits width like question box) */}
-                      <div className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs flex items-center gap-2">
-                        {twoMeanings(currentPracticeWord) && (
-                          <span className="text-sm font-black text-zinc-400 shrink-0">1.</span>
-                        )}
-                        <input
-                          ref={practiceTypeInputRef}
-                          type="text"
-                          value={practiceTypeInput}
-                          onChange={(e) => setPracticeTypeInput(e.target.value)}
-                          placeholder=""
-                          autoFocus
-                          className="w-full bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
-                        />
-                      </div>
-
-                      {/* Two meanings, two boxes — either one can go in either box */}
-                      {twoMeanings(currentPracticeWord) && (
-                        <div className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs flex items-center gap-2">
-                          <span className="text-sm font-black text-zinc-400 shrink-0">2.</span>
-                          <input
-                            type="text"
-                            value={practiceTypeInput2}
-                            onChange={(e) => setPracticeTypeInput2(e.target.value)}
-                            placeholder=""
-                            className="w-full bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
-                          />
-                        </div>
-                      )}
-
-                      {/* 2 Buttons: Speak and Check */}
-                      <div className="flex items-center gap-2.5 w-full">
-                        <button
-                          type="button"
-                          onClick={handleStartListening}
-                          className={`flex-1 py-3 rounded-xl font-black text-xs cursor-pointer transition-all border border-zinc-200 dark:border-zinc-700 active:scale-95 shadow-2xs ${
-                            isListening
-                              ? 'bg-red-500 hover:bg-red-600 text-white dark:bg-red-500 dark:text-white animate-pulse border-red-600'
-                              : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                          }`}
-                        >
-                          {isListening
-                            ? appLanguage === 'en'
-                              ? 'Listening...'
-                              : 'Zuhören...'
-                            : appLanguage === 'en'
-                            ? 'Speak'
-                            : 'Sprechen'}
-                        </button>
-
-                        <button
-                          type="submit"
-                          disabled={
-                            !practiceTypeInput.trim() ||
-                            (twoMeanings(currentPracticeWord) && !practiceTypeInput2.trim())
-                          }
-                          className="flex-1 py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs shadow-xs cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {appLanguage === 'en' ? 'Check' : 'Prüfen'}
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    /* Answered Feedback Area */
-                    <div className="w-full space-y-3 animate-fadeIn">
-                      {practiceFeedback.correct ? (
-                        /* Correct State: Green answer box with audio button inside */
-                        <>
-                          <div className="w-full px-4 py-3.5 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500 dark:border-emerald-600 rounded-2xl flex items-center justify-between shadow-xs">
-                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 stroke-[3]" />
-                              <span className="font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 truncate">
-                                {practiceFeedback.expected}
-                              </span>
-                            </div>
-                            {practiceDirection === 'EN_TO_DE' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                playSound('tap');
-                                speakGerman(practiceFeedback.expected);
-                              }}
-                              title={appLanguage === 'en' ? 'Listen (Space)' : 'Anhören (Leertaste)'}
-                              className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 dark:hover:bg-emerald-800 text-emerald-800 dark:text-emerald-200 transition-all cursor-pointer shrink-0 ml-1 active:scale-95"
+                              title={en ? 'Listen' : 'Anhören'}
+                              aria-label={en ? 'Listen' : 'Anhören'}
+                              className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 transition-all cursor-pointer active:scale-95 self-start"
                             >
                               <Volume2 className="w-4 h-4" />
                             </button>
-                            )}
                           </div>
-
-                          {/* Continue Button (Green) */}
-                          <button
-                            type="button"
-                            onClick={handleNextPractice}
-                            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer transition-all flex items-center justify-center"
-                          >
-                            <span>{appLanguage === 'en' ? 'Continue' : 'Weiter'}</span>
-                          </button>
-                        </>
-                      ) : (
-                        /* Incorrect State: Cross inside user input box, followed by clean correct answer box with audio, and red Got It button */
-                        <>
-                          <div className="space-y-2.5">
-                            {/* Box 1: User's incorrect input with cross icon inside (NO audio) */}
-                            <div className="w-full px-4 py-3.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-500 dark:border-red-600 rounded-2xl flex items-center gap-2.5 shadow-xs">
-                              <X className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 stroke-[3]" />
-                              <span className="font-bold text-base sm:text-lg text-red-900 dark:text-red-100 truncate">
-                                {practiceFeedback.userText || practiceTypeInput || (appLanguage === 'en' ? 'No answer' : 'Keine Antwort')}
-                              </span>
-                            </div>
-
-                            {/* Box 2: the correct answer, in green, with audio */}
-                            <div className="w-full px-4 py-3.5 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500 dark:border-emerald-600 rounded-2xl flex items-center justify-between shadow-xs">
-                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 stroke-[3]" />
-                                <span className="font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 truncate">
-                                  {practiceFeedback.expected}
-                                </span>
-                              </div>
-                              {practiceDirection === 'EN_TO_DE' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    playSound('tap');
-                                    speakGerman(practiceFeedback.expected);
-                                  }}
-                                  title={appLanguage === 'en' ? 'Listen (Space)' : 'Anhören (Leertaste)'}
-                                  className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 dark:hover:bg-emerald-800 text-emerald-800 dark:text-emerald-200 transition-all cursor-pointer shrink-0 ml-1 active:scale-95"
-                                >
-                                  <Volume2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Got It Button (Red) */}
-                          <button
-                            type="button"
-                            onClick={handleNextPractice}
-                            className="w-full py-3.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer transition-all flex items-center justify-center"
-                          >
-                            <span>{appLanguage === 'en' ? 'Got It' : 'Verstanden'}</span>
-                          </button>
-                        </>
+                        ),
+                        currentPracticeCard,
+                        practiceFeedback !== null
                       )}
                     </div>
                   )}
+
+                  {!practiceFeedback ? (
+                    speakOnly ? (
+                      /* Speaking: one button. Tap, say it; it is checked as soon as it is heard. */
+                      <div className="w-full space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleStartListening}
+                          disabled={!isSpeechRecognitionSupported()}
+                          className={`w-full py-4 rounded-2xl font-black text-sm cursor-pointer transition-all border-2 active:scale-[0.98] shadow-xs flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${
+                            isListening
+                              ? 'bg-red-500 hover:bg-red-600 text-white border-red-600 animate-pulse'
+                              : 'bg-zinc-950 hover:bg-zinc-800 text-white border-zinc-950 dark:bg-white dark:text-zinc-950 dark:border-white'
+                          }`}
+                        >
+                          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                          <span>{isListening ? (en ? 'Listening…' : 'Zuhören…') : en ? 'Speak' : 'Sprechen'}</span>
+                        </button>
+                        {!isSpeechRecognitionSupported() && (
+                          <p className="text-xs font-bold text-zinc-500">
+                            {en ? 'This browser cannot listen. Try Chrome or Safari.' : 'Dieser Browser kann nicht zuhören.'}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <form onSubmit={handlePracticeCheck} className="w-full space-y-2.5">
+                        {/* The answer box; DE → EN has its switches on the right (M / F, S / P) */}
+                        <div className="w-full pl-4 pr-2 py-2 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs flex items-center gap-1.5">
+                          {twoMeanings(currentPracticeWord) && <span className="text-sm font-black text-zinc-400 shrink-0">1.</span>}
+                          <input
+                            ref={practiceTypeInputRef}
+                            type="text"
+                            value={practiceTypeInput}
+                            onChange={(e) => setPracticeTypeInput(e.target.value)}
+                            autoFocus
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            enterKeyHint="done"
+                            className="flex-1 min-w-0 py-1 bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
+                          />
+                          {want.gender &&
+                            answerSwitch(
+                              genderPick,
+                              () => setGenderPick((g) => (g === 'M' ? 'F' : 'M')),
+                              markTone(genderPick),
+                              en ? 'Male or female — tap to change' : 'Männlich oder weiblich — tippen zum Wechseln'
+                            )}
+                          {want.number &&
+                            answerSwitch(
+                              numberPick,
+                              () => setNumberPick((n) => (n === 'S' ? 'P' : 'S')),
+                              markTone(numberPick),
+                              en ? 'Singular or plural — tap to change' : 'Singular oder Plural — tippen zum Wechseln'
+                            )}
+                        </div>
+
+                        {/* Two meanings, two boxes — either one can go in either box */}
+                        {twoMeanings(currentPracticeWord) && (
+                          <div className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs flex items-center gap-1.5">
+                            <span className="text-sm font-black text-zinc-400 shrink-0">2.</span>
+                            <input
+                              type="text"
+                              value={practiceTypeInput2}
+                              onChange={(e) => setPracticeTypeInput2(e.target.value)}
+                              autoComplete="off"
+                              autoCorrect="off"
+                              autoCapitalize="off"
+                              spellCheck={false}
+                              className="flex-1 min-w-0 bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
+                            />
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={!practiceTypeInput.trim() || (twoMeanings(currentPracticeWord) && !practiceTypeInput2.trim())}
+                          className="w-full py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs shadow-xs cursor-pointer active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {en ? 'Check' : 'Prüfen'}
+                        </button>
+                      </form>
+                    )
+                  ) : (
+                    /* Answered: what you gave (if wrong), the right answer, then on */
+                    <div className="w-full space-y-2.5 animate-fadeIn">
+                      {!practiceFeedback.correct && (
+                        <div className="w-full px-4 py-3 bg-red-50 dark:bg-red-950/40 border-2 border-red-500 dark:border-red-600 rounded-2xl flex items-center gap-2.5 shadow-xs">
+                          <X className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 stroke-[3]" />
+                          <span className="flex-1 min-w-0 text-left font-bold text-base sm:text-lg text-red-900 dark:text-red-100 truncate">
+                            {practiceFeedback.userText || (en ? 'No answer' : 'Keine Antwort')}
+                          </span>
+                          {markChips(practiceFeedback.userMarks)}
+                        </div>
+                      )}
+                      <div className="w-full px-4 py-3 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500 dark:border-emerald-600 rounded-2xl flex items-center gap-2.5 shadow-xs">
+                        <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 stroke-[3]" />
+                        <span className="flex-1 min-w-0 text-left font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 truncate">
+                          {practiceFeedback.expected}
+                        </span>
+                        {markChips(practiceFeedback.marks)}
+                        {practiceDirection === 'EN_TO_DE' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playSound('tap');
+                              if (currentPracticeCard) speakGerman(germanOf(currentPracticeCard));
+                            }}
+                            title={en ? 'Listen (Space)' : 'Anhören (Leertaste)'}
+                            className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 dark:hover:bg-emerald-800 text-emerald-800 dark:text-emerald-200 transition-all cursor-pointer shrink-0 active:scale-95"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleNextPractice}
+                        className={`w-full py-3.5 ${
+                          practiceFeedback.correct ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
+                        } active:scale-95 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer transition-all flex items-center justify-center`}
+                      >
+                        <span>{practiceFeedback.correct ? (en ? 'Continue' : 'Weiter') : en ? 'Got It' : 'Verstanden'}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Floating Hotkey Action Button (Desktop & Tablet only, stuck to bottom right) */}
       {activeExerciseMode === 'explorer' && (
@@ -3393,7 +3203,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   <div className="flex-1 flex flex-col items-center justify-center gap-4 px-1">
                     {!isArticle && noun && (
                       <span className="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-black text-zinc-600 dark:text-zinc-300">
-                        {noun.nounDetails?.gender} {noun.lemma}
+                        <span className={genderText(noun.nounDetails?.gender)}>{noun.nounDetails?.gender}</span> {noun.lemma}
                       </span>
                     )}
                     <p className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 leading-relaxed text-center">
@@ -3466,7 +3276,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             key={gender}
                             type="button"
                             onClick={() => handleGenderChoice(gender)}
-                            className="py-4 rounded-2xl text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-950 hover:text-white dark:hover:bg-white dark:hover:text-zinc-950 font-black text-base uppercase border-2 border-zinc-300 dark:border-zinc-700 active:scale-95 transition-all cursor-pointer shadow-xs"
+                            className={`py-4 rounded-2xl hover:brightness-95 dark:hover:brightness-125 font-black text-base uppercase border-2 active:scale-95 transition-all cursor-pointer shadow-xs ${
+                              isAccusative
+                                ? genderButton(accusativeGender(gender), 'accusative')
+                                : genderButton(gender, 'nominative')
+                            }`}
                           >
                             {gender}
                           </button>
@@ -3498,21 +3312,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             className="w-full bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
                           />
                         </div>
-                        {/* 2 Buttons: Speak and Check — the same pair Flashcard uses */}
+                        {/* Check — typing only; speaking lives in Speaking */}
                         <div className="flex items-center gap-2.5 w-full">
-                          <button
-                            type="button"
-                            onClick={handlePluralSpeak}
-                            className={`flex-1 py-3 rounded-xl font-black text-xs cursor-pointer transition-all border border-zinc-200 dark:border-zinc-700 active:scale-95 shadow-2xs ${
-                              isPluralListening
-                                ? 'bg-red-500 hover:bg-red-600 text-white dark:bg-red-500 dark:text-white animate-pulse border-red-600'
-                                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-                            }`}
-                          >
-                            {isPluralListening
-                              ? appLanguage === 'en' ? 'Listening...' : 'Zuhören...'
-                              : appLanguage === 'en' ? 'Speak' : 'Sprechen'}
-                          </button>
                           <button
                             type="submit"
                             disabled={!pluralInput.trim()}

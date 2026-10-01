@@ -6,6 +6,7 @@ import { speakGerman, speakGermanSequence } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage } from '../utils/translations';
 import { LearnPager } from './LearnPager';
+import { genderText } from '../utils/genderColors';
 
 /**
  * Learn: only the nouns that change in the accusative — the article becomes
@@ -126,7 +127,7 @@ export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, onGoToP
         {/* Nominative: nothing has changed yet, so all normal weight */}
         <div className="flex items-center gap-2">
           <span className="text-2xl sm:text-3xl tracking-tight font-normal">
-            <span className="text-blue-600 dark:text-blue-400">der</span>{' '}
+            <span className={genderText('der', 'nominative')}>der</span>{' '}
             <span className="text-zinc-900 dark:text-zinc-100">{noun.lemma}</span>
           </span>
           {speaker(`der ${noun.lemma}`, true)}
@@ -138,10 +139,10 @@ export const NounChangeLearn: React.FC<NounChangeLearnProps> = ({ nouns, onGoToP
           <ArrowDown className="w-6 h-6 -mt-2.5 stroke-[2.5]" />
         </div>
 
-        {/* Accusative: only what changed is bold — "den" (still masculine blue) and the ending */}
+        {/* Accusative: only what changed is bold — "den" (masculine blue, a shade darker for the accusative) and the ending */}
         <div className="flex items-center gap-2">
           <span className="text-2xl sm:text-3xl tracking-tight font-normal">
-            <span className="font-black text-blue-600 dark:text-blue-400">den</span>{' '}
+            <span className={`font-black ${genderText('der', 'accusative')}`}>den</span>{' '}
             <span className="text-zinc-900 dark:text-zinc-100">
               {stem}
               <span className="font-black">{ending}</span>

@@ -15,6 +15,19 @@
 
 let primed = false;
 
+/**
+ * Quiet while the note box is open: nothing is read out, and anything already
+ * playing stops, so you can write without the app talking over you.
+ */
+let muted = false;
+export function setSpeechMuted(on: boolean): void {
+  muted = on;
+  if (on && isSpeechAvailable()) {
+    sequenceToken++;
+    window.speechSynthesis.cancel();
+  }
+}
+
 /** The first tap on the page wakes the speech engine up. */
 function prime(): void {
   if (primed || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -117,7 +130,7 @@ let sequenceToken = 0;
  * (a tapped speaker) or the returned stop() ends it at once.
  */
 export function speakGermanSequence(texts: string[], pauseMs = 450): () => void {
-  if (!isSpeechAvailable() || texts.length === 0) return () => {};
+  if (muted || !isSpeechAvailable() || texts.length === 0) return () => {};
   const token = ++sequenceToken;
   const synth = window.speechSynthesis;
   let timer: number | undefined;
@@ -149,6 +162,7 @@ export function speakGermanSequence(texts: string[], pauseMs = 450): () => void 
 
 export function speakGerman(text: string): void {
   sequenceToken++; // a tap on a speaker stops any sequence that is playing
+  if (muted) return;
   if (!isSpeechAvailable()) {
     console.warn('Web Speech API is not supported in this browser.');
     return;
@@ -206,7 +220,9 @@ export function listenToGermanSpeech(
   onResult: (transcript: string) => void,
   onError: (error: string) => void,
   onEnd: () => void,
-  lang: string = 'de-DE'
+  lang: string = 'de-DE',
+  /** Nothing heard for this long: stop listening and go back to the Speak button. */
+  silenceMs = 10000
 ): { stop: () => void } | null {
   if (typeof window === 'undefined') return null;
 
@@ -225,7 +241,23 @@ export function listenToGermanSpeech(
     recognition.interimResults = false;
     recognition.maxAlternatives = 3;
 
+    let timer: number | undefined;
+    const stopNow = () => {
+      window.clearTimeout(timer);
+      try {
+        recognition.abort?.();
+      } catch {
+        // ignore
+      }
+      try {
+        recognition.stop();
+      } catch {
+        // ignore
+      }
+    };
+
     recognition.onresult = (event: any) => {
+      window.clearTimeout(timer);
       if (event.results && event.results.length > 0) {
         const transcript = event.results[0][0].transcript;
         onResult(transcript);
@@ -237,21 +269,25 @@ export function listenToGermanSpeech(
       onError(event.error || 'Speech recognition failed');
     };
 
+    let ended = false;
     recognition.onend = () => {
+      window.clearTimeout(timer);
+      if (ended) return;
+      ended = true;
       onEnd();
     };
 
     recognition.start();
+    timer = window.setTimeout(() => {
+      stopNow();
+      // Some browsers never fire onend after an abort: hand the button back anyway.
+      if (!ended) {
+        ended = true;
+        onEnd();
+      }
+    }, silenceMs);
 
-    return {
-      stop: () => {
-        try {
-          recognition.stop();
-        } catch {
-          // ignore
-        }
-      },
-    };
+    return { stop: stopNow };
   } catch (err: any) {
     onError(err.message || 'Could not start speech recognition');
     onEnd();
