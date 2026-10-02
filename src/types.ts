@@ -9,6 +9,8 @@ export interface NounDetails {
   plural: string;
   /** "die Ski / die Skier" → both forms; either is accepted. */
   pluralAlternatives?: string[];
+  /** Only used in the plural: "die Kenntnisse (Pl.)". Its one card is a plural card. */
+  pluralOnly?: boolean;
   pluralEndingHint?: string;
   genderRuleHint?: string;
 }

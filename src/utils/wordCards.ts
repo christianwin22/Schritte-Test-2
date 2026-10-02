@@ -1,5 +1,5 @@
 import { WordEntry } from '../types';
-import { checkEnglish, checkGerman, englishSenses } from './answerCheck';
+import { checkEnglish, checkGerman, englishOptions, englishSenses, meaningLines, normalizeEnglish } from './answerCheck';
 
 /**
  * Words · one card per thing to learn.
@@ -25,6 +25,7 @@ export function cardKey(wordId: string, plural: boolean, prefix = ''): string {
 
 /** "die Studenten", or null for a noun with no plural of its own (Sg., die Jeans, die SMS). */
 export function pluralOf(word: WordEntry): string | null {
+  if (word.nounDetails?.pluralOnly) return null;
   const raw = word.nounDetails?.gender ? word.nounDetails.plural?.trim() : '';
   if (!raw || /\(Sg\.?\)|^die\s*-?$/i.test(raw)) return null;
   const plural = raw.toLowerCase().startsWith('die ') ? raw : `die ${raw}`;
@@ -50,11 +51,45 @@ export function cardsFor(words: WordEntry[], prefix = ''): WordCard[] {
   return out;
 }
 
+/**
+ * The book's little tag after a noun: "Sg." when it has no plural
+ * (die Wirtschaft), "Pl." when it only has one (die Kenntnisse).
+ */
+export function numberTag(card: WordCard): 'Sg.' | 'Pl.' | null {
+  const details = card.word.nounDetails;
+  if (!details?.gender) return null;
+  if (details.pluralOnly) return 'Pl.';
+  const raw = (details.plural ?? '').trim();
+  return !raw || raw === '-' || /\(Sg\.?\)/i.test(raw) ? 'Sg.' : null;
+}
+
+/** Is this card asking for the plural? A plural card, or a noun that only has a plural. */
+export function asksPlural(card: WordCard): boolean {
+  return card.plural || !!card.word.nounDetails?.pluralOnly;
+}
+
 /** The German side: "der Student" / "die Studenten" / "gehen". */
 export function germanOf(card: WordCard): string {
   const { word } = card;
   if (card.plural) return pluralOf(word) ?? word.lemma;
   return word.nounDetails?.gender ? `${word.nounDetails.gender} ${word.lemma}` : word.lemma;
+}
+
+/**
+ * The German side as the book writes it, for showing: "die Uni(versität)",
+ * "(an)bieten", "die (Arbeits-)Stelle". germanOf stays the plain form, for
+ * audio and checking.
+ */
+export function germanShown(card: WordCard): string {
+  const { word } = card;
+  if (card.plural) return germanOf(card);
+  const written = (word.display || word.lemma)
+    .replace(/·/g, '')
+    .replace(/\s+\([^)]*\)/g, '') // notes after a space: "(Pl.)", "(die Uni)"
+    .trim();
+  if (!word.nounDetails?.gender) return written || word.lemma;
+  const noun = written.replace(/^(?:(?:der|die|das)\s*\/\s*)*(?:der|die|das)\s+/i, '').trim();
+  return `${word.nounDetails.gender} ${noun || word.lemma}`;
 }
 
 /** The example for this card: the plural card uses the plural sentence. */
@@ -108,6 +143,103 @@ export function hasNumberSwitch(card: WordCard): boolean {
   return !!card.word.nounDetails?.gender;
 }
 
+// --- English plurals ---------------------------------------------------------
+//
+// A plural card wants the English plural: die Kellner → "waiters", not "waiter".
+
+const IRREGULAR: Record<string, string> = {
+  man: 'men', woman: 'women', child: 'children', person: 'people', foot: 'feet', tooth: 'teeth',
+  mouse: 'mice', wife: 'wives', knife: 'knives', life: 'lives', leaf: 'leaves', half: 'halves',
+  shelf: 'shelves', thief: 'thieves', goose: 'geese',
+};
+// The same in the plural: the information → the information.
+const SAME = new Set([
+  'information', 'furniture', 'equipment', 'money', 'news', 'luggage', 'baggage', 'advice', 'homework',
+  'sheep', 'fish', 'staff', 'police', 'people', 'data', 'media', 'series', 'species', 'knowledge',
+  'software', 'hardware', 'traffic', 'weather', 'research', 'stuff', 'fruit', 'feedback', 'aircraft',
+]);
+
+/** Every way to write the plural of one English word: "boss" → bosses; "photo" → photos, photoes. */
+function pluralWords(word: string): string[] {
+  const w = word.toLowerCase();
+  if (!w || SAME.has(w)) return [w];
+  if (IRREGULAR[w]) return [IRREGULAR[w]];
+  if (/(man)$/.test(w) && !/(human|german|roman)$/.test(w)) return [w.replace(/man$/, 'men')];
+  if (/ing$/.test(w)) return [w, `${w}s`]; // shopping, cleaning — usually the same
+  if (/(ss|sh|ch|x|z)$/.test(w)) return [`${w}es`];
+  if (/s$/.test(w)) return [w, `${w}es`]; // studies, glasses — already plural, or bus → buses
+  if (/[^aeiou]y$/.test(w)) return [w.replace(/y$/, 'ies')];
+  if (/[^aeiou]o$/.test(w)) return [`${w}s`, `${w}es`];
+  if (/(?:[^f]fe|[lr]f)$/.test(w)) return [`${w}s`, w.replace(/fe?$/, 'ves')];
+  return [`${w}s`];
+}
+
+/** "police officer" → ["police officers"]: the last word takes the plural — or the one before "of" ("forms of address"). */
+function pluralPhrases(phrase: string): string[] {
+  const at = phrase.indexOf(' of ');
+  const head = at > 0 ? phrase.slice(0, at) : phrase;
+  const tail = at > 0 ? phrase.slice(at) : '';
+  const words = head.split(' ');
+  const last = words.pop() ?? '';
+  return pluralWords(last).map((p) => [...words, p].join(' ').trim() + tail);
+}
+
+/** Split on commas, but not on the ones inside brackets: "number (0, 1, 2 …), figure". */
+function splitOutsideBrackets(text: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of text) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth = Math.max(0, depth - 1);
+    if (ch === ',' && depth === 0) {
+      out.push(current);
+      current = '';
+    } else current += ch;
+  }
+  out.push(current);
+  return out;
+}
+
+/** For showing: "caretaker, janitor" → "caretakers, janitors"; notes in brackets stay. */
+export function pluralEnglish(text: string): string {
+  return splitOutsideBrackets(text)
+    .map((part) => {
+      const note = part.match(/\s*\([^)]*\)\s*$/)?.[0] ?? '';
+      const head = part.slice(0, part.length - note.length);
+      const lead = head.match(/^\s*(?:\([^)]*\)\s*)?/)?.[0] ?? '';
+      const body = head.slice(lead.length).trim();
+      if (!body) return part;
+      const at = body.indexOf(' of ');
+      const front = at > 0 ? body.slice(0, at) : body;
+      const tail = at > 0 ? body.slice(at) : '';
+      const words = front.split(' ');
+      const last = words.pop() ?? '';
+      // already plural ("studies", "glasses"): leave it
+      const plural = /[^s]s$|ies$/i.test(last) ? last : pluralWords(last)[0];
+      return `${lead}${[...words, plural].join(' ')}${tail}${note}`;
+    })
+    .join(',');
+}
+
+/** What the card shows as its meaning: the plural card says it in the plural. */
+export function cardMeaningLines(card: WordCard): string[] {
+  const lines = meaningLines(card.word);
+  return card.plural ? lines.map(pluralEnglish) : lines;
+}
+
+/** Which listed meaning a typed plural belongs to ("waiters" → "waiter"), or null. */
+function listedForPlural(input: string, card: WordCard): string | null {
+  const user = normalizeEnglish(input);
+  if (!user) return null;
+  for (const sense of englishOptions(card.word)) {
+    for (const option of sense) {
+      if (pluralPhrases(option).includes(user)) return option;
+    }
+  }
+  return null;
+}
+
 // --- Checking ----------------------------------------------------------------
 
 /** EN → DE: the plural card wants the plural ("die Studenten"), article and all. */
@@ -116,27 +248,15 @@ export function checkCardGerman(input: string, card: WordCard) {
   return checkGerman(input, { ...card.word, answers: pluralAnswers(card.word), isStem: false });
 }
 
-/** English plurals back to the word list's singular: students → student, cities → city, men → man. */
-function singularGuesses(text: string): string[] {
-  const t = text.trim();
-  const out = [t];
-  if (/ies$/i.test(t)) out.push(t.replace(/ies$/i, 'y'));
-  if (/es$/i.test(t)) out.push(t.replace(/es$/i, ''));
-  if (/s$/i.test(t)) out.push(t.replace(/s$/i, ''));
-  if (/men$/i.test(t)) out.push(t.replace(/men$/i, 'man'));
-  if (/children$/i.test(t)) out.push(t.replace(/children$/i, 'child'));
-  if (/people$/i.test(t)) out.push(t.replace(/people$/i, 'person'));
-  return out;
-}
-
-/** DE → EN: the meaning. On a plural card "students" counts as well as "student". */
+/** DE → EN: the meaning. A plural card wants it in the plural: "students", not "student". */
 export function checkCardEnglish(input: string, card: WordCard): boolean {
-  if (checkEnglish(input, card.word)) return true;
-  return card.plural && singularGuesses(input).some((guess) => checkEnglish(guess, card.word));
+  if (!card.plural) return checkEnglish(input, card.word);
+  return listedForPlural(input, card) !== null;
 }
 
 /** The typed meaning as the word list writes it ("areas" → "area" on a plural card), for the two-box check. */
 export function asListedEnglish(input: string, card: WordCard): string {
   if (!card.plural) return input;
-  return singularGuesses(input).find((guess) => checkEnglish(guess, card.word)) ?? input;
+  // A singular typed on a plural card matches nothing, so it is marked wrong.
+  return listedForPlural(input, card) ?? '\u0000';
 }

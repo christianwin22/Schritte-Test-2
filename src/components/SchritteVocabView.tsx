@@ -49,7 +49,20 @@ import {
   asListedEnglish,
   GenderChoice,
   NumberChoice,
+  numberTag,
+  asksPlural,
+  cardMeaningLines,
+  germanShown,
 } from '../utils/wordCards';
+import {
+  PracticeDone,
+  dirOf,
+  firstPracticeDone,
+  loadPracticeDone,
+  savePracticeDone,
+  loadLearnPlace,
+  saveLearnPlace,
+} from '../utils/practiceProgress';
 import { speakGerman, speakGermanSequence, listenToGermanSpeech, isSpeechRecognitionSupported } from '../utils/speech';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
@@ -215,6 +228,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const REVIEW_SESSION_KEY = speakOnly ? 'schritte_speak_review_session_v1' : 'schritte_review_session_v1';
   const PRACTICE_SESSION_KEY = speakOnly ? 'schritte_speak_practice_session_v1' : 'schritte_practice_session_v1';
   const LESSON_PROGRESS_KEY = speakOnly ? 'schritte_speak_lesson_progress_v1' : 'schritte_lesson_progress_v2';
+  /** Which cards each direction's Practice has had right at least once. */
+  const PRACTICE_DONE_KEY = speakOnly ? 'schritte_speak_practice_done_v1' : 'schritte_practice_done_v1';
 
   // Filter 1: CEFR Level (A1, A2, B1) - Persisted
   const [selectedLevel, setSelectedLevel] = useState<CEFRLevel>(() => {
@@ -271,11 +286,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    */
   const lessonStops = (level: string, lektion: number) => {
     const p = lessonProgress[getLessonKey(level, lektion)];
+    // Practice is done in a direction when nothing in the lesson waits there any more.
+    const waiting = pendingByLesson.get(getLessonKey(level, lektion));
     return {
       learnDe: Boolean(p?.learnDe ?? p?.learnCompleted),
       learnEn: Boolean(p?.learnEn ?? p?.learnCompleted),
-      practiceDe: Boolean(p?.practiceDe ?? p?.practiceCompleted),
-      practiceEn: Boolean(p?.practiceEn ?? p?.practiceCompleted),
+      practiceDe: waiting ? waiting.de === 0 : Boolean(p?.practiceDe ?? p?.practiceCompleted),
+      practiceEn: waiting ? waiting.en === 0 : Boolean(p?.practiceEn ?? p?.practiceCompleted),
     };
   };
 
@@ -375,8 +392,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // A Practice or Review you walked out of, picked up where you left it.
   const [resumedSession, setResumedSession] = useState(false);
   const [isPracticeComplete, setIsPracticeComplete] = useState(false);
-  // Practice and Review go the way the direction button says.
-  const practiceDirection = learnDirection;
+  // Practice goes the way the direction button says. Review is always DE → EN:
+  // a card reaches Review from either direction's Practice, and is asked one way there.
+  const practiceDirection: Direction = flashcardSubMode === 'review' ? 'DE_TO_EN' : learnDirection;
   // DE → EN: the two little switches beside the answer box (M / F and S / P).
   const [genderPick, setGenderPick] = useState<GenderChoice>('M');
   const [numberPick, setNumberPick] = useState<NumberChoice>('S');
@@ -384,6 +402,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // Words with two numbered meanings are asked for both (DE → EN only).
   const [practiceTypeInput2, setPracticeTypeInput2] = useState('');
   const practiceTypeInputRef = useRef<HTMLInputElement>(null);
+  const practiceTypeInput2Ref = useRef<HTMLInputElement>(null);
+  /** The answer box the M / F and S / P switches give the keyboard back to. */
+  const lastAnswerBoxRef = useRef<HTMLInputElement | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [practiceFeedback, setPracticeFeedback] = useState<{
     correct: boolean;
@@ -471,6 +492,50 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const filteredCards = useMemo(() => cardsFor(filteredWords, CARD_PREFIX), [filteredWords, CARD_PREFIX]);
   const allCards = useMemo(() => cardsFor(INITIAL_VOCABULARY, CARD_PREFIX), [CARD_PREFIX]);
   const cardByKey = useMemo(() => new Map(allCards.map((c) => [c.key, c])), [allCards]);
+
+  // --- What is still waiting to be practised, per direction -------------------
+  const [practiceDone, setPracticeDone] = useState<PracticeDone>(() => {
+    const saved = loadPracticeDone(PRACTICE_DONE_KEY);
+    if (saved) return saved;
+    // First time: carry over finished lessons and the half-done Practice.
+    let progress = {};
+    let session = null;
+    try {
+      progress = JSON.parse(localStorage.getItem(LESSON_PROGRESS_KEY) || '{}');
+      session = JSON.parse(localStorage.getItem(PRACTICE_SESSION_KEY) || 'null');
+    } catch {
+      // start with nothing done
+    }
+    return firstPracticeDone(INITIAL_VOCABULARY, CARD_PREFIX, progress, session);
+  });
+  useEffect(() => {
+    savePracticeDone(PRACTICE_DONE_KEY, practiceDone);
+  }, [practiceDone, PRACTICE_DONE_KEY]);
+
+  const markPracticeDone = (card: WordCard, dir: Direction) => {
+    const d = dirOf(dir);
+    setPracticeDone((prev) => (prev[d][card.key] ? prev : { ...prev, [d]: { ...prev[d], [card.key]: new Date().toISOString() } }));
+  };
+
+  /** A list's cards not yet answered right in this direction's Practice. */
+  const pendingIn = (cards: WordCard[], dir: Direction) => {
+    const done = practiceDone[dirOf(dir)];
+    return cards.filter((c) => !done[c.key]);
+  };
+  const pendingDe = useMemo(() => pendingIn(filteredCards, 'DE_TO_EN').length, [filteredCards, practiceDone]);
+  const pendingEn = useMemo(() => pendingIn(filteredCards, 'EN_TO_DE').length, [filteredCards, practiceDone]);
+  /** Per lesson, for the progress stops: "A1_L8" → how many wait in each direction. */
+  const pendingByLesson = useMemo(() => {
+    const out = new Map<string, { de: number; en: number }>();
+    for (const c of allCards) {
+      const k = `${c.word.level}_L${c.word.lektion}`;
+      const entry = out.get(k) ?? { de: 0, en: 0 };
+      if (!practiceDone.de[c.key]) entry.de++;
+      if (!practiceDone.en[c.key]) entry.en++;
+      out.set(k, entry);
+    }
+    return out;
+  }, [allCards, practiceDone]);
 
   // Global due cards across all lessons in the app (decoupled from lesson selector!)
   const globalDueWords = useMemo(() => {
@@ -574,27 +639,37 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
   };
 
-  /** A fresh run, or the saved one for this lesson and direction. Practice only. */
+  /**
+   * A fresh run, or the saved one for this lesson and direction. Practice only.
+   * A fresh run asks only the cards still waiting in that direction — all of
+   * them once nothing waits. Resuming adds any card that started waiting since
+   * (a word added to the lesson), so nothing is left out.
+   */
   const startPracticeRun = (cards: WordCard[], level: string, lektion: number | string, dir: Direction) => {
     const saved = loadPracticeSession(level, lektion, dir);
     const toCards = (keys: string[]) => keys.map((k) => cardByKey.get(k)).filter((c): c is WordCard => !!c);
     const queue = saved ? toCards(saved.keys) : [];
+    const waiting = pendingIn(cards, dir);
     if (saved && queue.length > 0 && saved.index < queue.length) {
-      setPracticeQueue(queue);
+      const redo = toCards(saved.redo);
+      const ahead = new Set([...queue.slice(saved.index), ...redo].map((c) => c.key));
+      const added = shuffled(waiting.filter((c) => !ahead.has(c.key)));
+      setPracticeQueue([...queue, ...added]);
       setPracticeQueueIndex(saved.index);
-      setCurrentRedoBatch(toCards(saved.redo));
+      setCurrentRedoBatch(redo);
       setRoundNumber(saved.round);
       setPracticeScore(saved.score);
       setMistakeCounts(saved.mistakes);
       setMistakeWords(toCards(Object.keys(saved.mistakes)));
       setInitialMistakeWordIds(saved.firstMistakes);
-      setSessionInitialCount(saved.initial);
+      setSessionInitialCount(saved.initial + added.length);
       setResumedSession(true);
       return;
     }
     // A new order each time, so a second run through a lesson is not the first one from memory.
-    setPracticeQueue(shuffled(cards));
-    setSessionInitialCount(cards.length);
+    const run = waiting.length > 0 ? waiting : cards;
+    setPracticeQueue(shuffled(run));
+    setSessionInitialCount(run.length);
     setPracticeQueueIndex(0);
     setCurrentRedoBatch([]);
     setRoundNumber(1);
@@ -843,7 +918,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     if (!card || speakOnly || practiceDirection !== 'DE_TO_EN') return { gender: null, number: null };
     return {
       gender: genderMark(card.word, INITIAL_VOCABULARY),
-      number: hasNumberSwitch(card) ? (card.plural ? 'P' : 'S') : null,
+      number: hasNumberSwitch(card) ? (asksPlural(card) ? 'P' : 'S') : null,
     };
   };
 
@@ -854,7 +929,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       return { isCorrect, expectedDisplay: expected, marks: [] as string[], userMarks: [] as string[] };
     }
     const word = card.word;
-    const expectedDisplay = meaningLines(word).join(' · ');
+    const expectedDisplay = cardMeaningLines(card).join(' · ');
     const textRight = twoMeanings(word)
       ? checkEnglishPair([asListedEnglish(inputVal, card), asListedEnglish(secondVal, card)], word).every(Boolean)
       : checkCardEnglish(inputVal, card);
@@ -877,6 +952,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       playSound('correct');
       setPracticeScore((prev) => prev + 1);
       onCorrectAnswer?.(15, 5);
+      if (flashcardSubMode === 'practice') {
+        // Into Review the moment it is right — due a day from now, whenever the rest gets done.
+        setFsrsRecords((prev) => unlockWordsAfterPractice([card.key], prev));
+        markPracticeDone(card, practiceDirection);
+      }
     } else {
       playSound('wrong');
       onWrongAnswer?.();
@@ -994,10 +1074,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       setIsPracticeComplete(true);
       clearAnswer();
 
-      // Activation Rule: when a lesson's Practice is finished (either direction),
-      // its cards enter Review starting the next day.
+      // Each card went into Review when it was answered right; finishing marks the lesson's stop.
       if (flashcardSubMode === 'practice') {
-        setFsrsRecords((prev) => unlockWordsAfterPractice(filteredCards.map((c) => c.key), prev));
         if (typeof selectedLektion === 'number') {
           recordLessonStop(selectedLevel, selectedLektion, 'practice', practiceDirection);
           if (!speakOnly) {
@@ -1037,6 +1115,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setIsPracticeComplete(false);
     clearAnswer();
   };
+
+  // Learn keeps its place per lesson and direction: walk out and the next visit
+  // offers Resume at the same card. Finishing the lesson forgets it.
+  useEffect(() => {
+    if (speakOnly) return;
+    const saved = loadLearnPlace(selectedLevel, selectedLektion, learnDirection);
+    setFlashcardIndex(saved < filteredCards.length ? saved : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLevel, selectedLektion, learnDirection, filteredCards.length]);
+  useEffect(() => {
+    if (speakOnly || flashcardSubMode !== 'learn' || !sessionStarted) return;
+    saveLearnPlace(selectedLevel, selectedLektion, learnDirection, isLearnComplete ? null : flashcardIndex);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashcardIndex, isLearnComplete, sessionStarted, flashcardSubMode]);
 
   /** Learn: is the English side of the card showing? It has nothing to hear, so only the arrows. */
   const englishSideUp = (learnDirection === 'DE_TO_EN') === isCardFlipped;
@@ -2215,23 +2307,46 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             ? 'All Lessons'
             : 'Alle Lektionen';
 
-        /** DE → EN | EN → DE, the button that sets the way every card goes. */
-        const directionSwitch = (
+        /**
+         * DE → EN | EN → DE, the button that sets the way every card goes. In
+         * Practice each side also says how many cards still wait that way.
+         */
+        const directionSwitch = (withPending: boolean) => (
           <div className="inline-grid grid-cols-2 gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
-            {(['DE_TO_EN', 'EN_TO_DE'] as Direction[]).map((dir) => (
-              <button
-                key={dir}
-                type="button"
-                onClick={() => changeDirection(dir)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  learnDirection === dir
-                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
-                }`}
-              >
-                {dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
-              </button>
-            ))}
+            {(['DE_TO_EN', 'EN_TO_DE'] as Direction[]).map((dir) => {
+              const left = dir === 'DE_TO_EN' ? pendingDe : pendingEn;
+              const on = learnDirection === dir;
+              return (
+                <button
+                  key={dir}
+                  type="button"
+                  onClick={() => changeDirection(dir)}
+                  className={`px-4 py-1.5 rounded-lg font-black transition-all cursor-pointer flex flex-col items-center ${
+                    on
+                      ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                  }`}
+                >
+                  <span className="text-xs">{dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}</span>
+                  {withPending && (
+                    <span
+                      className={`text-[11px] font-bold flex items-center gap-0.5 ${
+                        left === 0 ? (on ? 'text-emerald-300 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400') : on ? 'opacity-80' : ''
+                      }`}
+                    >
+                      {left === 0 ? (
+                        <>
+                          <Check className="w-3 h-3 stroke-[3]" />
+                          {en ? 'done' : 'fertig'}
+                        </>
+                      ) : (
+                        `${left} ${en ? 'left' : 'offen'}`
+                      )}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         );
 
@@ -2245,10 +2360,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
          * "der Student" / "die Studenten": the article in its gender's colour, the
          * noun in black. The plural "die" belongs to no gender, so it stays grey.
          */
-        const germanWord = (card: WordCard, size = 'text-3xl sm:text-4xl') => {
+        const germanWord = (card: WordCard, size = 'text-3xl sm:text-4xl', showPlural = true) => {
           const gender = card.word.nounDetails?.gender;
-          const articleTone = card.plural ? 'text-zinc-500 dark:text-zinc-400' : genderText(gender);
-          const text = germanOf(card);
+          const articleTone = asksPlural(card) ? 'text-zinc-500 dark:text-zinc-400' : genderText(gender);
+          const text = germanShown(card);
+          const tag = numberTag(card);
           const article = gender ? text.match(/^(der|die|das)\s+/i)?.[1] : undefined;
           return (
             <div className="flex flex-col items-center gap-1.5">
@@ -2261,15 +2377,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 ) : (
                   <span className="font-black text-zinc-900 dark:text-zinc-100">{text}</span>
                 )}
+                {/* The book's mark: Sg. = no plural, Pl. = only a plural */}
+                {tag && <span className="ml-1.5 text-[0.45em] font-bold text-zinc-400 dark:text-zinc-500 align-middle">({tag})</span>}
               </h3>
-              {card.plural && pluralChip}
+              {card.plural && showPlural && pluralChip}
             </div>
           );
         };
 
         /** The English: one line, or "1." and "2." each on its own line. */
-        const englishWord = (card: WordCard, size = 'text-2xl sm:text-3xl') => {
-          const lines = meaningLines(card.word);
+        const englishWord = (card: WordCard, size = 'text-2xl sm:text-3xl', showPlural = true) => {
+          const lines = cardMeaningLines(card);
           return (
             <div className="flex flex-col items-center gap-1.5">
               {lines.length > 1 ? (
@@ -2284,7 +2402,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               ) : (
                 <h3 className={`${size} font-black text-zinc-950 dark:text-white tracking-tight leading-tight`}>{lines[0]}</h3>
               )}
-              {card.plural && pluralChip}
+              {card.plural && showPlural && pluralChip}
             </div>
           );
         };
@@ -2340,9 +2458,18 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             type="button"
             // Keeps the answer box focused, so the phone keyboard stays up
             onPointerDown={(e) => e.preventDefault()}
+            onMouseDown={(e) => e.preventDefault()}
+            onTouchEnd={(e) => {
+              // iPhone: handle the tap here and keep the focus where it was, so the keyboard never drops
+              e.preventDefault();
+              playSound('tap');
+              onTap();
+              (lastAnswerBoxRef.current?.isConnected ? lastAnswerBoxRef.current : practiceTypeInputRef.current)?.focus();
+            }}
             onClick={() => {
               playSound('tap');
               onTap();
+              (lastAnswerBoxRef.current?.isConnected ? lastAnswerBoxRef.current : practiceTypeInputRef.current)?.focus();
             }}
             title={title}
             aria-label={title}
@@ -2441,6 +2568,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         const position = (practiceQueueIndex % (activeQueue.length || 1)) + 1;
         const want = wantedMarks(currentPracticeCard);
         const canResume = flashcardSubMode !== 'learn' && resumedSession && (practiceQueueIndex > 0 || roundNumber > 1);
+        const canResumeLearn = flashcardSubMode === 'learn' && flashcardIndex > 0 && !isLearnComplete;
 
         return (
           <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
@@ -2457,8 +2585,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             <div className="flex-1 min-h-0 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
               {/* Learn, Practice and Review all wait on a Start page, so their audio never starts on its own */}
               {!sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-7 py-6">
-                  <div className="space-y-3 max-w-xs">
+                <div className="flex-1 flex flex-col items-center gap-6 pt-1 pb-4">
+                  {/* Which lesson, pinned to the top of the card */}
+                  <div className="space-y-1 max-w-xs">
                     {flashcardSubMode !== 'review' ? (
                       <>
                         <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
@@ -2472,25 +2601,31 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     ) : (
                       <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">{en ? 'Review' : 'Wiederholen'}</p>
                     )}
-                    <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
-                      {canResume
-                        ? `${position} / ${activeQueue.length}`
-                        : flashcardSubMode !== 'review'
-                        ? `${filteredCards.length} ${en ? 'cards' : 'Karten'}`
-                        : `${practiceQueue.length} ${en ? 'cards due' : 'Karten fällig'}`}
-                    </p>
                   </div>
-                  {directionSwitch}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('tap');
-                      setSessionStarted(true);
-                    }}
-                    className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
-                  >
-                    {canResume ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
-                  </button>
+                  <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
+                    {/* Review: how many are due. Practice and Learn: where you stopped, if you did. */}
+                    {(flashcardSubMode === 'review' || canResume || canResumeLearn) && (
+                      <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
+                        {flashcardSubMode === 'review' && !canResume
+                          ? `${practiceQueue.length} ${en ? 'cards due' : 'Karten fällig'}`
+                          : flashcardSubMode === 'learn'
+                          ? `${flashcardIndex + 1} / ${filteredCards.length}`
+                          : `${position} / ${activeQueue.length}`}
+                      </p>
+                    )}
+                    {/* Review goes DE → EN only: no switch there */}
+                    {flashcardSubMode !== 'review' && directionSwitch(flashcardSubMode === 'practice')}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('tap');
+                        setSessionStarted(true);
+                      }}
+                      className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
+                    >
+                      {canResume || canResumeLearn ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
+                    </button>
+                  </div>
                 </div>
               ) : flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
                 /* Review with nothing unlocked: say so, instead of showing words you have not met */
@@ -2697,9 +2832,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                       <Volume2 className="w-3.5 h-3.5" />
                                     </button>
                                     <div className="min-w-0 flex-1 text-left">
-                                      <p className="font-black text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 truncate">{germanOf(card)}</p>
+                                      <p className="font-black text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 truncate">{germanShown(card)}</p>
                                       <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate">
-                                        {meaningLines(card.word).join(' · ')}
+                                        {cardMeaningLines(card).join(' · ')}
                                       </p>
                                     </div>
                                   </div>
@@ -2769,10 +2904,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col text-center flex-1 min-h-[120px] sm:min-h-[180px] p-3 sm:p-5">
                       {cardFace(
                         practiceDirection === 'EN_TO_DE' ? (
-                          englishWord(currentPracticeCard, practiceFeedback ? 'text-xl sm:text-2xl' : undefined)
+                          englishWord(currentPracticeCard, practiceFeedback ? 'text-xl sm:text-2xl' : undefined, practiceFeedback !== null)
                         ) : (
                           <div className="flex items-center justify-center gap-2.5">
-                            {germanWord(currentPracticeCard, practiceFeedback ? 'text-2xl sm:text-3xl' : undefined)}
+                            {germanWord(currentPracticeCard, practiceFeedback ? 'text-2xl sm:text-3xl' : undefined, practiceFeedback !== null)}
                             <button
                               type="button"
                               onClick={() => {
@@ -2826,12 +2961,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             type="text"
                             value={practiceTypeInput}
                             onChange={(e) => setPracticeTypeInput(e.target.value)}
+                            onFocus={(e) => (lastAnswerBoxRef.current = e.currentTarget)}
+                            onKeyDown={(e) => {
+                              // Two boxes: Enter in the first goes on to the second, like Tab
+                              if (e.key === 'Enter' && twoMeanings(currentPracticeWord) && !practiceTypeInput2.trim()) {
+                                e.preventDefault();
+                                practiceTypeInput2Ref.current?.focus();
+                              }
+                            }}
                             autoFocus
                             autoComplete="off"
                             autoCorrect="off"
                             autoCapitalize="off"
                             spellCheck={false}
-                            enterKeyHint="done"
+                            enterKeyHint={twoMeanings(currentPracticeWord) ? 'next' : 'done'}
                             className="flex-1 min-w-0 py-1 bg-transparent text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
                           />
                           {want.gender &&
@@ -2855,9 +2998,19 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           <div className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus-within:border-zinc-950 dark:focus-within:border-white rounded-2xl transition-all shadow-xs flex items-center gap-1.5">
                             <span className="text-sm font-black text-zinc-400 shrink-0">2.</span>
                             <input
+                              ref={practiceTypeInput2Ref}
                               type="text"
                               value={practiceTypeInput2}
                               onChange={(e) => setPracticeTypeInput2(e.target.value)}
+                              onFocus={(e) => (lastAnswerBoxRef.current = e.currentTarget)}
+                              onKeyDown={(e) => {
+                                // Enter with the first box still empty goes back to it
+                                if (e.key === 'Enter' && !practiceTypeInput.trim()) {
+                                  e.preventDefault();
+                                  practiceTypeInputRef.current?.focus();
+                                }
+                              }}
+                              enterKeyHint="done"
                               autoComplete="off"
                               autoCorrect="off"
                               autoCapitalize="off"

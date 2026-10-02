@@ -13,6 +13,26 @@ interface SuggestionButtonProps {
   variant?: 'inline' | 'floating';
 }
 
+/**
+ * The last answer box you were typing in, anywhere in the app. When the note
+ * closes, the keyboard goes straight back to it — the phone keyboard included,
+ * because the focus moves inside your tap.
+ */
+let lastTextField: HTMLInputElement | HTMLTextAreaElement | null = null;
+if (typeof document !== 'undefined') {
+  document.addEventListener('focusin', (e) => {
+    const el = e.target as HTMLElement | null;
+    if (!el || el.closest('[data-note-dialog]')) return;
+    if (el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && /^(text|search|email|)$/.test(el.type))) {
+      lastTextField = el;
+    }
+  });
+}
+function backToAnswerBox() {
+  const el = lastTextField;
+  if (el && el.isConnected && !el.disabled) el.focus({ preventScroll: true });
+}
+
 /** Grabs the headline of whatever card is on screen, so a note has context later. */
 function whatIsOnScreen(): string | undefined {
   const main = document.querySelector('main');
@@ -48,6 +68,7 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
 
   /** Closing throws the draft away: next time the box opens empty. */
   const close = useCallback(() => {
+    backToAnswerBox();
     setOpen(false);
     setText('');
     setMedia([]);
@@ -83,6 +104,8 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
     const note = text.trim();
     if (!note || status === 'saving') return;
     setStatus('saving');
+    // Back to the answer box now, inside the tap, so the phone keeps its keyboard up
+    backToAnswerBox();
     const result = await saveSuggestion(note, where, onScreen, media);
     setStatus(result);
     setText('');

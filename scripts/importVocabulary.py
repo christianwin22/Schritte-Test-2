@@ -25,6 +25,13 @@ VOLUMES = {
 }
 ARTICLES = ("der", "die", "das")
 
+# Headwords respelled the way the book writes them keep the id they had, so
+# their review schedule and practice progress stay where they were.
+KEEP_ID = {
+    "die Uni(versität)": "universitaet",
+    "(an)bieten": "anbieten",
+}
+
 # The app's PartOfSpeech only has these; everything else maps to the closest one.
 POS = {
     "noun": "noun", "proper noun": "noun",
@@ -81,7 +88,8 @@ def split_senses(english: str):
     parts = [p.strip() for p in re.split(r"<br\s*/?>", english) if p.strip()]
     if len(parts) > 1 or re.match(r"^\s*1\.\s", english):
         parts = [re.sub(r"^\s*\d+\.\s*", "", p).strip() for p in parts]
-    return [[w.strip() for w in re.split(r",", sense) if w.strip()] for sense in parts]
+    # commas inside brackets belong to the note: "number (a numeral: 0, 1, 2 …)"
+    return [[w.strip() for w in re.split(r",(?![^()]*\))", sense) if w.strip()] for sense in parts]
 
 
 def bracket_forms(text: str):
@@ -163,7 +171,7 @@ def main():
         pos = POS.get(word_type, "phrase")
         lemma, genders, answers = german_forms(display, pos)
 
-        base_id = f"{vol_slug}_{'intro' if lesson == 0 else f'l{lesson}'}_{slug(lemma) or slug(display)}"
+        base_id = f"{vol_slug}_{'intro' if lesson == 0 else f'l{lesson}'}_{KEEP_ID.get(display) or slug(lemma) or slug(display)}"
         word_id = base_id
         n = 2
         while word_id in seen_ids:
@@ -220,6 +228,9 @@ def main():
                 "plural": plural_display,
                 "pluralAlternatives": plural_variants,
             }
+            # "die Kenntnisse (Pl.)": the book's mark for a noun that only has a plural
+            if re.search(r"\(Pl\.?\)", display):
+                entry["nounDetails"]["pluralOnly"] = True
             singular_example = cell(row, "singular example")
             plural_example = cell(row, "plural example")
             if singular_example:

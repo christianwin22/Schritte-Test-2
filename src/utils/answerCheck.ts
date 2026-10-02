@@ -105,7 +105,7 @@ export function checkGerman(input: string, word: WordEntry): GermanResult {
 
 /* ----------------------------------------------------------------- English */
 
-function normalizeEnglish(text: string): string {
+export function normalizeEnglish(text: string): string {
   let t = text.toLowerCase();
   t = t.replace(/\([^)]*\)/g, ' ');       // "Mrs (title)" → "mrs"
   t = t.replace(PUNCTUATION, ' ');
@@ -128,6 +128,11 @@ function optionsFor(sense: string[]): string[] {
     .flatMap((part) => part.split(/[,;/]/))
     .map(normalizeEnglish)
     .filter(Boolean);
+}
+
+/** Every accepted English answer for each numbered sense, already normalised. */
+export function englishOptions(word: WordEntry): string[][] {
+  return englishSenses(word).map(optionsFor);
 }
 
 /** Does this answer any one of the word's meanings? */
