@@ -140,10 +140,12 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
         <div
           data-note-dialog
           onKeyDown={onDialogKey}
+          // A whole page over everything, top bar included. Its height is the part of
+          // the screen the keyboard leaves free, so the Save button sits just above it.
           style={visible ? { top: visible.top, height: visible.height, bottom: 'auto' } : undefined}
-          className="fixed inset-x-0 top-0 bottom-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-3 pb-3 sm:pb-0"
+          className="fixed inset-x-0 top-0 bottom-0 z-[60] bg-white dark:bg-zinc-900 flex justify-center animate-fadeIn"
         >
-          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 shadow-xl p-5 space-y-3 animate-fadeIn">
+          <div className="w-full max-w-xl h-full flex flex-col gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between">
               <h2 className="font-black text-base text-zinc-900 dark:text-zinc-100">
                 {en ? 'Note an idea' : 'Idee notieren'}
@@ -165,8 +167,9 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
+              style={{ flex: '1 1 auto', minHeight: 0 }}
               placeholder={en ? 'What would you change, add or remove?' : 'Was möchtest du ändern, ergänzen oder entfernen?'}
-              className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-950 dark:focus:border-white outline-none font-bold text-sm resize-none"
+              className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 focus:border-zinc-950 dark:focus:border-white outline-none font-bold text-base resize-none"
             />
 
             {media.length > 0 && (
