@@ -37,3 +37,797 @@ a12_l8_frei	The job is still vacant.
 a12_l8_normalerweise	Normally I work until 5 pm.
 a12_l8_zahlen	We will pay the bill tomorrow.
 a12_l8_pro	I work 40 hours per week.
+a11_intro_ansehen	Look at the photos.
+a11_intro_bild	Look at the pictures.
+a11_intro_hoeren	Listen.
+a11_intro_noch_einmal	Listen again.
+a11_intro_ankreuzen	Tick the right answer.
+a11_intro_zuordnen	Match them up.
+a11_intro_ergaenzen	Fill in the gaps.
+a11_intro_machen	Make a film.
+a11_intro_kurs	In the course.
+a11_intro_sprechen	Speak in the course.
+a11_intro_lesen	Read.
+a11_intro_gespraech	Read the conversations.
+a11_intro_spielen	Act out the conversations in the course.
+a11_intro_suchen	Look for it.
+a11_intro_zeigen	Show it.
+a11_intro_fragen	Ask in the course.
+a11_intro_markieren	Mark it.
+a11_intro_frage	Complete the questions.
+a11_intro_nachsprechen	Listen and repeat.
+a11_intro_raten	Guess.
+a11_intro_wort	Guess words.
+a11_intro_lektion	Guess words from the lesson.
+a11_intro_meinen	What do you think?
+a11_intro_sagen	What do the people say?
+a11_intro_notieren	Make a note.
+a11_intro_vergleichen	Compare.
+a11_intro_schreiben	Write conversations.
+a11_intro_variieren	Vary it.
+a11_intro_erzaehlen	Tell us.
+a11_intro_arbeiten	Work in pairs.
+a11_intro_zeichnen	Draw.
+a11_intro_verbinden	Listen and connect.
+a11_intro_antwort	Write questions and answers.
+a11_intro_antworten	Ask and answer.
+a11_l1_foto	Look at the photos.
+a11_l1_guten_tag	Hello. / Good day.
+a11_l1_auf_wiedersehen	Goodbye.
+a11_l1_hallo	Hello, Lili!
+a11_l1_tschues	Bye, Heike!
+a11_l1_guten_abend	Good evening.
+a11_l1_dame	Good evening, ladies and gentlemen.
+a11_l1_willkommen	Welcome to "Musik international".
+a11_l1_bei	Welcome to "Musik international".
+a11_l1_musik	Welcome to "Musik international".
+a11_l1_international	Welcome to "Musik international".
+a11_l1_guten_morgen	Good morning, Mrs Fleckenstein.
+a11_l1_frau	Good morning, Mrs Fleckenstein.
+a11_l1_danke	Oh, thank you.
+a11_l1_gute_nacht	Good night.
+a11_l1_herr	Good night, Mr Schröder.
+a11_l1_entschuldigung	Excuse me, what is your name?
+a11_l1_wie_bitte	Pardon? Please spell it.
+a11_l1_bitte	Please spell it.
+a11_l1_vielen_dank	Thank you very much.
+a11_l1_auf_wiederhoeren	Goodbye (on the phone), Mr Takishima.
+a11_l1_ich	I am Lili.
+a11_l1_du	What is your name?
+a11_l1_sie	What is your name? (formal)
+a11_l1_er	This is Tim. He comes from Canada.
+a11_l1_heissen	My name is Lara Nowak.
+a11_l1_sein	I am Sofia Baumann.
+a11_l1_name	My name is Walter Baumann.
+a11_l1_wie	What is your name?
+a11_l1_wer	Who is that?
+a11_l1_ja	Yes, that's right.
+a11_l1_nein	That is Sofia. – No, that is Lara.
+a11_l1_wissen	Who is that? – I don't know.
+a11_l1_woher	Where do you come from?
+a11_l1_kommen	I come from Poland.
+a11_l1_aus	I come from Portugal.
+a11_l1_von	I am from the company Teletec.
+a11_l1_aha	I see!
+a11_l1_und	And you? What is your name?
+a11_l1_nur	No, only a little.
+a11_l1_was	What languages do you speak?
+a11_l1_ein_bisschen	I speak Italian and a little German.
+a11_l1_sprache	Language: German, Polish, English, ...
+a11_l1_buchstabe	Letter: a, k, s ...
+a11_l1_alphabet	The alphabet: A, B, C, ...
+a11_l1_buchstabieren	I'll spell it: B - A - R - I
+a11_l1_da_sein	Is Mrs Beck there, please?
+a11_l1_moment	One moment, please.
+a11_l1_leid_tun	I'm sorry, Mrs Beck is not here.
+a11_l1_nicht	Mrs Beck is not here.
+a11_l1_firma	I am from the company Teletec.
+a11_l1_adresse	Address: Keplerstraße 105, 8020 Graz
+a11_l1_visitenkarte	Write your business card.
+a11_l1_sport	Sport is great.
+a11_l1_vorname	First name: Heidi, Francesco, Bettina, ...
+a11_l1_familienname	Surname: Morbacher, Studer, ...
+a11_l1_strasse	Street: Keplerstraße, Paradeplatz, Gärtnergasse, ...
+a11_l1_stadt	City: Graz, Zürich, Mainz, ...
+a11_l1_land	Country: Austria, Switzerland, Germany, ...
+a11_l1_telefon	Telephone: 040-42 83 80
+a11_l1_fax	Fax: (089) 2 88 14 29
+a11_l1_e_mail	Email: info@jojo-reisen.li
+a11_l1_formular	Complete the form.
+a11_l1_postleitzahl	The postcode is 1700.
+a11_l1_deutschland	I come from Germany.
+a11_l1_osterreich	I come from Austria.
+a11_l1_schweiz	I come from Switzerland.
+a11_l2_lehrer	Tim is Lara's German teacher.
+a11_l2_lernen	Tim is learning German too.
+a11_l2_auch	Tim is learning German too.
+a11_l2_haben	Tim and Lara have a break.
+a11_l2_pause	Tim and Lara have a break.
+a11_l2_park	Tim and Lara are studying in the park.
+a11_l2_familie	This is my family.
+a11_l2_vater	This is Tim's father.
+a11_l2_mutter	This is Lara's mother.
+a11_l2_bruder	This is Tim's brother.
+a11_l2_schwester	Sofia is my sister.
+a11_l2_jahr	Lara is twenty years old.
+a11_l2_leben	Lara's father lives in Poznań.
+a11_l2_in	Lara's father lives in Poznań.
+a11_l2_oma	Luise is Lili's grandma.
+a11_l2_grossmutter	Luisa is Lili's grandmother.
+a11_l2_opa	Walter is Lili's grandpa.
+a11_l2_grossvater	Walter is Lili's grandfather.
+a11_l2_enkelin	Lili is Walter's granddaughter.
+a11_l2_sohn	Tobias is Walter's son.
+a11_l2_tochter	Sofia is Walter's daughter.
+a11_l2_kind	These are my children: my son and my daughter.
+a11_l2_mann	Walter is my husband.
+a11_l2_ehefrau	María is your wife.
+a11_l2_partnerin	My partner Mailin comes from Denmark.
+a11_l2_arzt	My name is Franz Waldherr and I am a doctor.
+a11_l2_dein	Who is that? Your brother?
+a11_l2_mein	No, that is my father.
+a11_l2_ihr	Who is that? Your daughter?
+a11_l2_sie	This is Lara. She comes from Poland.
+a11_l2_sie_2	These are Lara's parents. They are divorced.
+a11_l2_ihr_2	Who are you? – I am Stéphane and this is Pierre.
+a11_l2_wir	We come from Geneva.
+a11_l2_zusammen	Lara's parents don't live together.
+a11_l2_geschieden	They are divorced.
+a11_l2_wohnen	Tim lives in Munich now.
+a11_l2_jetzt	Tim lives in Munich now.
+a11_l2_zahl	Number: 0, 1, 2, ...
+a11_l2_null	Zero is a number.
+a11_l2_wo	Where were you born?
+a11_l2_geboren	Where were you born?
+a11_l2_liegen	In Biasca. That is in Switzerland.
+a11_l2_nummer	What is your phone number?
+a11_l2_verheiratet	Are you married?
+a11_l2_alt	How old is your child?
+a11_l2_geburtsort	Place of birth: Biasca.
+a11_l2_wohnort	Place of residence: 20249 Hamburg
+a11_l2_familienstand	Marital status: single, married, divorced, ...
+a11_l2_ledig	I am single.
+a11_l2_verwitwet	I am widowed.
+a11_l2_alter	Age: three.
+a11_l2_super	How are you? – Great.
+a11_l2_sehr	How are you? – Very well, thank you.
+a11_l2_gut	How are you? – Fine, thanks.
+a11_l2_na_ja	How are you? – Well, it's OK.
+a11_l2_ach	How are you? – Oh, not so good.
+a11_l2_so	How are you? – Not so good.
+a11_l2_falsch	No, wrong.
+a11_l2_genau	Yes, exactly.
+a11_l2_liste	Make a list.
+a11_l2_hauptstadt	Berlin is the capital of Germany.
+a11_l2_kennen	You don't know us yet?
+a11_l2_also	So, this is us: ...
+a11_l2_hier	I was born in Stuttgart and I live here too.
+a11_l2_aber	I come from Kiel, but I live in Heidelberg.
+a11_l2_polizei	I am with the police.
+a11_l2_schon	I have been living here in Stuttgart for a very long time.
+a11_l2_lange	I have been living here in Stuttgart for a very long time.
+a11_l2_zurzeit	At the moment I live in England.
+a11_l3_banane	Lili is buying bananas.
+a11_l3_butter	Lara and Sofia have butter.
+a11_l3_ei	They have eggs.
+a11_l3_mehl	Lara and Sofia have flour.
+a11_l3_milch	Mr Meier has milk.
+a11_l3_zucker	Lara and Sofia have sugar.
+a11_l3_pfannkuchen	We are making pancakes.
+a11_l3_schokolade	This is chocolate.
+a11_l3_apfel	That is not an apple.
+a11_l3_orange	That is an orange.
+a11_l3_kuchen	That is a cake.
+a11_l3_kaffee	Is that a coffee?
+a11_l3_saft	That's not juice!
+a11_l3_broetchen	But that's a bread roll!
+a11_l3_wuerstchen	That is a small sausage.
+a11_l3_birne	That is not a pear.
+a11_l3_tomate	That is not a tomato.
+a11_l3_brot	There are loaves of bread in the shopping trolley.
+a11_l3_kartoffel	I am buying a kilo of potatoes.
+a11_l3_joghurt	I am buying three yoghurts.
+a11_l3_zwiebel	I am buying two onions.
+a11_l3_fisch	I am buying two fish.
+a11_l3_kaese	Do we have cheese?
+a11_l3_salz	Do you have salt?
+a11_l3_tee	Do we have tea?
+a11_l3_obst	Is that fruit?
+a11_l3_gemuese	That is vegetables.
+a11_l3_mineralwasser	Do we have mineral water?
+a11_l3_wasser	Do we need water?
+a11_l3_fleisch	Do we have meat?
+a11_l3_reis	Do we need rice?
+a11_l3_wein	Do we have wine?
+a11_l3_bier	Do we have beer?
+a11_l3_sahne	How much is a pot of cream?
+a11_l3_steak	I'm having steak and salad.
+a11_l3_salat	I'm having steak and salad.
+a11_l3_sosse	Mmm! Spaghetti and tomato sauce!
+a11_l3_haehnchen	I'm having chicken and chips.
+a11_l3_pizza	I'm having pizza.
+a11_l3_cola	I'm drinking cola.
+a11_l3_durst	Leonie is thirsty.
+a11_l3_essen	My favourite food is vegetable soup.
+a11_l3_suppe	My favourite food is vegetable soup.
+a11_l3_pfeffer	I need salt and pepper for the vegetable soup.
+a11_l3_getraenk	Coffee is my favourite drink.
+a11_l3_brauchen	They need eggs.
+a11_l3_kaufen	Lili is buying bananas.
+a11_l3_hunger	I am hungry.
+a11_l3_euro	That comes to 3 euros 87.
+a11_l3_dann	That comes to 3 euros 87 altogether, then.
+a11_l3_helfen	Can I help you?
+a11_l3_welt	Where in the world are there pancakes?
+a11_l3_kein	But that's not an egg!
+a11_l3_ein	That is a chocolate egg.
+a11_l3_regal	There are three bananas on shelf A.
+a11_l3_preis	Price: 50 cents, one euro, one euro ten, ...
+a11_l3_cent	That comes to 2 euros and 45 cents.
+a11_l3_prospekt	Look at the leaflet.
+a11_l3_sonderangebot	On special offer today: sausage rolls for €0.99!
+a11_l3_lebensmittel	Foodstuffs: milk, bread, eggs, ...
+a11_l3_abteilung	Special offers from our food department: ...
+a11_l3_wurst	100 grams of sausage cost €2.29.
+a11_l3_hackfleisch	How much is a kilo of minced meat?
+a11_l3_ol	How much is a litre of oil?
+a11_l3_wie_viel	How much is a kilo of oranges?
+a11_l3_kosten	100 grams of cheese cost €2.45.
+a11_l3_kilo	I am buying a kilo of potatoes.
+a11_l3_gramm	How much do 100 grams of cheese cost?
+a11_l3_pfund	How much is a pound of coffee?
+a11_l3_liter	How much is a litre of milk?
+a11_l3_flasche	A bottle of juice costs €1.09.
+a11_l3_dose	A tin of tomatoes costs €0.49.
+a11_l3_restaurant	We are eating at the restaurant.
+a11_l3_mensa	We eat in the canteen.
+a11_l3_essen_2	We like eating fish.
+a11_l3_kochen	Hisako is cooking vegetable soup.
+a11_l3_fuer	How many potatoes do you need for potato pancakes?
+a11_l3_lieblings	My favourite food is potato pancakes with apple sauce.
+a11_l3_rezept	There are many recipes for vegetable soup.
+a11_l3_typisch	The recipe is typically German and very easy.
+a11_l3_ganz	The recipe is really easy.
+a11_l3_einfach	The recipe is really easy.
+a11_l3_portion	For four portions you need a kilo of potatoes.
+a11_l3_gross	You need a big onion.
+a11_l3_schmecken	Mm, that tastes so good!
+a11_l3_trinken	Jens is drinking water.
+a11_l3_glas	With it I drink water or a glass of beer.
+a11_l3_studieren	I study in Berlin.
+a11_l3_zum_beispiel	There are lots of recipes. This one, for example: ...
+a11_l3_reichen	That's enough for three or four days.
+a11_l3_tag	That's enough for three or four days.
+a11_l3_teuer	That's not expensive.
+a11_l3_gern	What do you like eating?
+a11_l4_wohnung	They are in Lara's flat.
+a11_l4_lampe	The lamp is old.
+a11_l4_zimmer	Lara's room is bright.
+a11_l4_kueche	The kitchen is nice.
+a11_l4_bad	The bathroom is small.
+a11_l4_neu	The lamp is new.
+a11_l4_klein	The bathroom is small.
+a11_l4_hell	Lara's room is bright.
+a11_l4_dunkel	Lara's room is dark.
+a11_l4_billig	The flat is cheap.
+a11_l4_schoen	The kitchen is nice.
+a11_l4_haesslich	The kitchen is ugly.
+a11_l4_flur	Here is the hallway.
+a11_l4_toilette	Is there a toilet here too?
+a11_l4_balkon	The balcony is nice.
+a11_l4_wohnzimmer	The living room is here.
+a11_l4_der	the hallway
+a11_l4_das	the bathroom
+a11_l4_die	the kitchen
+a11_l4_haus	This is the house.
+a11_l4_dort	The study is over there.
+a11_l4_monat	My room costs 350 euros a month.
+a11_l4_beispiel	Mark it as in the example.
+a11_l4_schmal	My house is very narrow.
+a11_l4_richtig	Yes, right.
+a11_l4_breit	The street is wide.
+a11_l4_schrank	Here is another cupboard.
+a11_l4_kuehlschrank	How much is the fridge?
+a11_l4_sofa	How much is the sofa?
+a11_l4_tisch	The table is very big.
+a11_l4_stuhl	Here are some chairs.
+a11_l4_bett	Where are the beds, then?
+a11_l4_fernseher	How much is the TV?
+a11_l4_dusche	The flat has a bathroom with a shower.
+a11_l4_herd	Here is the cooker.
+a11_l4_badewanne	The flat has a bathroom with a bathtub.
+a11_l4_teppich	The carpet is nice.
+a11_l4_sessel	The armchair is nice.
+a11_l4_moebel	The furniture is very nice.
+a11_l4_elektro	Electrical appliances: fridge, TV, lamp, ...
+a11_l4_geraet	Electrical appliances: fridge, TV, lamp, ...
+a11_l4_gefallen	How do you like the chairs?
+a11_l4_farbe	The colour is very nice.
+a11_l4_finden	I think so too.
+a11_l4_modern	The lamp is very modern!
+a11_l4_schwarz	My chairs are black.
+a11_l4_grau	My fridge is grey.
+a11_l4_weiss	My fridge is white.
+a11_l4_gruen	The lamp is green.
+a11_l4_braun	My chairs are brown.
+a11_l4_blau	My fridge is blue.
+a11_l4_rot	My fridge is red.
+a11_l4_gelb	The carpet is yellow.
+a11_l4_hell_2	My fridge is light red.
+a11_l4_dunkel_2	My fridge is dark red.
+a11_l4_zentimeter	About 60 centimetres wide.
+a11_l4_mal	The cot is 60 by 120 centimetres.
+a11_l4_handy	My mobile number is: 0163/235621147.
+a11_l4_meter	The table is about a metre long.
+a11_l4_lang	The table is about a metre long.
+a11_l4_hoch	The table is 70 centimetres high.
+a11_l4_platz	I don't need that much space at all.
+a11_l4_computer	My computer is big.
+a11_l4_heft	I have lots of exercise books and school things.
+a11_l4_ziemlich	My desk is rather full.
+a11_l4_egal	The desk isn't nice. But that doesn't matter.
+a11_l4_lieben	I love my desk.
+a11_l4_immer	I always do my homework there.
+a11_l4_hausaufgabe	I always do my homework there.
+a11_l4_glauben	I think it's already very old.
+a11_l4_besonder	Today is a special day.
+a11_l4_besonders	My desk chair is especially nice.
+a11_l4_arbeit	My number at work is: ...
+a11_l4_anzeige	Read the advertisements.
+a11_l4_nett	Nice married couple with a child.
+a11_l4_ehepaar	Nice married couple with a child.
+a11_l4_garten	Married couple with a child looking for a 3–4 room flat with a garden.
+a11_l4_vermieten	Apartment to let, 36 m².
+a11_l4_apartment	The apartment costs 440 euros a month.
+a11_l4_raum	The living space is big.
+a11_l4_stock	I am looking for a flat on the first floor.
+a11_l4_circa	3-room flat, approx. 60 m².
+a11_l4_privat	Private sale: 3-room flat.
+a11_l4_ab	Call from 7 pm.
+a11_l4_sofort	I am looking for a 2-room flat from now on.
+a11_l4_maximal	2-room flat with a balcony up to a maximum of 750 euros.
+a11_l4_anruf	I look forward to your call.
+a11_l4_moebliert	The room is furnished.
+a11_l4_tv	Nice furnished 1-room flat with a balcony and TV.
+a11_l4_garage	They would like a flat with a garage.
+a11_l4_quadratmeter	The room is 21 m².
+a11_l4_miete	They only want to pay 400 to 500 euros rent.
+a11_l4_bezahlen	They only want to pay 400 to 500 euros rent.
+a11_l4_buch	There are the books.
+a11_l4_stift	There is a pen.
+a11_l4_welch	Which desk goes with which person?
+a11_l4_schreibtisch	My desk is made of wood.
+a11_l4_holz	My desk is made of wood.
+a11_l4_ungefaehr	The table is about a metre long.
+a11_l4_dunkelblau	The chair is dark blue.
+a11_l4_hellblau	The wall is light blue.
+a11_l4_braunrot	The carpet is reddish brown.
+a11_l4_violett	The lamp is purple.
+a11_l4_rosa	The sofa is pink.
+a11_l4_dunkelgruen	The cupboard is dark green.
+a11_l4_hellgruen	The door is light green.
+a11_l4_tuerkis	The bathroom is turquoise.
+a11_l4_beige	The shelf is beige.
+a11_l4_laut	The neighbours are very loud.
+a11_l4_leise	It is quiet here in the evening.
+a11_l4_leer	The fridge is empty.
+a11_l4_dreckig	The kitchen is dirty.
+a11_l5_bis	From morning till night.
+a11_l5_praesentation	Lara is giving a presentation.
+a11_l5_fruehstuecken	Lara, Sofia and Lili have breakfast together.
+a11_l5_einkaufen	Lara does the shopping.
+a11_l5_spazieren_gehen	Lara goes for a walk.
+a11_l5_aufraeumen	Lara tidies up the kitchen.
+a11_l5_aufstehen	Lara gets up at a quarter past seven.
+a11_l5_gehen	Lara goes to the German course.
+a11_l5_oder	In the afternoon Lara goes for a walk or does the shopping.
+a11_l5_muede	Sofia is tired in the evening.
+a11_l5_anrufen	Lara calls her family.
+a11_l5_frueh	Lara gets up early.
+a11_l5_supermarkt	She does her shopping at the supermarket.
+a11_l5_fernsehen	She watches TV.
+a11_l5_mit	She has breakfast with Lara and Lili.
+a11_l5_spaet	What time is it now?
+a11_l5_erst	It's only eleven.
+a11_l5_viertel	It's a quarter to twelve.
+a11_l5_vor	It's a quarter to twelve.
+a11_l5_nach	It's a quarter past one.
+a11_l5_halb	It's half past one.
+a11_l5_uhr	That is a clock.
+a11_l5_kurz	It's just before twelve.
+a11_l5_gleich	It's almost twelve.
+a11_l5_intensivkurs	German: intensive and evening courses
+a11_l5_wann	When? – On Monday.
+a11_l5_am	When? – On Monday.
+a11_l5_um	When? – At half past eight.
+a11_l5_von_bis	The course is from half past eight to three (o'clock).
+a11_l5_party	I'm having a party on Friday.
+a11_l5_zeit	Do you have time?
+a11_l5_fussball	I play football from five to six.
+a11_l5_anfangen	When does the party start, then?
+a11_l5_passen	That suits me fine.
+a11_l5_termin	Write your appointment diary.
+a11_l5_terminkalender	Write your appointment diary.
+a11_l5_naechst	The diary for next week: ...
+a11_l5_woche	The diary for next week: ...
+a11_l5_taeglich	Opening hours: daily 8 am – 1 am
+a11_l5_montag	Do the courses start on Monday?
+a11_l5_dienstag	On Tuesday Tim plays football.
+a11_l5_mittwoch	On Wednesday Tim does homework.
+a11_l5_donnerstag	What does Tim do on Thursday?
+a11_l5_freitag	On Friday Tim does the shopping.
+a11_l5_samstag	On Saturday Tim cooks with Lara.
+a11_l5_sonnabend	On Saturday Tim cooks with Lara.
+a11_l5_sonntag	When does Tim sleep in? – On Sunday.
+a11_l5_wochenende	At the weekend the Reinhardt family doesn't work.
+a11_l5_mama	When does Tim call Mum and Dad?
+a11_l5_schlafen	Tim sleeps in on Sunday.
+a11_l5_morgen	In the morning Robert has breakfast.
+a11_l5_vormittag	In the late morning he tidies up.
+a11_l5_mittag	At midday he eats with Nina.
+a11_l5_nachmittag	In the afternoon he does sport.
+a11_l5_abend	In the evening he plays football.
+a11_l5_nacht	At night he goes for a walk.
+a11_l5_kino	In the evening Robert goes to the cinema.
+a11_l5_chatten	At night Robert chats online.
+a11_l5_jeder	I get up at six o'clock every morning.
+a11_l5_jedes	Every room has a window.
+a11_l5_jede	Every flat has a kitchen.
+a11_l5_cafe	Café Einstein is in Kurfürstenstraße.
+a11_l5_fahrrad	By bike through Berlin: Fahrradstation Mitte ...
+a11_l5_bibliothek	The library opens at 3 pm from Monday to Friday.
+a11_l5_feiertag	The library is closed on public holidays.
+a11_l5_geschlossen	The library is closed on public holidays.
+a11_l5_ansage	Listen to the announcements.
+a11_l5_offiziell	Official: radio, television, announcements, ...
+a11_l5_film	Which film is Mr Tanaka watching?
+a11_l5_sehen	Which film is Mr Tanaka watching?
+a11_l5_museum	Mr Tanaka likes going to museums.
+a11_l5_geoeffnet	When is the museum open?
+a11_l5_schiff	In the afternoon he takes a boat tour.
+a11_l5_tour	When does the tour start?
+a11_l5_kaufhaus	The KaDeWe is the biggest department store in Europe.
+a11_l5_europa	The KaDeWe is the biggest department store in Europe.
+a11_l5_kennenlernen	Take the boat and get to know Berlin.
+a11_l5_abfahrt	Departure is at 10.30.
+a11_l5_erwachsene	For adults the tour costs eight euros.
+a11_l5_plan	Make a plan.
+a11_l5_offen	The window is open.
+a11_l6_ausflug	The Baumann family and Lara go on a trip.
+a11_l6_auto	Sofia likes driving.
+a11_l6_wandern	I really like hiking.
+a11_l6_picknick	Lili is hungry and they have a picnic.
+a11_l6_gitarre	Walter plays the guitar.
+a11_l6_telefonieren	Tim is on the phone.
+a11_l6_fotografieren	Lili takes a photo of Tim and Laura.
+a11_l6_sonne	The sun is shining.
+a11_l6_scheinen	The sun is shining.
+a11_l6_regnen	It's raining.
+a11_l6_viel	There are a lot of clouds.
+a11_l6_wolke	There are a lot of clouds.
+a11_l6_wetter	The weather is not so good.
+a11_l6_los	They set off.
+a11_l6_vergessen	Sofia forgets the tin.
+a11_l6_bringen	Tim brings the tin.
+a11_l6_freizeit	What does Adrian like doing in his free time?
+a11_l6_hobby	Which hobby doesn't Adrian have?
+a11_l6_wichtig	Sport is really important to me.
+a11_l6_berg	There is snow in the mountains.
+a11_l6_ski	I like skiing or snowboarding.
+a11_l6_fahren	I like skiing or snowboarding.
+a11_l6_joggen	I like jogging.
+a11_l6_schwimmen	I swim every day.
+a11_l6_tanzen	I really love dancing salsa.
+a11_l6_spass	Reading is fun!
+a11_l6_treffen	At the weekend I meet my friends.
+a11_l6_grillen	We have a barbecue together.
+a11_l6_klub	We go to the cinema or to a club.
+a11_l6_surfen	I don't like this so much: surfing the internet.
+a11_l6_krimi	I think crime stories are great.
+a11_l6_toll	I think crime stories are great.
+a11_l6_interessant	I find photography interesting.
+a11_l6_grad	It is 25 degrees.
+a11_l6_warm	It is warm.
+a11_l6_windig	It is windy.
+a11_l6_kalt	It is cold.
+a11_l6_schneien	It's snowing.
+a11_l6_bewoelkt	It is cloudy.
+a11_l6_norden	In the north the sun is shining.
+a11_l6_osten	In the east it is cloudy.
+a11_l6_sueden	In the south the weather is bad.
+a11_l6_westen	In the north and west the weather is nice.
+a11_l6_schlecht	In the south the weather is bad.
+a11_l6_wetterbericht	The weather report for tomorrow is on the radio.
+a11_l6_radio	The weather report for tomorrow is on the radio.
+a11_l6_internet	I read the weather report on the internet.
+a11_l6_sonnig	In the north it is cloudy, otherwise sunny.
+a11_l6_morgen	Tomorrow temperatures will rise everywhere.
+a11_l6_steigen	Tomorrow temperatures will rise everywhere.
+a11_l6_ueberall	Tomorrow temperatures will rise everywhere.
+a11_l6_temperatur	Tomorrow temperatures will rise everywhere.
+a11_l6_regen	I like rain.
+a11_l6_schnee	At the weekend there will be snow in the west.
+a11_l6_heute	Today it is sunny and warm.
+a11_l6_bleiben	The weather will stay nice in the coming days too.
+a11_l6_minus	It is minus one degree and it's snowing.
+a11_l6_herbst	It rains a lot in autumn.
+a11_l6_winter	It is cold in winter.
+a11_l6_sommer	In summer the weather is very good.
+a11_l6_fruehling	In spring the weather is often nice.
+a11_l6_speisekarte	Look at the menu.
+a11_l6_speise	Small dishes: chips, vegetable soup, ...
+a11_l6_ketchup	I'll have the chips with ketchup.
+a11_l6_hamburger	I'll have a hamburger with chips.
+a11_l6_schinken	I'll have the salad with ham and egg.
+a11_l6_dessert	Dessert: chocolate cake, ...
+a11_l6_nehmen	I'll have the sausages and a juice.
+a11_l6_doch	Haven't we got the cheese with us? – Yes, we have.
+a11_l6_papa	Here, Dad! I've got the cheese.
+a11_l6_moechten	Would you like a sausage?
+a11_l6_lieber	But I'd rather have cheese.
+a11_l6_freundin	Is that your girlfriend?
+a11_l6_vielleicht	Then maybe pizza?
+a11_l6_idee	That's a good idea.
+a11_l6_problem	No problem!
+a11_l6_hund	Do you have a dog?
+a11_l6_reise	Welcome to the travel destination "D-A-CH"!
+a11_l6_urlaub	Would you like to go on holiday?
+a11_l6_wunderbar	You are learning German? Wonderful!
+a11_l6_natur	We have plenty of nature for you.
+a11_l6_nord	We start in northern Germany.
+a11_l6_ost	Here there is the Baltic Sea.
+a11_l6_sued	In southern Europe it is often hot.
+a11_l6_west	Bonn is in western Germany.
+a11_l6_surfen_2	I like surfing on holiday.
+a11_l6_programm	We have a special programme for you.
+a11_l6_heiss	It is usually not so hot here.
+a11_l6_mitte	In the middle there are also lots of things to do in your free time.
+a11_l6_moeglichkeit	In the middle there are also lots of things to do in your free time.
+a11_l6_angebot	In winter there are lots of offers for skiers.
+a11_l6_mountainbike	Do you like tours on a mountain bike?
+a11_l6_klettern	What do you think of mountaineering – or climbing?
+a11_l7_wind	There is a lot of wind in northern Germany.
+a11_l7_insel	Malta is an island in the Mediterranean.
+a11_l7_reifen	Walter buys a tyre.
+a11_l7_weiter	Walter keeps practising hula hoop.
+a11_l7_ueben	Walter practises hula hoop.
+a11_l7_schicken	Lara says: "Send a photo!"
+a11_l7_funktionieren	It doesn't work.
+a11_l7_kommentar	4 comments
+a11_l7_aussehen	That looks great!
+a11_l7_koennen	Can I learn that too?
+a11_l7_stimmen	That's not true.
+a11_l7_tipp	I can give good tips.
+a11_l7_reiten	Can you ride well?
+a11_l7_wollen	I'd so love to learn that again!
+a11_l7_stress	Britta wants to do an anti-stress course.
+a11_l7_kommunikation	I want to do a communication training.
+a11_l7_training	I want to do a communication training.
+a11_l7_psychologie	I'd like to do a course in psychology.
+a11_l7_theater	I like acting.
+a11_l7_produktion	I find digital music production interesting.
+a11_l7_mathematik	In the holidays Nina is doing a maths course.
+a11_l7_noch	Do you still know hula hoop?
+a11_l7_gestern	I found a photo yesterday.
+a11_l7_frueher	I used to practise hula hoop so often.
+a11_l7_oft	I used to practise hula hoop so often.
+a11_l7_nach_hause	In the afternoon I came home.
+a11_l7_einmal	Have you ever cycled 100 kilometres? – Yes, once.
+a11_l7_nie	I have never done a course in the holidays.
+a11_l7_oefter	I have often done a dance course on holiday.
+a11_l7_schwer	The vocabulary is so hard!
+a11_l7_cool	My tip: always stay cool!
+a11_l7_zeitung	I buy French newspapers.
+a11_l7_meistens	I mostly buy sports newspapers.
+a11_l7_leicht	You can easily find tandem partners on the internet.
+a11_l7_bus	I learn vocabulary on the bus.
+a11_l7_plakat	Make a poster.
+a11_l7_comic	My tip: read comics in German.
+a11_l7_malen	I can paint very well.
+a11_l7_backen	I can bake cakes well.
+a11_l7_das_tennis	I can't play tennis very well.
+a11_l7_singen	I can't sing at all.
+a11_l7_klavier	Can you play the piano well?
+a11_l7_senkrecht	vertical ↕
+a11_l7_waagerecht	horizontal ↔
+a11_l7_gitarre_spielen	At the weekend I'd like to play the guitar.
+a11_l7_fahrrad_fahren	In summer we'd like to go cycling.
+a11_l7_freunde_treffen	On Saturday I'd like to meet friends.
+a11_l7_ski_fahren	In winter we'd like to go skiing.
+a11_l7_tennis_spielen	On Monday I'd like to play tennis.
+a11_l7_rechnen	We do sums in the course.
+a12_l9_gueltig	My passport is valid for two more years.
+a12_l9_auslaendisch	The foreign driving licence is valid here.
+a12_l9_europaeisch	We have a European passport.
+a12_l9_europaeische_union	The European Union has 27 member states.
+a12_l9_ausfuellen	We would like to fill in the form.
+a12_l9_mitbringen	You must bring a photo.
+a12_l9_beantragen	We are applying for a new ID card.
+a12_l9_muessen	We have to go to the office.
+a12_l9_duerfen	We are not allowed to park here.
+a12_l9_erlaubt	Parking is allowed here.
+a12_l9_verboten	Smoking is forbidden in the hotel.
+a12_l9_achtung	Caution, the door closes automatically!
+a12_l9_rauchen	We don't smoke.
+a12_l9_abgeben	You can hand in the form here.
+a12_l9_benutzen	We use the lift.
+a12_l9_mitnehmen	You may take the leaflet with you.
+a12_l9_parken	We park in front of the hotel.
+a12_l9_langsam	Please speak slowly.
+a12_l9_auswaehlen	You can choose a room.
+a12_l9_waehlen	We choose the hotel in the centre.
+a12_l9_verstehen	We don't understand the question.
+a12_l9_man	You are not allowed to smoke here.
+a12_l9_einen_fuehrerschein_beantragen	We would like to apply for a driving licence.
+a12_l9_einen_antrag_ausfuellen	You have to fill in an application form.
+a12_l9_einen_antrag_abgeben	Please hand in an application form.
+a12_l9_den_ausweis_mitbringen	You must bring your ID card.
+a12_l9_den_pass_mitbringen	Please bring your passport.
+a12_l9_eine_gebuehr_bezahlen	You have to pay a fee.
+a12_l9_mitkommen	Would you like to come along?
+a12_l9_mieten	We are renting a car for a week.
+a12_l9_beginnen	The guided tours start at ten o'clock.
+a12_l9_beruehmt	The castle is very famous.
+a12_l9_besuchen	We are visiting the museum on Sunday.
+a12_l9_besichtigen	We would like to visit the cathedral.
+a12_l9_paar	We are staying in Berlin for a few days.
+a12_l9_inklusive	Breakfast is included.
+a12_l9_kostenlos	The Wi-Fi in the hotel is free.
+a12_l9_zentral	The hotel is very central.
+a12_l9_historisch	The historic old town is beautiful.
+a12_l9_buchen	We are booking a double room.
+a12_l9_fertig	The room is ready at 2 pm.
+a12_l9_wiederholen	Can you repeat that, please?
+a12_l9_reservieren	We are reserving a table for eight o'clock.
+a12_l9_vorne	The entrance is over there at the front.
+a12_l9_abholen	We would like to collect the key.
+a12_l9_erklaeren	Can you explain the way to me?
+a12_l9_ausmachen	Please turn off the light.
+a12_l9_schliessen	The shops close at 8 pm.
+a12_l9_oeffnen	We open the window.
+a12_l9_zuhoeren	Please listen carefully!
+a12_l9_puenktlich	The bus is on time today.
+a12_l9_warten	We are waiting at reception.
+a12_l9_ander	Do you have another room?
+a12_l9_lachen	We laugh a lot in the course.
+a12_l9_jung	The colleague is still very young.
+a12_l9_zuerst	First we go to the office.
+a12_l9_warum	Why is the museum closed today?
+a12_l10_wehtun	Your back can hurt after work.
+a12_l10_schlimm	The cold is not serious.
+a12_l10_krank	My colleague has been ill since Monday.
+a12_l10_gesund	Fruit and vegetables are healthy.
+a12_l10_verwenden	We use this ointment three times a day.
+a12_l10_vereinbaren	We make an appointment with the doctor.
+a12_l10_aendern	We would like to change the appointment.
+a12_l10_absagen	Unfortunately I have to cancel the appointment.
+a12_l10_dringend	The patient urgently needs an appointment.
+a12_l10_trainieren	We train twice a week.
+a12_l10_aufpassen	You must take care of your health.
+a12_l10_laufen	We run in the park every morning.
+a12_l10_dick	The jacket is very thick.
+a12_l10_ruhig	Please stay calm.
+a12_l10_doppelt	I wrote the appointment down twice.
+a12_l10_gegen	Do you have anything for headaches?
+a12_l10_informieren	We inform the doctor.
+a12_l10_hoffentlich	Hopefully you'll be well again soon.
+a12_l10_unser	Our doctor is very friendly.
+a12_l10_eur	What is your doctor's name?
+a12_l10_ausfallen	Unfortunately the course has to be cancelled today.
+a12_l10_vorbeikommen	Can you drop by tomorrow?
+a12_l10_geben	We'll give you a prescription.
+a12_l10_sollen	You should drink a lot of water.
+a12_l10_tun	What can we do for you?
+a12_l10_beobachten	We'll watch the symptoms for two more days.
+a12_l10_beide	Both appointments are on Friday.
+a12_l10_lustig	The film is really funny.
+a12_l10_nichts	I haven't eaten anything today.
+a12_l11_fliegen	We are flying to Spain in July.
+a12_l11_abfahren	The train is supposed to leave at eight o'clock.
+a12_l11_ankommen	We would like to arrive at ten o'clock.
+a12_l11_einsteigen	Please get on at the back!
+a12_l11_umsteigen	We have to change in Cologne.
+a12_l11_aussteigen	You have to get off at the station.
+a12_l11_hin_und_zurueck	One return ticket to Hamburg, please.
+a12_l11_unterwegs	We have been on the road for two hours.
+a12_l11_rechts	Turn right at the traffic lights.
+a12_l11_links	The post office is on the left next to the bank.
+a12_l11_geradeaus	Keep going straight ahead.
+a12_l11_wohin	Where are you going on holiday?
+a12_l11_weit	The station is not far.
+a12_l11_an	We are waiting at the stop.
+a12_l11_auf	The timetable is on the board.
+a12_l11_hinter	The car park is behind the station.
+a12_l11_ueber	The bridge goes over the river.
+a12_l11_unter	The station is under the square.
+a12_l11_zwischen	The pharmacy is between the bank and the post office.
+a12_l11_neben	The hotel is next to the museum.
+a12_l11_vorne	The exit is over there at the front.
+a12_l11_hinten	The toilets are at the back there.
+a12_l11_drueben	The stop is over there.
+a12_l11_direkt	The train goes directly to Munich.
+a12_l11_stehen	We are standing in front of the entrance.
+a12_l11_sitzen	We are sitting in the last carriage.
+a12_l11_holen	We get the tickets from the machine.
+a12_l11_zumachen	Please close the door!
+a12_l11_bedeuten	What do these signs mean?
+a12_l11_kopieren	We are copying the timetable.
+a12_l11_ausleihen	We would like to rent two bicycles.
+a12_l11_achten	We pay attention to the announcements.
+a12_l11_schnell	The ICE is very fast.
+a12_l11_fremd	The city is still strange to me.
+a12_l11_okay	The seat by the window is okay.
+a12_l11_selbst	We buy the tickets ourselves.
+a12_l12_reparieren	We are repairing the washing machine.
+a12_l12_naehen	Can you sew the skirt?
+a12_l12_verkaufen	We are selling our old sofa.
+a12_l12_empfehlen	We recommend this repair shop to you.
+a12_l12_vorbeibringen	You can bring the device by tomorrow.
+a12_l12_zurueckgeben	I would like to return the jacket.
+a12_l12_kaputt	Unfortunately my mobile phone is broken.
+a12_l12_sauer	The customer is very annoyed.
+a12_l12_unfreundlich	The employee was unfriendly.
+a12_l12_normal	The price is quite normal.
+a12_l12_guenstig	The repair was very cheap.
+a12_l12_anmachen	Please turn on the light!
+a12_l12_aufmachen	Can you open the window?
+a12_l12_zurueckrufen	We would like to call you back tomorrow.
+a12_l12_bescheid_sagen_geben	We would like to let you know tomorrow.
+a12_l12_gruendlich	We clean the carpet thoroughly.
+a12_l12_sparen	We are saving for a new kitchen.
+a12_l12_reinigen	We are having the coat dry-cleaned.
+a12_l12_putzen	We clean the windows on Saturday.
+a12_l12_bestellen	We are ordering a spare part.
+a12_l12_geniessen	We are enjoying the day off.
+a12_l13_tragen	We don't wear jeans at the office.
+a12_l13_anziehen	You can put the coat on.
+a12_l13_anprobieren	I would like to try on the shoes.
+a12_l13_gehoeren	These bags belong to my sister.
+a12_l13_moegen	We like the colour blue.
+a12_l13_duenn	The blouse is very thin.
+a12_l13_langweilig	The dress is too boring for me.
+a12_l13_perfekt	The trousers fit perfectly.
+a12_l13_wunderschoen	The skirt is beautiful.
+a12_l13_total	The jumper is really modern.
+a12_l13_allein	I go shopping alone.
+a12_l13_am_besten	It's best to take size 40.
+a12_l13_am_liebsten	Most of all I like wearing trainers.
+a12_l13_mehr	We need more time for shopping.
+a12_l13_am_meisten	I like this jacket the most.
+a12_l13_dies	This shirt is too big.
+a12_l13_nordsee	In summer we go to the North Sea.
+a12_l14_feiern	We are celebrating a birthday on Saturday.
+a12_l14_einladen	We would like to invite the neighbours.
+a12_l14_schenken	We are giving her flowers.
+a12_l14_gratulieren	Many congratulations to you!
+a12_l14_wuenschen	We wish you all the best.
+a12_l14_organisieren	We are organising the party together.
+a12_l14_erste	The first present is from Grandma.
+a12_l14_zweite	The second candle is already burning.
+a12_l14_dritte	Today is the third Sunday of Advent.
+a12_l14_werden	We are turning thirty in May.
+a12_l14_sich_freuen	They are pleased about the invitation.
+a12_l14_eroeffnen	We open the party at six o'clock.
+a12_l14_sorgen	We'll take care of the drinks.
+a12_l14_anmelden	You can sign up for the party.
+a12_l14_bitten	We ask for a short reply.
+a12_l14_bescheid_geben	Please let us know by Friday.
+a12_l14_mitmachen	All children may take part.
+a12_l14_waschen	We wash the dishes after the party.
+a12_l14_schmutzig	The tablecloth is dirty.
+a12_l14_herzlich	Happy birthday!
+a12_l14_anzuenden	We would like to light the candles.
+a12_l14_bunt	The lights are very colourful.
+a12_l14_verstecken	The children hide the eggs in the garden.
+a12_l14_enden	The party is supposed to end at midnight.
+a12_l14_traurig	We are sad after the goodbye.
+a12_l14_lieb	That was very kind of you.
+a12_l14_lieb_haben	We love you.
+a12_l14_lieben	They have loved each other for ten years.
+a12_l14_denn	We are celebrating today, because it's New Year's Eve.
+a12_l14_zurueckkommen	When would you like to come back?
+a12_l14_auspacken	The children want to unwrap the presents.
+a12_l14_vorlesen	Grandpa would like to read a story aloud.
+a12_l14_vorher	Before that, we'll buy a cake.
+a12_l14_stellen	We put the flowers on the table.
+a12_l14_heilig	Christmas Eve is on 24 December.

@@ -182,14 +182,14 @@ def main():
         plural_variants = [p.strip() for p in plural_display.split("/") if p.strip()]
         # what Learn shows: the textbook sentence, else the app example, else (nouns) the singular example
         sentence = cell(row, "example sentence") or cell(row, "app example") or cell(row, "singular example")
-        # its English, where the list has one (textbook sentences have none yet)
-        sentence_english = (
-            ""
-            if cell(row, "example sentence")
-            else cell(row, "app example english")
-            if cell(row, "app example")
-            else cell(row, "singular example english")
-        )
+        # its English. A textbook sentence keeps its English in "App example English"
+        # (the App example itself stays "-" for those rows).
+        if cell(row, "example sentence"):
+            sentence_english = "" if cell(row, "app example") else cell(row, "app example english")
+        elif cell(row, "app example"):
+            sentence_english = cell(row, "app example english")
+        else:
+            sentence_english = cell(row, "singular example english")
 
         entry = {
             "id": word_id,
