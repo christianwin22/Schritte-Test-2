@@ -569,3 +569,386 @@ a12_l14_blume	Die Blumen im Garten blühen schon.	The flowers in the garden are 
 a12_l14_ende	Das Seil hat zwei Enden.	The rope has two ends.
 a12_l14_bart	Die Männer im Dorf tragen lange Bärte.	The men in the village have long beards.
 a12_l14_sack	Die Säcke mit Kartoffeln stehen im Keller.	The sacks of potatoes are in the cellar.
+a21_l1_umzug	Die Umzüge im Sommer sind anstrengend.	Moving house in summer is exhausting.
+a21_l1_mieter	Die Mieter treffen sich einmal im Jahr.	The tenants meet once a year.
+a21_l1_mieterin	Die Mieterinnen im zweiten Stock sind Studentinnen.	The tenants on the second floor are students.
+a21_l1_wohngemeinschaft	In Berlin gibt es viele Wohngemeinschaften.	There are many shared flats in Berlin.
+a21_l1_wecker	Im Geschäft gibt es Wecker in allen Farben.	The shop has alarm clocks in all colours.
+a21_l1_arbeitgeber	Die Arbeitgeber suchen dringend Fachkräfte.	Employers are urgently looking for skilled workers.
+a21_l1_arbeitgeberin	Die Arbeitgeberinnen bieten flexible Arbeitszeiten an.	The employers offer flexible working hours.
+a21_l1_arbeitstag	Die Arbeitstage im Dezember sind kurz.	The working days in December are short.
+a21_l1_software	Die Firma testet verschiedene Softwares.	The company is testing various software packages.
+a21_l1_anfang	Die Anfänge im neuen Job waren schwer.	The beginnings in the new job were hard.
+a21_l1_verwandte	Die Verwandten aus Italien kommen zur Hochzeit.	The relatives from Italy are coming to the wedding.
+a21_l1_verwandte_2	An Weihnachten besuchen wir die Verwandten.	At Christmas we visit our relatives.
+a21_l1_onkel	Meine Onkel wohnen alle in Hamburg.	My uncles all live in Hamburg.
+a21_l1_tante	Meine Tanten backen jedes Jahr Plätzchen.	My aunts bake biscuits every year.
+a21_l1_cousin	Meine Cousins spielen zusammen Fußball.	My cousins play football together.
+a21_l1_cousine	Meine Cousinen studieren in Wien.	My cousins are studying in Vienna.
+a21_l1_neffe	Meine Neffen sind drei und fünf Jahre alt.	My nephews are three and five years old.
+a21_l1_nichte	Meine Nichten besuchen mich im Sommer.	My nieces are visiting me in summer.
+a21_l1_mitglied	Der Verein hat 300 Mitglieder.	The club has 300 members.
+a21_l1_schwiegervater	Die Schwiegerväter sitzen zusammen am Tisch.	The fathers-in-law are sitting together at the table.
+a21_l1_schwiegermutter	Die Schwiegermütter verstehen sich gut.	The mothers-in-law get on well.
+a21_l1_rente	Die Renten steigen nächstes Jahr.	Pensions will go up next year.
+a21_l1_gefuehl	Ich kann meine Gefühle schlecht zeigen.	I'm not good at showing my feelings.
+a21_l1_panne	Beim Umzug gab es viele Pannen.	There were many mishaps during the move.
+a21_l1_geldboerse	Im Fundbüro liegen viele Geldbörsen.	There are lots of purses at the lost property office.
+a21_l1_mal	Ich war schon viele Male in Wien.	I have been to Vienna many times.
+a21_l1_ehemann	Die Ehemänner warten vor dem Geschäft.	The husbands are waiting outside the shop.
+a21_l1_schwager	Meine Schwäger helfen beim Umzug.	My brothers-in-law are helping with the move.
+a21_l1_schwaegerin	Meine Schwägerinnen kommen aus Polen.	My sisters-in-law come from Poland.
+a21_l2_decke	Die Decken in alten Häusern sind hoch.	The ceilings in old houses are high.
+a21_l2_kugelschreiber	Die Kugelschreiber liegen in der Schublade.	The ballpoint pens are in the drawer.
+a21_l2_schloss	Wir brauchen neue Schlösser für die Türen.	We need new locks for the doors.
+a21_l2_wand	Die Wände im Wohnzimmer sind weiß.	The walls in the living room are white.
+a21_l2_schild	Auf der Straße stehen viele Schilder.	There are lots of signs on the street.
+a21_l2_pflanze	Die Pflanzen brauchen viel Licht.	The plants need a lot of light.
+a21_l2_briefkasten	Die Briefkästen sind unten im Flur.	The letterboxes are downstairs in the hallway.
+a21_l2_menge	Wir kaufen nur kleine Mengen.	We only buy small quantities.
+a21_l2_kassette	Auf dem Dachboden liegen alte Kassetten.	There are old cassettes in the attic.
+a21_l2_katze	Die Katzen schlafen auf dem Sofa.	The cats are sleeping on the sofa.
+a21_l2_paeckchen	Die Päckchen liegen bei der Nachbarin.	The small parcels are at the neighbour's.
+a21_l2_paket	Der Postbote bringt drei Pakete.	The postman is bringing three parcels.
+a21_l2_schicht	In der Fabrik arbeitet man in drei Schichten.	In the factory people work in three shifts.
+a21_l2_handwerker	Die Handwerker kommen morgen um acht Uhr.	The tradesmen are coming tomorrow at eight o'clock.
+a21_l2_handwerkerin	Die Handwerkerinnen reparieren das Dach.	The tradeswomen are repairing the roof.
+a21_l2_bewohner	Die Bewohner des Hauses feiern ein Hoffest.	The residents of the building are having a courtyard party.
+a21_l2_bewohnerin	Die Bewohnerinnen im Altenheim spielen Karten.	The residents of the care home are playing cards.
+a21_l2_experiment	Die Experimente im Labor dauern lange.	The experiments in the lab take a long time.
+a21_l2_leitung	Die Leitungen im Haus sind sehr alt.	The pipes in the building are very old.
+a21_l2_loesung	Für jedes Problem gibt es Lösungen.	There are solutions to every problem.
+a21_l2_tonne	Die (Müll-)Tonnen stehen im Hof.	The bins are in the courtyard.
+a21_l2_waschmittel	Im Supermarkt gibt es viele Waschmittel.	There are lots of detergents in the supermarket.
+a21_l2_zettel	Am Kühlschrank hängen viele Zettel.	Lots of notes are stuck to the fridge.
+a21_l2_kostuem	Die Kinder tragen im Februar lustige Kostüme.	The children wear funny costumes in February.
+a21_l2_notiz	Ich mache mir immer Notizen.	I always make notes.
+a21_l2_abfall	Die Abfälle kommen in verschiedene Tonnen.	The rubbish goes into different bins.
+a21_l2_moderator	Die Moderatoren sprechen sehr schnell.	The presenters speak very fast.
+a21_l2_moderatorin	Die Moderatorinnen begrüßen die Gäste.	The presenters welcome the guests.
+a21_l2_aktion	Die Aktionen der Stadt sind sehr beliebt.	The city's campaigns are very popular.
+a21_l2_deutsche	Die Deutschen machen gern Urlaub in Italien.	The Germans like to holiday in Italy.
+a21_l2_deutsche_2	Die Deutschen trennen ihren Müll genau.	The Germans sort their rubbish carefully.
+a21_l3_nachspeise	Die Nachspeisen hier sind hausgemacht.	The desserts here are homemade.
+a21_l3_mahlzeit	Wir essen drei Mahlzeiten am Tag.	We eat three meals a day.
+a21_l3_kantine	Die Kantinen in großen Firmen sind günstig.	The canteens in big companies are cheap.
+a21_l3_gewohnheit	Alte Gewohnheiten ändert man schwer.	Old habits are hard to change.
+a21_l3_marmelade	Oma kocht im Sommer Marmeladen.	Grandma makes jams in summer.
+a21_l3_schwein	Auf dem Bauernhof leben zehn Schweine.	Ten pigs live on the farm.
+a21_l3_diaet	Diäten funktionieren oft nicht.	Diets often don't work.
+a21_l3_art	Es gibt viele Arten von Brot.	There are many kinds of bread.
+a21_l3_frucht	Im Sommer gibt es viele frische Früchte.	There is lots of fresh fruit in summer.
+a21_l3_vorspeise	Die Vorspeisen sind sehr klein.	The starters are very small.
+a21_l3_schnitzel	Wir bestellen zwei Schnitzel mit Pommes.	We order two schnitzels with chips.
+a21_l3_stueck	Ich nehme zwei Stücke Kuchen.	I'll have two pieces of cake.
+a21_l3_zitrone	Für den Kuchen brauche ich zwei Zitronen.	I need two lemons for the cake.
+a21_l3_rind	Auf der Weide stehen viele Rinder.	There are lots of cattle in the meadow.
+a21_l3_loeffel	Die Löffel liegen in der Schublade.	The spoons are in the drawer.
+a21_l3_messer	Die Messer sind sehr scharf.	The knives are very sharp.
+a21_l3_teller	Stell bitte die Teller auf den Tisch.	Please put the plates on the table.
+a21_l3_gabel	Wir brauchen noch zwei Gabeln.	We need two more forks.
+a21_l3_tasse	Die Tassen stehen im Schrank.	The cups are in the cupboard.
+a21_l3_topf	Auf dem Herd stehen zwei Töpfe.	There are two pots on the cooker.
+a21_l3_kanne	Im Café stehen Kannen mit Tee auf den Tischen.	In the café there are pots of tea on the tables.
+a21_l3_schuessel	Die Schüsseln sind voll mit Salat.	The bowls are full of salad.
+a21_l3_pfanne	Die Pfannen hängen an der Wand.	The frying pans hang on the wall.
+a21_l3_spuelmaschine	Die Spülmaschinen im Restaurant laufen den ganzen Tag.	The dishwashers in the restaurant run all day.
+a21_l3_trinkgeld	Die Kellner bekommen gute Trinkgelder.	The waiters get good tips.
+a21_l3_boden	Die Böden in der Wohnung sind aus Holz.	The floors in the flat are wooden.
+a21_l3_prozent	Beim Schlussverkauf gibt es auf alles Prozente.	At the end-of-season sale there are discounts on everything.
+a21_l3_markt	Die Märkte in Frankreich sind bunt.	The markets in France are colourful.
+a21_l3_produkt	Wir kaufen nur Produkte aus der Region.	We only buy products from the region.
+a21_l3_umgebung	Die Umgebungen von Wien und Graz sind schön.	The areas around Vienna and Graz are lovely.
+a21_l3_fabrik	Die Fabriken liegen am Stadtrand.	The factories are on the edge of town.
+a21_l3_quartett	Die Kinder spielen gern Quartette.	The children like playing card games.
+a21_l4_reservierung	Die Reservierungen stehen im Computer.	The reservations are in the computer.
+a21_l4_bestaetigung	Die Bestätigungen kommen per E-Mail.	The confirmations come by email.
+a21_l4_besprechung	Heute habe ich drei Besprechungen.	I have three meetings today.
+a21_l4_notfall	Die Notfälle kommen sofort dran.	Emergencies are dealt with straight away.
+a21_l4_test	Die Tests sind am Freitag.	The tests are on Friday.
+a21_l4_quittung	Bitte heben Sie die Quittungen auf.	Please keep the receipts.
+a21_l4_material	Die Materialien für den Kurs liegen im Schrank.	The course materials are in the cupboard.
+a21_l4_kopierer	Die Kopierer stehen im Flur.	The photocopiers are in the corridor.
+a21_l4_sekretaer	Die Sekretäre beantworten die Anrufe.	The secretaries answer the calls.
+a21_l4_sekretaerin	Die Sekretärinnen organisieren die Termine.	The secretaries organise the appointments.
+a21_l4_teilnehmer	Der Kurs hat zwölf Teilnehmer.	The course has twelve participants.
+a21_l4_teilnehmerin	Die Teilnehmerinnen stellen sich vor.	The participants introduce themselves.
+a21_l4_feierabend	Die Feierabende verbringe ich mit der Familie.	I spend my evenings after work with my family.
+a21_l4_export	Die Exporte nach China steigen.	Exports to China are rising.
+a21_l4_import	Die Importe aus Asien werden teurer.	Imports from Asia are getting more expensive.
+a21_l4_entscheidung	Wichtige Entscheidungen treffe ich nicht allein.	I don't make important decisions alone.
+a21_l4_plattform	Es gibt viele Plattformen für Jobs.	There are many platforms for jobs.
+a21_l4_forum	In Foren findet man viele Tipps.	You can find lots of tips in forums.
+a21_l4_meinung	Die Meinungen im Team sind verschieden.	Opinions in the team differ.
+a21_l4_betrieb	Die Betriebe in der Region suchen Azubis.	The companies in the region are looking for trainees.
+a21_l4_massnahme	Die Firma plant neue Maßnahmen.	The company is planning new measures.
+a21_l4_konto	Ich habe zwei Konten bei der Bank.	I have two accounts at the bank.
+a21_l4_arbeitnehmer	Die Arbeitnehmer bekommen mehr Urlaub.	The employees get more holiday.
+a21_l4_arbeitnehmerin	Die Arbeitnehmerinnen arbeiten oft in Teilzeit.	The employees often work part-time.
+a21_l4_angestellte	Die Angestellten bekommen im Dezember mehr Geld.	The employees get more money in December.
+a21_l4_angestellte_2	Die Angestellten der Bank haben ab 16 Uhr frei.	The bank's employees are off from 4 pm.
+a21_l4_weiterbildung	Die Firma bezahlt die Weiterbildungen.	The company pays for the further training.
+a21_l4_lohn	Die Löhne steigen jedes Jahr ein bisschen.	Wages rise a little every year.
+a21_l4_ahnung	Die Ahnungen der Oma waren oft richtig.	Grandma's hunches were often right.
+a21_l4_nationalfeiertag	Die Nationalfeiertage sind in jedem Land anders.	National holidays are different in every country.
+a21_l4_uberstunde	Diese Woche habe ich zehn Überstunden gemacht.	I did ten hours of overtime this week.
+a21_l4_regel	Im Büro gibt es klare Regeln.	There are clear rules in the office.
+a21_l4_vertrag	Die Verträge liegen auf dem Tisch.	The contracts are on the table.
+a21_l4_durchschnitt	Die Durchschnitte der Klassen sind ähnlich.	The class averages are similar.
+a21_l5_video	Die Videos vom Training sind online.	The training videos are online.
+a21_l5_verein	In unserer Stadt gibt es viele Vereine.	There are many clubs in our town.
+a21_l5_versuch	Die ersten Versuche waren nicht so gut.	The first attempts were not so good.
+a21_l5_meister	Die Meister der letzten Jahre kommen alle aus München.	The champions of recent years all come from Munich.
+a21_l5_sportart	Welche Sportarten machst du gern?	Which sports do you like doing?
+a21_l5_bewegung	Langsame Bewegungen sind gut für den Rücken.	Slow movements are good for your back.
+a21_l5_halle	Die Hallen sind im Winter voll.	The sports halls are full in winter.
+a21_l5_mannschaft	Heute spielen zwei starke Mannschaften.	Two strong teams are playing today.
+a21_l5_trend	Die Trends im Sport ändern sich schnell.	Trends in sport change quickly.
+a21_l5_spielplatz	Im Park gibt es zwei Spielplätze.	There are two playgrounds in the park.
+a21_l5_strecke	Die Strecken im Wald sind gut zum Joggen.	The routes in the forest are good for jogging.
+a21_l5_treppe	Ich nehme immer die Treppen.	I always take the stairs.
+a21_l5_ursache	Die Ursachen für das Problem sind noch unklar.	The causes of the problem are still unclear.
+a21_l5_krankheit	Im Winter gibt es viele Krankheiten.	There are lots of illnesses in winter.
+a21_l5_krankenkasse	Die Krankenkassen bezahlen einen Teil vom Kurs.	The health insurance funds pay part of the course.
+a21_l5_koerper	Unsere Körper brauchen Bewegung.	Our bodies need exercise.
+a21_l5_untersuchung	Die Untersuchungen dauern zwei Stunden.	The examinations take two hours.
+a21_l5_bildschirm	Im Büro stehen zwei Bildschirme auf jedem Tisch.	In the office there are two screens on every desk.
+a21_l5_angst	Kinder haben oft Ängste in der Nacht.	Children often have fears at night.
+a21_l5_weltmeisterschaft	Die Weltmeisterschaften sind alle vier Jahre.	The world championships are every four years.
+a21_l5_wettervorhersage	Die Wettervorhersagen für das Wochenende sind gut.	The weather forecasts for the weekend are good.
+a21_l5_besuch	Die Besuche bei Oma sind immer schön.	The visits to Grandma are always nice.
+a21_l5_beitrag	Die Beiträge für den Verein sind nicht hoch.	The club fees are not high.
+a21_l5_broschuere	Die Broschüren liegen am Eingang.	The brochures are at the entrance.
+a21_l5_ehepartner	Die Ehepartner dürfen kostenlos mitkommen.	Spouses may come along for free.
+a21_l5_ehepartnerin	Die Ehepartnerinnen der Spieler sitzen in der ersten Reihe.	The players' wives sit in the front row.
+a21_l5_angehoerige	Die Angehörigen warten im Krankenhaus.	The family members are waiting at the hospital.
+a21_l5_angehoerige_2	Die Angehörigen dürfen bis 20 Uhr bleiben.	The family members may stay until 8 pm.
+a21_l5_azubi	Die Azubis lernen viel in der Werkstatt.	The trainees learn a lot in the workshop.
+a21_l5_apparat	Im Fitnessstudio gibt es viele Apparate.	There are lots of machines in the gym.
+a21_l6_fach	Welche (Schul-)Fächer magst du?	Which school subjects do you like?
+a21_l6_note	Lisa hat gute Noten in Mathe.	Lisa has good marks in maths.
+a21_l6_gymnasium	In der Stadt gibt es drei Gymnasien.	There are three grammar schools in the town.
+a21_l6_referat	Die Referate sind am Donnerstag.	The presentations are on Thursday.
+a21_l6_klasse	Die Klassen sind sehr groß.	The classes are very big.
+a21_l6_abschluss	In Deutschland gibt es verschiedene Abschlüsse.	There are different qualifications in Germany.
+a21_l6_pruefung	Die Prüfungen sind im Juni.	The exams are in June.
+a21_l6_leistung	Die Leistungen der Schüler sind sehr gut.	The pupils' achievements are very good.
+a21_l6_system	Die Systeme in den Bundesländern sind verschieden.	The systems in the federal states are different.
+a21_l6_hochschule	Die (Fach-)Hochschulen sind sehr praktisch.	The universities of applied sciences are very practical.
+a21_l6_gesamtschule	Die Gesamtschulen sind bis 16 Uhr offen.	The comprehensive schools are open until 4 pm.
+a21_l6_realschule	Die Realschulen in Bayern sind beliebt.	The secondary schools in Bavaria are popular.
+a21_l6_hauptschule	Die Hauptschulen haben kleine Klassen.	The lower secondary schools have small classes.
+a21_l6_mittelschule	Die Mittelschulen bieten viele Praktika an.	The middle schools offer lots of work placements.
+a21_l6_berufsschule	Die Berufsschulen sind meistens in der Stadt.	The vocational schools are usually in town.
+a21_l6_krippe	Die Krippen nehmen Kinder ab einem Jahr.	The crèches take children from one year old.
+a21_l6_grundschule	Die Grundschulen beginnen um acht Uhr.	The primary schools start at eight o'clock.
+a21_l6_karriere	Beide Partner wollen ihre Karrieren machen.	Both partners want to pursue their careers.
+a21_l6_friseur	Die Friseure haben am Montag geschlossen.	The hairdressers are closed on Monday.
+a21_l6_friseurin	Die Friseurinnen arbeiten auch samstags.	The hairdressers work on Saturdays too.
+a21_l6_schauspieler	Die Schauspieler kommen nach dem Film auf die Bühne.	The actors come on stage after the film.
+a21_l6_schauspielerin	Die Schauspielerinnen bekommen viel Applaus.	The actresses get a lot of applause.
+a21_l6_mechatroniker	Die Mechatroniker reparieren die Maschinen.	The mechatronics technicians repair the machines.
+a21_l6_mechatronikerin	Die Mechatronikerinnen arbeiten in der Autofabrik.	The mechatronics technicians work in the car factory.
+a21_l6_experte	Die Experten sind sich nicht einig.	The experts don't agree.
+a21_l6_expertin	Die Expertinnen geben im Radio Tipps.	The experts give tips on the radio.
+a21_l6_astronaut	Die Astronauten bleiben sechs Monate im All.	The astronauts stay in space for six months.
+a21_l6_astronautin	Die Astronautinnen trainieren jeden Tag.	The astronauts train every day.
+a21_l6_vortrag	Die Vorträge an der Uni sind öffentlich.	The lectures at the university are open to the public.
+a21_l6_voraussetzung	Die Voraussetzungen für die Stelle sind hoch.	The requirements for the job are high.
+a21_l6_erfolg	Wir feiern unsere Erfolge zusammen.	We celebrate our successes together.
+a21_l6_kuendigung	Die Kündigungen kamen per Post.	The notices came by post.
+a21_l6_einfuehrung	Die Einführungen für neue Studenten sind im Oktober.	The introductions for new students are in October.
+a21_l6_theorie	Die Theorien sind interessant, aber schwer.	The theories are interesting but difficult.
+a21_l6_rest	Die Reste vom Essen kommen in den Kühlschrank.	The leftovers go in the fridge.
+a21_l6_jugendliche	Die Jugendlichen treffen sich im Jugendzentrum.	The young people meet at the youth centre.
+a21_l6_jugendliche_2	Die Jugendlichen machen ein Praktikum in der Firma.	The young people are doing a work placement at the company.
+a21_l6_junge	Die Jungen spielen auf dem Hof Fußball.	The boys are playing football in the yard.
+a21_l6_situation	Schwierige Situationen gibt es überall.	There are difficult situations everywhere.
+a21_l6_aktivitaet	Die Schule bietet viele Aktivitäten am Nachmittag an.	The school offers lots of afternoon activities.
+a21_l6_stimme	Im Nebenzimmer höre ich Stimmen.	I can hear voices in the next room.
+a21_l6_auftritt	Die Band hat im Sommer viele Auftritte.	The band has a lot of gigs in summer.
+a21_l6_festplatte	Die Festplatten sind voll.	The hard drives are full.
+a21_l6_kultur	In der Stadt leben Menschen aus vielen Kulturen.	People from many cultures live in the city.
+a21_l6_notarzt	Die Notärzte sind schnell da.	The emergency doctors arrive quickly.
+a21_l6_klinik	Die Kliniken in der Stadt suchen Pflegekräfte.	The clinics in the city are looking for nurses.
+a21_l6_tier	Im Zoo gibt es viele Tiere.	There are lots of animals at the zoo.
+a21_l7_baby	Die Babys schlafen im Kinderwagen.	The babies are sleeping in the pram.
+a21_l7_kette	Im Schaufenster liegen goldene Ketten.	There are gold necklaces in the shop window.
+a21_l7_puppe	Die Puppen sitzen auf dem Bett.	The dolls are sitting on the bed.
+a21_l7_motorrad	Vor dem Café stehen viele Motorräder.	There are lots of motorbikes in front of the café.
+a21_l7_geldbeutel	Die Geldbeutel sind aus Leder.	The wallets are made of leather.
+a21_l7_creme	Im Bad stehen viele Cremes.	There are lots of creams in the bathroom.
+a21_l7_parfuem	Die Parfüme im Kaufhaus riechen sehr stark.	The perfumes in the department store smell very strong.
+a21_l7_praline	Die Pralinen sind mit Kaffee gefüllt.	The chocolates are filled with coffee.
+a21_l7_pflaume	Aus den Pflaumen backen wir einen Kuchen.	We are baking a cake with the plums.
+a21_l7_herz	Die Kinder malen rote Herzen.	The children are drawing red hearts.
+a21_l7_schachtel	Die Schachteln sind leer.	The boxes are empty.
+a21_l7_briefmarke	Ich brauche zehn Briefmarken.	I need ten stamps.
+a21_l7_kirche	In der Altstadt stehen drei Kirchen.	There are three churches in the old town.
+a21_l7_trauung	Die Trauungen sind samstags um elf.	The wedding ceremonies are on Saturdays at eleven.
+a21_l7_torte	Die Torten im Café sind wunderbar.	The cakes in the café are wonderful.
+a21_l7_sms	Ich schreibe jeden Tag viele SMS.	I write lots of text messages every day.
+a21_l7_unterhaltung	Die Unterhaltungen mit den Gästen waren lustig.	The conversations with the guests were fun.
+a22_l8_disco	Die Discos in der Stadt sind am Samstag voll.	The discos in town are full on Saturday.
+a22_l8_diskothek	Die Diskotheken öffnen erst um elf Uhr.	The clubs don't open until eleven o'clock.
+a22_l8_radtour	Im Sommer machen wir gern Radtouren.	In summer we like going on bike tours.
+a22_l8_flohmarkt	Die Flohmärkte sind immer sonntags.	The flea markets are always on Sundays.
+a22_l8_rundfahrt	Die Rundfahrten mit dem Bus dauern zwei Stunden.	The sightseeing tours by bus last two hours.
+a22_l8_vorschlag	Hast du Vorschläge für das Wochenende?	Do you have any suggestions for the weekend?
+a22_l8_treffpunkt	Die Treffpunkte stehen auf der Karte.	The meeting points are on the map.
+a22_l8_rathaus	Die Rathäuser in Bayern sind oft sehr alt.	The town halls in Bavaria are often very old.
+a22_l8_bahn	Die Bahnen fahren heute nicht.	The trains aren't running today.
+a22_l8_volkshochschule	Die Volkshochschulen bieten viele Kurse an.	The adult education centres offer lots of courses.
+a22_l8_kuenstler	Die Künstler zeigen ihre Bilder im Rathaus.	The artists show their pictures in the town hall.
+a22_l8_kuenstlerin	Die Künstlerinnen malen auf dem Marktplatz.	The artists paint on the market square.
+a22_l8_cd	Meine alten CDs höre ich nicht mehr.	I don't listen to my old CDs any more.
+a22_l8_sender	Im Radio gibt es viele Sender.	There are many stations on the radio.
+a22_l8_eintrittskarte	Die Eintrittskarten sind schon ausverkauft.	The entrance tickets are already sold out.
+a22_l8_sprachenschule	In Wien gibt es viele Sprachenschulen.	There are many language schools in Vienna.
+a22_l8_anleitung	Die Anleitungen sind in fünf Sprachen.	The instructions are in five languages.
+a22_l8_hammer	In der Werkstatt hängen drei Hämmer.	Three hammers hang in the workshop.
+a22_l8_werkzeug	Die Werkzeuge liegen im Keller.	The tools are in the cellar.
+a22_l8_ding	Auf dem Flohmarkt gibt es viele schöne Dinge.	There are lots of nice things at the flea market.
+a22_l9_bikini	Die Bikinis sind im Sommer im Angebot.	The bikinis are on offer in summer.
+a22_l9_brieftasche	Die Brieftaschen sind aus Leder.	The wallets are made of leather.
+a22_l9_feuerzeug	Die Feuerzeuge liegen an der Kasse.	The lighters are at the till.
+a22_l9_poster	An der Wand hängen viele Poster.	Lots of posters hang on the wall.
+a22_l9_rucksack	Die Rucksäcke stehen im Flur.	The backpacks are in the hallway.
+a22_l9_hut	Im Sommer tragen wir Hüte.	We wear hats in summer.
+a22_l9_roman	Ich lese gern lange Romane.	I like reading long novels.
+a22_l9_pudding	Die Kinder essen die Puddings zum Nachtisch.	The children eat the puddings for dessert.
+a22_l9_besteck	Im Restaurant liegen silberne Bestecke auf dem Tisch.	In the restaurant there are silver sets of cutlery on the table.
+a22_l9_metall	Gold und Silber sind teure Metalle.	Gold and silver are expensive metals.
+a22_l9_stoff	Die Stoffe für die Vorhänge sind schön.	The fabrics for the curtains are nice.
+a22_l9_platte	Die Platten für den Tisch sind aus Glas.	The tabletops are made of glass.
+a22_l9_anrufbeantworter	Heute hat fast niemand mehr Anrufbeantworter.	Hardly anyone has answering machines any more.
+a22_l9_telefonbuch	Die alten Telefonbücher liegen im Keller.	The old phone books are in the cellar.
+a22_l9_klingel	Am Haus gibt es zehn Klingeln.	There are ten doorbells on the building.
+a22_l9_hoehe	Ich habe Angst vor Höhen.	I'm afraid of heights.
+a22_l9_zustand	Die Zustände in dem alten Haus sind schlimm.	Conditions in the old house are bad.
+a22_l9_qualitaet	Die Qualitäten der Stoffe sind sehr verschieden.	The qualities of the fabrics vary a lot.
+a22_l9_schaufenster	Die Schaufenster sind zu Weihnachten bunt.	The shop windows are colourful at Christmas.
+a22_l9_statistik	Die Statistiken zeigen ein klares Bild.	The statistics show a clear picture.
+a22_l9_versicherung	Wir haben drei Versicherungen.	We have three insurance policies.
+a22_l9_nahrungsmittel	Die Nahrungsmittel werden immer teurer.	Food is getting more and more expensive.
+a22_l9_gas	In der Luft sind viele Gase.	There are many gases in the air.
+a22_l9_kredit	Die Kredite bei der Bank sind teuer.	The loans at the bank are expensive.
+a22_l9_erinnerung	Ich habe schöne Erinnerungen an den Urlaub.	I have lovely memories of the holiday.
+a22_l9_gedanke	Meine Gedanken sind bei dir.	My thoughts are with you.
+a22_l10_briefumschlag	Die Briefumschläge liegen in der Schublade.	The envelopes are in the drawer.
+a22_l10_postkarte	Aus dem Urlaub schreibe ich Postkarten.	I write postcards from my holiday.
+a22_l10_schere	Die Scheren sind sehr scharf.	The scissors are very sharp.
+a22_l10_sendung	Die Sendungen kommen morgen an.	The consignments are arriving tomorrow.
+a22_l10_netzwerk	Die sozialen Netzwerke sind bei Jugendlichen beliebt.	Social networks are popular with young people.
+a22_l10_mobiltelefon	Bitte schalten Sie die Mobiltelefone aus.	Please switch off your mobile phones.
+a22_l10_mail	Ich lese jeden Morgen meine Mails.	I read my emails every morning.
+a22_l10_chat	Die Chats in der Gruppe sind sehr lustig.	The chats in the group are very funny.
+a22_l10_ereignis	Die Ereignisse der Woche stehen in der Zeitung.	The events of the week are in the newspaper.
+a22_l10_stoerung	Heute gibt es Störungen im Netz.	There are faults in the network today.
+a22_l10_reporter	Die Reporter warten vor dem Rathaus.	The reporters are waiting outside the town hall.
+a22_l10_reporterin	Die Reporterinnen machen Interviews auf der Straße.	The reporters do interviews in the street.
+a22_l10_eisenbahn	Die Eisenbahnen in der Schweiz sind pünktlich.	The railways in Switzerland are punctual.
+a22_l10_blatt	Im Herbst fallen die Blätter.	The leaves fall in autumn.
+a22_l10_baer	Im Wald leben Bären.	Bears live in the forest.
+a22_l10_muenze	Ich sammle alte Münzen.	I collect old coins.
+a22_l10_ente	Die Enten schwimmen auf dem See.	The ducks are swimming on the lake.
+a22_l10_souvenir	Aus dem Urlaub bringen wir Souvenirs mit.	We bring souvenirs back from the holiday.
+a22_l10_vogel	Am Morgen singen die Vögel.	The birds sing in the morning.
+a22_l10_punkt	Das Kleid hat weiße Punkte.	The dress has white dots.
+a22_l10_elefant	Im Zoo gibt es zwei Elefanten.	There are two elephants at the zoo.
+a22_l10_rose	Er schenkt ihr rote Rosen.	He gives her red roses.
+a22_l10_stern	In der Nacht sehen wir viele Sterne.	At night we see lots of stars.
+a22_l10_himmel	Die Himmel auf den alten Bildern sind immer blau.	The skies in the old paintings are always blue.
+a22_l10_fantasie	Kinder haben wilde Fantasien.	Children have wild imaginations.
+a22_l10_ernte	Die Ernten waren in diesem Jahr gut.	The harvests were good this year.
+a22_l10_konsulat	Die Konsulate sind am Wochenende geschlossen.	The consulates are closed at the weekend.
+a22_l10_visum	Für manche Länder braucht man Visa.	You need visas for some countries.
+a22_l10_impfung	Für die Reise brauchen wir zwei Impfungen.	We need two vaccinations for the trip.
+a22_l10_sorge	Mach dir keine Sorgen!	Don't worry!
+a22_l11_zoo	Die Zoos in Berlin sind sehr groß.	The zoos in Berlin are very big.
+a22_l11_richtung	Die Busse fahren in beide Richtungen.	The buses go in both directions.
+a22_l11_fluss	Durch die Stadt fließen zwei Flüsse.	Two rivers flow through the city.
+a22_l11_kreuzung	Die Kreuzungen in der Stadt haben Ampeln.	The junctions in the city have traffic lights.
+a22_l11_ausfahrt	Die Ausfahrten an der Autobahn sind nummeriert.	The motorway exits are numbered.
+a22_l11_stau	Am Freitag gibt es viele Staus.	There are lots of traffic jams on Friday.
+a22_l11_rad	Vor der Uni stehen hunderte Räder.	There are hundreds of bikes in front of the university.
+a22_l11_wagen	Auf dem Parkplatz stehen viele Wagen.	There are lots of cars in the car park.
+a22_l11_moped	Die Mopeds sind sehr laut.	The mopeds are very loud.
+a22_l11_verkehrsmittel	In der Stadt gibt es viele Verkehrsmittel.	There are many means of transport in the city.
+a22_l11_batterie	Die Batterien sind leer.	The batteries are flat.
+a22_l11_baustelle	Auf der Autobahn gibt es viele Baustellen.	There are lots of roadworks on the motorway.
+a22_l11_spur	Die Autobahn hat drei Spuren.	The motorway has three lanes.
+a22_l11_fahrbahn	Die Fahrbahnen sind bei Regen glatt.	The roads are slippery in the rain.
+a22_l11_buergersteig	Die Bürgersteige sind im Winter glatt.	The pavements are slippery in winter.
+a22_l11_radfahrer	Die Radfahrer fahren auf dem Radweg.	The cyclists ride on the cycle path.
+a22_l11_knie	Nach dem Sturz tun mir die Knie weh.	My knees hurt after the fall.
+a22_l11_pflaster	Im Bad gibt es Pflaster.	There are plasters in the bathroom.
+a22_l11_liebling	Die Kinder sind unsere Lieblinge.	The children are our darlings.
+a22_l11_nebel	Die Nebel im Herbst sind dicht.	The autumn fogs are thick.
+a22_l11_sturm	Im Herbst gibt es oft Stürme.	There are often storms in autumn.
+a22_l11_gewitter	Im Sommer gibt es viele Gewitter.	There are lots of thunderstorms in summer.
+a22_l11_region	In manchen Regionen regnet es viel.	It rains a lot in some regions.
+a22_l11_teil	Die Teile für das Fahrrad kommen morgen.	The parts for the bike are coming tomorrow.
+a22_l11_gefahr	Im Winter gibt es viele Gefahren auf der Straße.	In winter there are many dangers on the roads.
+a22_l11_buerger	Die Bürger der Stadt wählen einen neuen Bürgermeister.	The citizens of the town are electing a new mayor.
+a22_l11_buergerin	Die Bürgerinnen sammeln Unterschriften.	The citizens are collecting signatures.
+a22_l11_aussicht	Die Aussichten für morgen sind gut.	The outlook for tomorrow is good.
+a22_l11_start	Wegen des Nebels gibt es heute keine Starts.	Because of the fog there are no take-offs today.
+a22_l11_landung	Die Landungen sind heute wegen des Sturms schwierig.	Landings are difficult today because of the storm.
+a22_l11_abflug	Die Abflüge stehen auf der Tafel.	The departures are on the board.
+a22_l11_fussgaenger	Die Fußgänger warten an der Ampel.	The pedestrians are waiting at the traffic lights.
+a22_l11_fussgaengerin	Die Fußgängerinnen gehen über die Straße.	The pedestrians cross the road.
+a22_l11_strafzettel	Er hat schon drei Strafzettel bekommen.	He has already got three parking tickets.
+a22_l11_strafe	Die Strafen für zu schnelles Fahren sind hoch.	The penalties for speeding are high.
+a22_l11_fahrer	Die Fahrer machen nach vier Stunden eine Pause.	The drivers take a break after four hours.
+a22_l11_fahrerin	Die Fahrerinnen der Busse sind sehr freundlich.	The bus drivers are very friendly.
+a22_l11_unterschied	Es gibt große Unterschiede zwischen Stadt und Land.	There are big differences between town and country.
+a22_l12_kuh	Auf der Weide stehen braune Kühe.	There are brown cows in the pasture.
+a22_l12_pferd	Die Pferde fressen Heu im Stall.	The horses eat hay in the stable.
+a22_l12_schaf	Auf dem Berg leben viele Schafe.	Lots of sheep live on the mountain.
+a22_l12_tal	Die Täler in den Alpen sind grün.	The valleys in the Alps are green.
+a22_l12_wiese	Die Wiesen sind voller Blumen.	The meadows are full of flowers.
+a22_l12_festival	Im Sommer gibt es viele Festivals.	There are lots of festivals in summer.
+a22_l12_pension	Die Pensionen am See sind günstig.	The guesthouses by the lake are cheap.
+a22_l12_ubernachtung	Wir buchen drei Übernachtungen.	We are booking three nights.
+a22_l12_jugendherberge	Die Jugendherbergen sind bei Schulklassen beliebt.	Youth hostels are popular with school classes.
+a22_l12_aufenthalt	Die Aufenthalte in Wien waren immer schön.	Our stays in Vienna were always lovely.
+a22_l12_ausstellung	Das Museum zeigt zwei neue Ausstellungen.	The museum is showing two new exhibitions.
+a22_l12_reisebuero	Die Reisebüros haben viele Angebote.	The travel agencies have lots of offers.
+a22_l12_spezialist	Die Spezialisten im Reisebüro kennen alle Inseln.	The specialists at the travel agency know all the islands.
+a22_l12_verbindung	Die Verbindungen mit dem Zug sind gut.	The train connections are good.
+a22_l12_reiseziel	Die beliebtesten Reiseziele sind Spanien und Italien.	The most popular destinations are Spain and Italy.
+a22_l12_gebirge	Europa hat viele Gebirge.	Europe has many mountain ranges.
+a22_l12_kueste	Die Küsten in Kroatien sind wunderschön.	The coasts in Croatia are beautiful.
+a22_l12_unterkunft	Die Unterkünfte sind im Sommer teuer.	The accommodation is expensive in summer.
+a22_l12_spezialistin	Die Spezialistinnen beraten Sie gern.	The specialists are happy to advise you.
+a22_l13_betrag	Die Beträge stehen auf dem Kontoauszug.	The amounts are on the bank statement.
+a22_l13_girokonto	Die Girokonten bei dieser Bank sind kostenlos.	The current accounts at this bank are free.
+a22_l13_geldautomat	Die Geldautomaten sind im Bahnhof.	The cash machines are in the station.
+a22_l13_ec_karte	Die EC-Karten funktionieren heute nicht.	The debit cards aren't working today.
+a22_l13_zoll	Die Zölle auf Autos sind hoch.	The customs duties on cars are high.
+a22_l13_staat	Die Staaten in Europa arbeiten zusammen.	The states in Europe work together.
+a22_l13_summe	Die Summen sind sehr hoch.	The sums are very high.
+a22_l13_gehalt	Die Gehälter steigen im Januar.	Salaries go up in January.
+a22_l13_erhoehung	Die Erhöhungen der Mieten sind ein Problem.	The rent increases are a problem.
+a22_l13_kontoauszug	Die Kontoauszüge kommen per Post.	The bank statements come by post.
+a22_l13_kraft	Nach der Krankheit fehlen mir noch die Kräfte.	After the illness I still lack strength.
+a22_l13_trainer	Die Trainer besprechen das Spiel.	The coaches discuss the match.
+a22_l13_kontrolle	An der Grenze gibt es Kontrollen.	There are checks at the border.
+a22_l13_fortschritt	Du machst große Fortschritte!	You are making great progress!
+a22_l13_bremse	Die Bremsen am Fahrrad sind kaputt.	The brakes on the bike are broken.
+a22_l13_artikel	Ich lese die Artikel in der Zeitung.	I read the articles in the newspaper.
+a22_l13_menue	Das Restaurant hat drei Menüs.	The restaurant has three set meals.
+a22_l13_ober	Die Ober im Wiener Café sind elegant.	The waiters in the Viennese café are elegant.
+a22_l14_motor	Die Motoren der neuen Autos sind leise.	The engines of the new cars are quiet.
+a22_l14_kindheit	Unsere Kindheiten waren sehr verschieden.	Our childhoods were very different.
+a22_l14_lokal	In der Altstadt gibt es viele Lokale.	There are lots of pubs in the old town.
+a22_l14_gegenteil	Groß und klein sind Gegenteile.	Big and small are opposites.
+a22_l14_paar	Auf der Party tanzen viele Paare.	Lots of couples are dancing at the party.
+a22_l14_ratschlag	Danke für die guten Ratschläge!	Thanks for the good advice!
+a22_l14_maus	Im Keller wohnen Mäuse.	There are mice living in the cellar.
+a22_l14_raucher	Die Raucher stehen vor der Tür.	The smokers stand outside the door.
+a22_l14_raucherin	Die Raucherinnen machen draußen Pause.	The smokers take their break outside.
+a22_l14_maerchen	Oma erzählt uns Märchen.	Grandma tells us fairy tales.
+a22_l14_einfall	Die Kinder haben immer lustige Einfälle.	The children always have funny ideas.
+a22_l14_haustier	Viele Familien haben Haustiere.	Many families have pets.
