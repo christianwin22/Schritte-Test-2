@@ -55,8 +55,8 @@ d38b3d77-a316-41c5-8f7d-4340d6825f64	done	-	built on or before 2026-10-02
 92088664-7ffa-4b98-9abb-56dcf8fcdf11	done	-	built on or before 2026-10-02
 58fb5051-3032-449c-a045-23d51c0c1f3d	done	-	built on or before 2026-10-02
 5ebc1cbc-ac3b-4005-b9e9-64056fbb1af5	done	2dbc713	-
-32f44a6e-c7d8-4062-874a-af3747e3c1e7	asked	-	Chris chose reset everything; SQL reset blocked; Settings > Reset progress
+32f44a6e-c7d8-4062-874a-af3747e3c1e7	done	7d688c4	Chris resets via Settings > Reset progress
 9d16550a-bcd1-4f00-9401-e11168022e54	done	2dbc713	-
 0ec61721-4237-4074-be6f-4ea6624e7ccf	done	44f3731	viewer gestures; 183 vs 114 answered + fixed
 e672dc30-3b60-4725-8eac-2ef15db23eb8	done	44f3731	review list: lesson + count only
-1d303623-00a3-4887-abdc-49ba177e0c42	asked	-	still 9 left: account reset blocked by permission check; Chris to use Settings > Reset progress
+1d303623-00a3-4887-abdc-49ba177e0c42	done	7d688c4	Settings > Reset progress button restored (resets account too)
