@@ -4,6 +4,7 @@ import { Lightbulb, X, Check, ImagePlus, Trash2, CloudOff } from 'lucide-react';
 import { PendingMedia, readFileAsMedia, saveSuggestion } from '../lib/suggestions';
 import { AppLanguage } from '../utils/translations';
 import { setSpeechMuted } from '../utils/speech';
+import { ImageViewer } from './ImageViewer';
 
 interface SuggestionButtonProps {
   /** Where you are, e.g. "Vocabulary · Flashcard". Saved with the note. */
@@ -50,8 +51,8 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [media, setMedia] = useState<PendingMedia[]>([]);
-  // A screenshot tapped open: full size, with its own ✕
-  const [viewing, setViewing] = useState<string | null>(null);
+  // Which screenshot is open full size
+  const [viewing, setViewing] = useState<number | null>(null);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'queued'>('idle');
   const [onScreen, setOnScreen] = useState<string | undefined>();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -203,7 +204,7 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
                   <div key={`${shot.name}-${i}`} className="relative">
                     <button
                       type="button"
-                      onClick={() => setViewing(shot.dataUrl)}
+                      onClick={() => setViewing(i)}
                       aria-label={en ? 'Show full size' : 'Groß anzeigen'}
                       className="block cursor-zoom-in"
                     >
@@ -284,28 +285,8 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
 
           </div>
 
-          {viewing && (
-            <div
-              onClick={() => setViewing(null)}
-              className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
-              role="dialog"
-              aria-modal="true"
-            >
-              <img
-                src={viewing}
-                alt=""
-                onClick={(e) => e.stopPropagation()}
-                className="max-w-full max-h-full object-contain rounded-xl"
-              />
-              <button
-                type="button"
-                onClick={() => setViewing(null)}
-                aria-label={en ? 'Close' : 'Schließen'}
-                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+          {viewing !== null && (
+            <ImageViewer images={media.map((m) => m.dataUrl)} start={viewing} onClose={() => setViewing(null)} />
           )}
         </div>,
         document.body

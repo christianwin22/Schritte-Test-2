@@ -601,7 +601,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       const queue = (saved.ids ?? []).map((id) => cardByKey.get(id)).filter((c): c is WordCard => !!c);
       const index = Math.min(Math.max(0, saved.index ?? 0), queue.length - 1);
       if (queue.length === 0 || index < 0) return null;
-      return { queue, index, score: saved.score ?? 0, initial: saved.initial ?? queue.length };
+      // What is left is exactly what is due, so the count matches the Review
+      // badge: cards ahead that are no longer due drop out, and every due card
+      // not ahead (one that fell due since) joins at the end.
+      const dueKeys = new Set(globalDueWords.map((c) => c.key));
+      const ahead = queue.slice(index).filter((c) => dueKeys.has(c.key));
+      const aheadKeys = new Set(ahead.map((c) => c.key));
+      const added = shuffled(globalDueWords.filter((c) => !aheadKeys.has(c.key)));
+      const left = [...ahead, ...added];
+      if (left.length === 0) return null;
+      return { queue: [...queue.slice(0, index), ...left], index, score: saved.score ?? 0, initial: index + left.length };
     } catch {
       return null;
     }
@@ -1393,8 +1402,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    * End session forgets it. Nothing done yet: it just leaves.
    */
   const [leavePromptOpen, setLeavePromptOpen] = useState(false);
-  /** Review's Start page: the lesson whose waiting words are opened up. */
-  const [openDueLesson, setOpenDueLesson] = useState<string | null>(null);
   const wordsSessionHasPlace = () =>
     flashcardSubMode === 'learn'
       ? flashcardIndex > 0 && !isLearnComplete
@@ -2705,42 +2712,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               {!sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
                 <div className="flex-1 min-h-0 flex flex-col items-center gap-4 pt-1 pb-2">
                   {flashcardSubMode === 'review' ? (
-                    /* Review: what is waiting, lesson by lesson, in a box that scrolls —
+                    /* Review: how many wait in each lesson, in a box that scrolls —
                        the buttons stay put however many thousand words there are. */
                     <>
                       <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500 shrink-0">
                         {reviewWaiting.length} {en ? (canResume ? 'cards left' : 'cards due') : canResume ? 'Karten offen' : 'Karten fällig'}
                       </p>
                       <div className="flex-1 min-h-0 w-full max-w-md overflow-y-auto rounded-2xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-200 dark:divide-zinc-700 text-left">
-                        {reviewByLesson.map((group) => {
-                          const open = openDueLesson === group.key;
-                          return (
-                            <div key={group.key}>
-                              <button
-                                type="button"
-                                onClick={() => setOpenDueLesson(open ? null : group.key)}
-                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 cursor-pointer"
-                              >
-                                <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 w-14 shrink-0">{group.label}</span>
-                                <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
-                                <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{group.cards.length}</span>
-                                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${open ? 'rotate-180' : ''}`} />
-                              </button>
-                              {open && (
-                                <div className="flex flex-wrap gap-1.5 px-4 pb-3">
-                                  {group.cards.map((card) => (
-                                    <span
-                                      key={card.key}
-                                      className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300"
-                                    >
-                                      {germanShown(card)}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                        {reviewByLesson.map((group) => (
+                          <div key={group.key} className="flex items-center gap-3 px-4 py-3">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 w-14 shrink-0">{group.label}</span>
+                            <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
+                            <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{group.cards.length}</span>
+                          </div>
+                        ))}
                       </div>
                       <div className="w-full max-w-xs flex flex-col gap-2 shrink-0">
                         {startButton}
