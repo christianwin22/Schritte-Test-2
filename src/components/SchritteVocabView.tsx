@@ -17,6 +17,7 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import { LeaveSessionModal } from './LeaveSessionModal';
+import { BOOK_LESSON_TITLES } from '../data/bookLessonTitles';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import {
   BLANK,
@@ -149,11 +150,15 @@ const SentenceWithWord: React.FC<{ sentence: string; word: WordEntry; className?
 };
 
 /**
- * What a lesson is about, in its own words: the group headings the word list
- * gives it, most-used first. The "— picture labels (LWS 4)" tails are the
- * book's own cross-references and mean nothing here, so they are cut.
+ * What a lesson is called: its title as the book prints it ("Beruf und
+ * Arbeit"). Words from several lessons fall back to the word list's group
+ * headings, most-used first — without the "— picture labels (LWS 4)" tails,
+ * which are the book's own cross-references and mean nothing here.
  */
 export const lessonTopics = (words: WordEntry[], limit = 2): string => {
+  const lessons = new Set(words.map((w) => `${w.level}_${w.lektion}`));
+  const [only] = lessons;
+  if (lessons.size === 1 && BOOK_LESSON_TITLES[only]) return BOOK_LESSON_TITLES[only];
   const counts = new Map<string, number>();
   for (const word of words) {
     const group = word.category?.split('—')[0].trim();
@@ -2351,27 +2356,45 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
          * DE → EN | EN → DE, the button that sets the way every card goes. In
          * Practice each side also says how many cards still wait that way.
          */
-        const directionSwitch = (withPending: boolean) => (
-          <div className="inline-grid grid-cols-2 gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+        /**
+         * Learn: how many cards are still ahead of you in each direction — all of
+         * them until you start, none once that direction's Learn is finished.
+         */
+        const learnLeft = (dir: Direction) => {
+          const total = filteredCards.length;
+          if (typeof selectedLektion !== 'number') return total;
+          const place = loadLearnPlace(selectedLevel, selectedLektion, dir);
+          const index = typeof place === 'string' ? filteredCards.findIndex((c) => c.key === place) : place ?? -1;
+          if (index > 0 && index < total) return total - index;
+          const stops = lessonStops(selectedLevel, selectedLektion);
+          return (dir === 'DE_TO_EN' ? stops.learnDe : stops.learnEn) ? 0 : total;
+        };
+
+        const directionSwitch = (pending: { de: number; en: number } | null) => (
+          <div className="inline-grid grid-cols-2 gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-700">
             {(['DE_TO_EN', 'EN_TO_DE'] as Direction[]).map((dir) => {
-              const left = dir === 'DE_TO_EN' ? pendingDe : pendingEn;
+              const left = dir === 'DE_TO_EN' ? pending?.de : pending?.en;
               const on = learnDirection === dir;
               return (
                 <button
                   key={dir}
                   type="button"
                   onClick={() => changeDirection(dir)}
-                  className={`px-4 py-1.5 rounded-lg font-black transition-all cursor-pointer flex flex-col items-center ${
+                  className={`px-6 py-2.5 rounded-xl font-black transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
                     on
                       ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
                       : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
                   }`}
                 >
-                  <span className="text-xs">{dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}</span>
-                  {withPending && (
+                  <span className="text-sm">{dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}</span>
+                  {left !== undefined && (
                     <span
-                      className={`text-[11px] font-bold flex items-center gap-0.5 ${
-                        left === 0 ? (on ? 'text-emerald-300 dark:text-emerald-600' : 'text-emerald-600 dark:text-emerald-400') : on ? 'opacity-80' : ''
+                      className={`text-[11px] font-semibold flex items-center gap-0.5 ${
+                        left === 0
+                          ? on
+                            ? 'text-emerald-300 dark:text-emerald-600'
+                            : 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-zinc-400 dark:text-zinc-500'
                       }`}
                     >
                       {left === 0 ? (
@@ -2652,7 +2675,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
                     {/* Review: how many are due. Practice and Learn: where you stopped, if you did. */}
                     {(flashcardSubMode === 'review' || canResume || canResumeLearn) && (
-                      <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
+                      <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">
                         {flashcardSubMode === 'review' && !canResume
                           ? `${practiceQueue.length} ${en ? 'cards due' : 'Karten fällig'}`
                           : flashcardSubMode === 'learn'
@@ -2661,32 +2684,38 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       </p>
                     )}
                     {/* Review goes DE → EN only: no switch there */}
-                    {flashcardSubMode !== 'review' && directionSwitch(flashcardSubMode === 'practice')}
-                    <div className="w-full max-w-xs flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playSound('tap');
-                          setSessionStarted(true);
-                        }}
-                        className="w-full py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
-                      >
-                        {canResume || canResumeLearn ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
-                      </button>
-                      {(canResume || canResumeLearn) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            playSound('tap');
-                            startWordsSessionOver();
-                          }}
-                          className="w-full py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-[0.98] transition-all"
-                        >
-                          {en ? 'Start over' : 'Neu beginnen'}
-                        </button>
+                    {flashcardSubMode !== 'review' &&
+                      directionSwitch(
+                        flashcardSubMode === 'practice'
+                          ? { de: pendingDe, en: pendingEn }
+                          : speakOnly
+                          ? null
+                          : { de: learnLeft('DE_TO_EN'), en: learnLeft('EN_TO_DE') }
                       )}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('tap');
+                        setSessionStarted(true);
+                      }}
+                      className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
+                    >
+                      {canResume || canResumeLearn ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
+                    </button>
                   </div>
+                  {/* Start over sits at the foot of the card, away from Resume */}
+                  {(canResume || canResumeLearn) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('tap');
+                        startWordsSessionOver();
+                      }}
+                      className="w-full max-w-xs py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-[0.98] transition-all"
+                    >
+                      {en ? 'Start over' : 'Neu beginnen'}
+                    </button>
+                  )}
                 </div>
               ) : flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
                 /* Review with nothing unlocked: say so, instead of showing words you have not met */
