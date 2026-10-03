@@ -30,6 +30,7 @@ ARTICLES = ("der", "die", "das")
 KEEP_ID = {
     "die Uni(versität)": "universitaet",
     "(an)bieten": "anbieten",
+    "essen": "essen_2",  # book order puts it before das Essen; keep the id it had
 }
 
 # The app's PartOfSpeech only has these; everything else maps to the closest one.
