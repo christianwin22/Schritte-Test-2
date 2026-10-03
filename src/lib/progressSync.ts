@@ -243,6 +243,33 @@ export function clearAppData(): void {
   for (const key of appKeys()) localStorage.removeItem(key);
 }
 
+/** Settings and choices that a progress reset leaves alone. */
+const KEPT_ON_RESET = new Set([
+  'deutschmeister_theme_mode_v2',
+  'deutschmeister_app_lang_v2',
+  'deutschmeister_locale_v1',
+  'deutschmeister_music_enabled_v2',
+  'deutschmeister_notif_enabled_v2',
+  'deutschmeister_profile_v1',
+  'schritte_flashcard_hotkeys',
+  'schritte_conj_learn_view',
+  'schritte_levels',
+  'schritte_series',
+]);
+
+/**
+ * Settings → Reset progress: every learning record goes — Learn, Practice,
+ * Review, drills, XP, streak — and the settings stay. Signed in, the empty
+ * progress is saved to the account straight away, so the next load (and any
+ * other device) gets the fresh start too. Resolves false if that save failed;
+ * this device is then marked as having unsent changes and tries again.
+ */
+export async function resetProgress(userId: string | null): Promise<boolean> {
+  for (const key of appKeys()) if (!KEPT_ON_RESET.has(key)) localStorage.removeItem(key);
+  if (!userId) return true;
+  return pushSnapshot(userId, takeSnapshot());
+}
+
 function applySnapshot(snapshot: ProgressSnapshot): void {
   clearAppData();
   for (const [key, value] of Object.entries(snapshot)) {

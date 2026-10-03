@@ -285,5 +285,25 @@ console.log('\nThe auto-sync merges when another device has saved, and asks noth
   check('the merged progress is saved for both', tableData('u-merge')?.schritte_saved_level === 'A2' && tableData('u-merge')?.deutschmeister_streak === '2');
 }
 
+console.log('\nReset progress clears learning, keeps settings, and saves the fresh start');
+{
+  storage.clear();
+  failWrites = false;
+  storage.setItem('deutschmeister_fsrs_records_v1', '{"a":1}');
+  storage.setItem('schritte_practice_done_v1', '{"de":{},"en":{}}');
+  storage.setItem('deutschmeister_xp_v2', '120');
+  storage.setItem('deutschmeister_theme_mode_v2', 'dark');
+  storage.setItem('deutschmeister_app_lang_v2', 'en');
+  table.set('u-reset', { data: { deutschmeister_fsrs_records_v1: '{"a":1}', deutschmeister_theme_mode_v2: 'dark' }, updated_at: 'x' });
+  const ok = await sync.resetProgress('u-reset');
+  check('the save went through', ok === true);
+  check('review records are gone', storage.getItem('deutschmeister_fsrs_records_v1') === null);
+  check('practice and XP are gone', storage.getItem('schritte_practice_done_v1') === null && storage.getItem('deutschmeister_xp_v2') === null);
+  check('settings stay', storage.getItem('deutschmeister_theme_mode_v2') === 'dark' && storage.getItem('deutschmeister_app_lang_v2') === 'en');
+  check('the account has the fresh start', tableData('u-reset')?.deutschmeister_fsrs_records_v1 === undefined && tableData('u-reset')?.deutschmeister_theme_mode_v2 === 'dark');
+  await sync.restoreForUser('u-reset');
+  check('reloading does not bring the old progress back', storage.getItem('deutschmeister_fsrs_records_v1') === null);
+}
+
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

@@ -39,7 +39,6 @@ interface SettingsViewProps {
   onToggleSound: () => void;
   onToggleMusic: () => void;
   onToggleNotification: () => void;
-  onResetProgress: () => void;
   appLanguage: AppLanguage;
   onSelectLanguage: (lang: AppLanguage) => void;
   onBackToHome?: () => void;
@@ -54,7 +53,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onToggleSound,
   onToggleMusic,
   onToggleNotification,
-  onResetProgress,
   appLanguage,
   onSelectLanguage,
   onBackToHome,
@@ -65,8 +63,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [accountOpen, setAccountOpen] = useState(false);
   const [seeded, setSeeded] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
-  const isSandbox = useAuth()?.isSandbox ?? false;
+  const auth = useAuth();
+  const isSandbox = auth?.isSandbox ?? false;
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12 animate-fadeIn">
@@ -216,6 +216,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
             </div>
 
+          </div>
+
+          {/* Reset progress: asks once, right here, before anything goes */}
+          <div className="bg-white dark:bg-[#252a35] rounded-3xl p-6 border-2 border-zinc-200 dark:border-zinc-700/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
+                  {appLanguage === 'en' ? 'Reset progress' : 'Fortschritt zurücksetzen'}
+                </h2>
+              </div>
+              {!showResetConfirm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('tap');
+                    setShowResetConfirm(true);
+                  }}
+                  className="px-4 py-2 rounded-xl font-black text-xs border cursor-pointer bg-white dark:bg-zinc-800 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800"
+                >
+                  {appLanguage === 'en' ? 'Reset' : 'Zurücksetzen'}
+                </button>
+              )}
+            </div>
+            {showResetConfirm && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={resetting}
+                  onClick={() => {
+                    playSound('tap');
+                    setShowResetConfirm(false);
+                  }}
+                  className="flex-1 py-3 rounded-2xl font-black text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 cursor-pointer disabled:opacity-50"
+                >
+                  {appLanguage === 'en' ? 'Cancel' : 'Abbrechen'}
+                </button>
+                <button
+                  type="button"
+                  disabled={resetting}
+                  onClick={() => {
+                    playSound('wrong');
+                    setResetting(true);
+                    void auth?.resetProgress();
+                  }}
+                  className="flex-1 py-3 rounded-2xl font-black text-sm bg-rose-600 text-white cursor-pointer disabled:opacity-60"
+                >
+                  {resetting
+                    ? appLanguage === 'en' ? 'Resetting…' : 'Wird zurückgesetzt…'
+                    : appLanguage === 'en' ? 'Reset everything' : 'Alles zurücksetzen'}
+                </button>
+              </div>
+            )}
           </div>
 
         </div>

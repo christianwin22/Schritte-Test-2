@@ -8,6 +8,7 @@ import {
   exitSandbox,
   pushSnapshot,
   claimAccount,
+  resetProgress,
   restoreForUser,
   signOutAndClear,
   startAutoSync,
@@ -27,6 +28,8 @@ interface AuthContextValue {
   isSandbox: boolean;
   /** Logs out, or leaves the sandbox; either way back to the login home page. Resolves false if logging out couldn't save. */
   leave: () => Promise<boolean>;
+  /** Settings → Reset progress, then a reload. */
+  resetProgress: () => Promise<void>;
 }
 
 // Remembers being in the sandbox, so reopening the app returns there.
@@ -163,6 +166,10 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     const sandbox: AuthContextValue = {
       email: null,
       isSandbox: true,
+      resetProgress: async () => {
+        await resetProgress(null);
+        window.location.reload();
+      },
       leave: async () => {
         // Whatever happens while tidying up, you still leave.
         try {
@@ -220,6 +227,10 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const value: AuthContextValue = {
     email,
     isSandbox: false,
+    resetProgress: async () => {
+      await resetProgress(userId);
+      window.location.reload();
+    },
     leave: async () => {
       const ok = await signOutAndClear(userId);
       if (ok) window.location.reload();

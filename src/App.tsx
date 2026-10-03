@@ -14,13 +14,12 @@ import { WritingView } from './components/WritingView';
 import { OrientationGuard } from './components/OrientationGuard';
 import { playSound, setGlobalSoundEnabled, setGlobalMusicEnabled } from './utils/audioEffects';
 import { AppLanguage, getTranslation } from './utils/translations';
-import { clearAppData } from './lib/progressSync';
 import { loadExerciseReady, readyLessonKeys } from './utils/exerciseReady';
 import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLessons } from './utils/srsEngine';
 import { isTabLocked } from './config/features';
 import { SuggestionButton } from './components/SuggestionButton';
 import { ChooserSheet } from './components/ChooserSheet';
-import { clearActivity, currentStreak, recordActivity } from './utils/streak';
+import { currentStreak, recordActivity } from './utils/streak';
 
 /** As Hueber writes it. */
 const SCHRITTE = 'Schritte international Neu';
@@ -337,26 +336,6 @@ export default function App() {
   const handleRefillHearts = () => {
     playSound('correct');
     setHearts(maxHearts);
-  };
-
-  const handleResetProgress = () => {
-    if (
-      window.confirm(
-        appLanguage === 'en'
-          ? 'Are you sure you want to reset all your learning progress?'
-          : 'Möchtest du deinen gesamten Lernfortschritt wirklich zurücksetzen?'
-      )
-    ) {
-      playSound('wrong');
-      clearActivity();
-      setStreak(1);
-      setXp(0);
-      setGems(100);
-      setHearts(5);
-      setVocabulary(INITIAL_VOCABULARY);
-      // Only the app's progress keys; localStorage.clear() would also sign you out.
-      clearAppData();
-    }
   };
 
   // Safe Navigation with Active Exercise Abandon Protection
@@ -746,7 +725,6 @@ export default function App() {
               onToggleSound={() => setSoundEnabled(!soundEnabled)}
               onToggleMusic={() => setMusicEnabled(!musicEnabled)}
               onToggleNotification={() => setNotificationEnabled(!notificationEnabled)}
-              onResetProgress={handleResetProgress}
               appLanguage={appLanguage}
               onSelectLanguage={setAppLanguage}
               onBackToHome={() => handleSelectTab('home')}
