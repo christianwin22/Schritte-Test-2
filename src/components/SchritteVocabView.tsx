@@ -16,6 +16,7 @@ import {
   RotateCcw,
   ArrowRightLeft,
 } from 'lucide-react';
+import { LeaveSessionModal } from './LeaveSessionModal';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import {
   BLANK,
@@ -1116,17 +1117,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     clearAnswer();
   };
 
-  // Learn keeps its place per lesson and direction: walk out and the next visit
-  // offers Resume at the same card. Finishing the lesson forgets it.
+  // Learn keeps its place per lesson and direction — the word itself, not the
+  // page number: walk out and the next visit offers Resume at the same word.
+  // Finishing the lesson, or ending the session, forgets it.
   useEffect(() => {
     if (speakOnly) return;
     const saved = loadLearnPlace(selectedLevel, selectedLektion, learnDirection);
-    setFlashcardIndex(saved < filteredCards.length ? saved : 0);
+    const index = typeof saved === 'string' ? filteredCards.findIndex((c) => c.key === saved) : saved ?? 0;
+    setFlashcardIndex(index > 0 && index < filteredCards.length ? index : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLevel, selectedLektion, learnDirection, filteredCards.length]);
   useEffect(() => {
     if (speakOnly || flashcardSubMode !== 'learn' || !sessionStarted) return;
-    saveLearnPlace(selectedLevel, selectedLektion, learnDirection, isLearnComplete ? null : flashcardIndex);
+    const key = isLearnComplete || flashcardIndex === 0 ? null : filteredCards[flashcardIndex]?.key ?? null;
+    saveLearnPlace(selectedLevel, selectedLektion, learnDirection, key);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flashcardIndex, isLearnComplete, sessionStarted, flashcardSubMode]);
 
@@ -1378,19 +1382,55 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setDrillStarted(false);
   };
 
-  // The top bar's back arrow: inside a session, back to this exercise's Start
-  // screen — asking first only if at least one answer has been given.
-  const handleBackInExercise = (): boolean => {
-    if (activeExerciseMode === 'explorer' && flashcardSubMode === 'learn' && sessionStarted) {
-      // Learn has nothing to lose: straight back to its Start page
+  /**
+   * Leaving Words (Learn, Practice or Review) mid-way asks Save or End session.
+   * Save keeps your place, so the Start page offers Resume or Start over;
+   * End session forgets it. Nothing done yet: it just leaves.
+   */
+  const [leavePromptOpen, setLeavePromptOpen] = useState(false);
+  const wordsSessionHasPlace = () =>
+    flashcardSubMode === 'learn'
+      ? flashcardIndex > 0 && !isLearnComplete
+      : !isPracticeComplete && (practiceQueueIndex > 0 || roundNumber > 1 || practiceFeedback !== null);
+
+  const saveAndLeaveWordsSession = () => {
+    setLeavePromptOpen(false);
+    if (flashcardSubMode === 'learn') {
       cancelFlip();
       setIsCardFlipped(false);
       setSessionStarted(false);
-      return true;
+    } else leaveFlashcardSession();
+  };
+
+  const endWordsSession = () => {
+    setLeavePromptOpen(false);
+    setSessionStarted(false);
+    if (flashcardSubMode === 'learn') {
+      cancelFlip();
+      setIsCardFlipped(false);
+      saveLearnPlace(selectedLevel, selectedLektion, learnDirection, null);
+      setIsLearnComplete(false);
+      setFlashcardIndex(0);
+      return;
     }
-    if (activeExerciseMode === 'explorer' && flashcardSubMode !== 'learn' && sessionStarted) {
-      // Practice and Review both keep their place, so there is nothing to confirm.
-      leaveFlashcardSession();
+    clearAnswer();
+    if (flashcardSubMode === 'review') clearReviewSession();
+    buildFreshPracticeRun();
+    setResumedSession(false);
+  };
+
+  /** Start page: begin again from the first card, forgetting the saved place. */
+  const startWordsSessionOver = () => {
+    endWordsSession();
+    setSessionStarted(true);
+  };
+
+  // The top bar's back arrow and the ✕: inside a session, back to this exercise's
+  // Start screen — Words asks Save or End session first when there is a place to keep.
+  const handleBackInExercise = (): boolean => {
+    if (activeExerciseMode === 'explorer' && sessionStarted) {
+      if (wordsSessionHasPlace()) setLeavePromptOpen(true);
+      else saveAndLeaveWordsSession();
       return true;
     }
     if (activeDrillSkill && drillStarted) {
@@ -2572,6 +2612,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
+            <LeaveSessionModal
+              isOpen={leavePromptOpen}
+              onStay={() => setLeavePromptOpen(false)}
+              onSave={saveAndLeaveWordsSession}
+              onEnd={endWordsSession}
+              appLanguage={appLanguage}
+            />
             {/* The bars belong to Learn and to the Start screen. Once the cards
                 are up it is the header, the card and the answer. */}
             {(flashcardSubMode === 'learn' || !sessionStarted) && (
@@ -2615,16 +2662,30 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     )}
                     {/* Review goes DE → EN only: no switch there */}
                     {flashcardSubMode !== 'review' && directionSwitch(flashcardSubMode === 'practice')}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('tap');
-                        setSessionStarted(true);
-                      }}
-                      className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
-                    >
-                      {canResume || canResumeLearn ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
-                    </button>
+                    <div className="w-full max-w-xs flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound('tap');
+                          setSessionStarted(true);
+                        }}
+                        className="w-full py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
+                      >
+                        {canResume || canResumeLearn ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
+                      </button>
+                      {(canResume || canResumeLearn) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playSound('tap');
+                            startWordsSessionOver();
+                          }}
+                          className="w-full py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-[0.98] transition-all"
+                        >
+                          {en ? 'Start over' : 'Neu beginnen'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
@@ -2702,7 +2763,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
                         {flashcardIndex + 1} / {filteredCards.length}
                       </span>
-                      <span />
+                      <button
+                        type="button"
+                        aria-label={en ? 'Close' : 'Schließen'}
+                        onClick={() => {
+                          playSound('tap');
+                          handleBackInExercise();
+                        }}
+                        className="justify-self-end p-1.5 -m-1 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer active:scale-95 transition-all"
+                      >
+                        <X className="w-4 h-4 stroke-[3]" />
+                      </button>
                     </div>
 
                     {currentLearnCard && (
@@ -2888,15 +2959,28 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     <span className="pointer-events-none select-none px-2 py-1 rounded-xl text-[11px] font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 whitespace-nowrap">
                       {practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}
                     </span>
-                    {roundNumber > 1 ? (
-                      <span className="px-2 py-1 rounded-xl text-[11px] font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 whitespace-nowrap">
-                        {en ? `Redo ${roundNumber - 1}` : `Wdh. ${roundNumber - 1}`} · {position}/{activeQueue.length}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider whitespace-nowrap">
-                        {position} / {activeQueue.length}
-                      </span>
-                    )}
+                    <span className="flex items-center gap-2">
+                      {roundNumber > 1 ? (
+                        <span className="px-2 py-1 rounded-xl text-[11px] font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 whitespace-nowrap">
+                          {en ? `Redo ${roundNumber - 1}` : `Wdh. ${roundNumber - 1}`} · {position}/{activeQueue.length}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider whitespace-nowrap">
+                          {position} / {activeQueue.length}
+                        </span>
+                      )}
+                      <button
+                          type="button"
+                          aria-label={en ? 'Close' : 'Schließen'}
+                          onClick={() => {
+                            playSound('tap');
+                            handleBackInExercise();
+                          }}
+                          className="p-1.5 -m-1 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer active:scale-95 transition-all"
+                        >
+                          <X className="w-4 h-4 stroke-[3]" />
+                        </button>
+                    </span>
                   </div>
 
                   {/* The question; once answered, a line across the middle and the example below it */}

@@ -103,22 +103,27 @@ export function firstPracticeDone(
 const LEARN_PLACE_KEY = 'schritte_learn_place_v1';
 const placeKey = (level: string, lektion: number | string, dir: string) => `${level}_${lektion}_${dir}`;
 
-export function loadLearnPlace(level: string, lektion: number | string, dir: string): number {
+/**
+ * The card you stopped on, by its key, so it is the same word even when the
+ * lesson's order changes. Older saves kept a page number; those come back as one.
+ */
+export function loadLearnPlace(level: string, lektion: number | string, dir: string): string | number | null {
   try {
-    const all = JSON.parse(localStorage.getItem(LEARN_PLACE_KEY) || '{}') as Record<string, number>;
-    return Math.max(0, Number(all[placeKey(level, lektion, dir)]) || 0);
+    const all = JSON.parse(localStorage.getItem(LEARN_PLACE_KEY) || '{}') as Record<string, string | number>;
+    const place = all[placeKey(level, lektion, dir)];
+    return typeof place === 'string' || typeof place === 'number' ? place : null;
   } catch {
-    return 0;
+    return null;
   }
 }
 
-/** null forgets the place (the lesson was finished). */
-export function saveLearnPlace(level: string, lektion: number | string, dir: string, index: number | null): void {
+/** null forgets the place (the lesson was finished, or the session ended). */
+export function saveLearnPlace(level: string, lektion: number | string, dir: string, cardKey: string | null): void {
   try {
-    const all = JSON.parse(localStorage.getItem(LEARN_PLACE_KEY) || '{}') as Record<string, number>;
+    const all = JSON.parse(localStorage.getItem(LEARN_PLACE_KEY) || '{}') as Record<string, string | number>;
     const k = placeKey(level, lektion, dir);
-    if (index === null || index <= 0) delete all[k];
-    else all[k] = index;
+    if (cardKey === null) delete all[k];
+    else all[k] = cardKey;
     localStorage.setItem(LEARN_PLACE_KEY, JSON.stringify(all));
   } catch {
     // nothing to do
