@@ -28,8 +28,6 @@ interface AuthContextValue {
   isSandbox: boolean;
   /** Logs out, or leaves the sandbox; either way back to the login home page. Resolves false if logging out couldn't save. */
   leave: () => Promise<boolean>;
-  /** Settings → Reset progress, then a reload. */
-  resetProgress: () => Promise<void>;
 }
 
 // Remembers being in the sandbox, so reopening the app returns there.
@@ -130,6 +128,20 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   const userId = session?.user.id ?? null;
 
+  // Not a button anywhere: opening the app with ?reset-progress asks once, then
+  // clears all learning progress (settings stay) — in the account too, or in
+  // the Sandbox when that is where you are.
+  useEffect(() => {
+    if (!isSandbox && (phase !== 'ready' || !userId)) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('reset-progress')) return;
+    url.searchParams.delete('reset-progress');
+    window.history.replaceState(null, '', url.toString());
+    const where = isSandbox ? 'the Sandbox' : 'this account';
+    if (!window.confirm(`Reset all learning progress in ${where}? Settings stay.`)) return;
+    void resetProgress(isSandbox ? null : userId).then(() => window.location.reload());
+  }, [phase, isSandbox, userId]);
+
   useEffect(() => {
     if (phase !== 'ready' || !userId) return;
     // Ideas noted in the Sandbox or offline go up now that we're signed in.
@@ -166,10 +178,6 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     const sandbox: AuthContextValue = {
       email: null,
       isSandbox: true,
-      resetProgress: async () => {
-        await resetProgress(null);
-        window.location.reload();
-      },
       leave: async () => {
         // Whatever happens while tidying up, you still leave.
         try {
@@ -227,10 +235,6 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const value: AuthContextValue = {
     email,
     isSandbox: false,
-    resetProgress: async () => {
-      await resetProgress(userId);
-      window.location.reload();
-    },
     leave: async () => {
       const ok = await signOutAndClear(userId);
       if (ok) window.location.reload();
