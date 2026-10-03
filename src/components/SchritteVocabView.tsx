@@ -1393,6 +1393,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    * End session forgets it. Nothing done yet: it just leaves.
    */
   const [leavePromptOpen, setLeavePromptOpen] = useState(false);
+  /** Review's Start page: the lesson whose waiting words are opened up. */
+  const [openDueLesson, setOpenDueLesson] = useState<string | null>(null);
   const wordsSessionHasPlace = () =>
     flashcardSubMode === 'learn'
       ? flashcardIndex > 0 && !isLearnComplete
@@ -2633,6 +2635,52 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         const canResume = flashcardSubMode !== 'learn' && resumedSession && (practiceQueueIndex > 0 || roundNumber > 1);
         const canResumeLearn = flashcardSubMode === 'learn' && flashcardIndex > 0 && !isLearnComplete;
 
+        const startButton = (
+          <button
+            type="button"
+            onClick={() => {
+              playSound('tap');
+              setSessionStarted(true);
+            }}
+            className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
+          >
+            {canResume || canResumeLearn ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
+          </button>
+        );
+        const startOverButton = (canResume || canResumeLearn) && (
+          <button
+            type="button"
+            onClick={() => {
+              playSound('tap');
+              startWordsSessionOver();
+            }}
+            className="w-full max-w-xs py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-[0.98] transition-all"
+          >
+            {en ? 'Start over' : 'Neu beginnen'}
+          </button>
+        );
+
+        // Review's Start page: the cards still waiting, grouped by lesson in course order.
+        const reviewWaiting = canResume ? activeQueue.slice(practiceQueueIndex) : practiceQueue;
+        const reviewByLesson = (() => {
+          const groups = new Map<string, { key: string; label: string; title: string; order: number; cards: WordCard[] }>();
+          for (const card of reviewWaiting) {
+            const { level, lektion } = card.word;
+            const key = `${level}_${lektion}`;
+            if (!groups.has(key)) {
+              groups.set(key, {
+                key,
+                label: `${level} · ${lektion === 0 ? 'Intro' : `L${lektion}`}`,
+                title: BOOK_LESSON_TITLES[key] ?? '',
+                order: ['A1', 'A2', 'B1', 'B2'].indexOf(level) * 100 + (lektion ?? 0),
+                cards: [],
+              });
+            }
+            groups.get(key)!.cards.push(card);
+          }
+          return [...groups.values()].sort((a, b) => a.order - b.order);
+        })();
+
         return (
           <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
             <LeaveSessionModal
@@ -2655,11 +2703,54 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             <div className="flex-1 min-h-0 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
               {/* Learn, Practice and Review all wait on a Start page, so their audio never starts on its own */}
               {!sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
-                <div className="flex-1 flex flex-col items-center gap-6 pt-1 pb-4">
-                  {/* Which lesson, pinned to the top of the card */}
-                  <div className="space-y-1 max-w-xs">
-                    {flashcardSubMode !== 'review' ? (
-                      <>
+                <div className="flex-1 min-h-0 flex flex-col items-center gap-4 pt-1 pb-2">
+                  {flashcardSubMode === 'review' ? (
+                    /* Review: what is waiting, lesson by lesson, in a box that scrolls —
+                       the buttons stay put however many thousand words there are. */
+                    <>
+                      <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500 shrink-0">
+                        {reviewWaiting.length} {en ? (canResume ? 'cards left' : 'cards due') : canResume ? 'Karten offen' : 'Karten fällig'}
+                      </p>
+                      <div className="flex-1 min-h-0 w-full max-w-md overflow-y-auto rounded-2xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-200 dark:divide-zinc-700 text-left">
+                        {reviewByLesson.map((group) => {
+                          const open = openDueLesson === group.key;
+                          return (
+                            <div key={group.key}>
+                              <button
+                                type="button"
+                                onClick={() => setOpenDueLesson(open ? null : group.key)}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 cursor-pointer"
+                              >
+                                <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 w-14 shrink-0">{group.label}</span>
+                                <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
+                                <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{group.cards.length}</span>
+                                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+                              </button>
+                              {open && (
+                                <div className="flex flex-wrap gap-1.5 px-4 pb-3">
+                                  {group.cards.map((card) => (
+                                    <span
+                                      key={card.key}
+                                      className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300"
+                                    >
+                                      {germanShown(card)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="w-full max-w-xs flex flex-col gap-2 shrink-0">
+                        {startButton}
+                        {startOverButton}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Which lesson, pinned to the top of the card */}
+                      <div className="space-y-1 max-w-xs">
                         <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
                           {selectedLevel}
                           {typeof selectedLektion === 'number' ? ` · ${lessonName}` : ''}
@@ -2667,54 +2758,29 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         <p className="font-black text-base text-zinc-900 dark:text-zinc-100 leading-relaxed">
                           {lessonTopics(filteredWords) || (en ? 'Practice' : 'Üben')}
                         </p>
-                      </>
-                    ) : (
-                      <p className="font-black text-lg text-zinc-900 dark:text-zinc-100">{en ? 'Review' : 'Wiederholen'}</p>
-                    )}
-                  </div>
-                  <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
-                    {/* Review: how many are due. Practice and Learn: where you stopped, if you did. */}
-                    {(flashcardSubMode === 'review' || canResume || canResumeLearn) && (
-                      <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">
-                        {flashcardSubMode === 'review' && !canResume
-                          ? `${practiceQueue.length} ${en ? 'cards due' : 'Karten fällig'}`
-                          : flashcardSubMode === 'learn'
-                          ? `${flashcardIndex + 1} / ${filteredCards.length}`
-                          : `${position} / ${activeQueue.length}`}
-                      </p>
-                    )}
-                    {/* Review goes DE → EN only: no switch there */}
-                    {flashcardSubMode !== 'review' &&
-                      directionSwitch(
-                        flashcardSubMode === 'practice'
-                          ? { de: pendingDe, en: pendingEn }
-                          : speakOnly
-                          ? null
-                          : { de: learnLeft('DE_TO_EN'), en: learnLeft('EN_TO_DE') }
+                      </div>
+                      {/* Not begun: one area, Start. Begun and left: two equal areas — Resume, then Start over. */}
+                      <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
+                        {(canResume || canResumeLearn) && (
+                          <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">
+                            {flashcardSubMode === 'learn'
+                              ? `${flashcardIndex + 1} / ${filteredCards.length}`
+                              : `${position} / ${activeQueue.length}`}
+                          </p>
+                        )}
+                        {directionSwitch(
+                          flashcardSubMode === 'practice'
+                            ? { de: pendingDe, en: pendingEn }
+                            : speakOnly
+                            ? null
+                            : { de: learnLeft('DE_TO_EN'), en: learnLeft('EN_TO_DE') }
+                        )}
+                        {startButton}
+                      </div>
+                      {(canResume || canResumeLearn) && (
+                        <div className="flex-1 w-full flex items-center justify-center">{startOverButton}</div>
                       )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('tap');
-                        setSessionStarted(true);
-                      }}
-                      className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
-                    >
-                      {canResume || canResumeLearn ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
-                    </button>
-                  </div>
-                  {/* Start over sits at the foot of the card, away from Resume */}
-                  {(canResume || canResumeLearn) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('tap');
-                        startWordsSessionOver();
-                      }}
-                      className="w-full max-w-xs py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-[0.98] transition-all"
-                    >
-                      {en ? 'Start over' : 'Neu beginnen'}
-                    </button>
+                    </>
                   )}
                 </div>
               ) : flashcardSubMode === 'review' && practiceQueue.length === 0 ? (
