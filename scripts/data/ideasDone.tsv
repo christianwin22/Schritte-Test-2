@@ -60,3 +60,7 @@ d38b3d77-a316-41c5-8f7d-4340d6825f64	done	-	built on or before 2026-10-02
 0ec61721-4237-4074-be6f-4ea6624e7ccf	done	44f3731	viewer gestures; 183 vs 114 answered + fixed
 e672dc30-3b60-4725-8eac-2ef15db23eb8	done	44f3731	review list: lesson + count only
 1d303623-00a3-4887-abdc-49ba177e0c42	done	7d688c4	Settings > Reset progress button restored (resets account too)
+1dd4b085-a23a-4b4d-b4e2-d204fa57b825	done	92450ae	218 book words re-added into their lessons
+793e84cd-7fe7-466b-9829-1c135dd285ff	done	92450ae	no in-lesson duplicates; missing picture words added
+89fb50a4-3581-46f7-8faf-b07d6eaf69f6	done	99c4ea4	direction chip = black label in sessions
+a43ba822-4f6b-4cc6-91d0-c4e7c2d15b23	done	99c4ea4	plural die orange
