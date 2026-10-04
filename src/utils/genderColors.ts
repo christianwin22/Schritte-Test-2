@@ -6,6 +6,9 @@
  * case a step darker: Accusative, Dative, Genitive. So "der" (Nom.) is a light
  * blue and "den" (Acc.) the same blue, darker.
  *
+ * The plural "die" belongs to no gender: it is orange, as the book marks it,
+ * with the same steps by case.
+ *
  * Tailwind only keeps classes it can see written out in full, so every one is
  * spelled out here rather than built from pieces.
  */
@@ -55,6 +58,23 @@ const BUTTON: Record<GenderKey, Record<GrammarCase, string>> = {
     genitive: 'bg-green-200 border-green-700 text-green-900 dark:bg-green-900/80 dark:border-green-400 dark:text-green-300',
   },
 };
+
+const PLURAL_TEXT: Record<GrammarCase, string> = {
+  nominative: 'text-orange-500 dark:text-orange-300',
+  accusative: 'text-orange-600 dark:text-orange-400',
+  dative: 'text-orange-700 dark:text-orange-500',
+  genitive: 'text-orange-900 dark:text-orange-600',
+};
+
+/** Text colour for a plural article ("die Studenten", "die Kenntnisse (Pl.)"). */
+export function pluralText(kase: GrammarCase = 'nominative'): string {
+  return PLURAL_TEXT[kase];
+}
+
+/** Button colours for the plural (the P of the S/P switch). */
+export function pluralButton(): string {
+  return 'bg-orange-50 border-orange-300 text-orange-600 dark:bg-orange-950/40 dark:border-orange-700 dark:text-orange-300';
+}
 
 /** "der" / "die" / "das" (the noun's own gender) → m / f / n. */
 export function genderKey(gender?: string | null): GenderKey | null {

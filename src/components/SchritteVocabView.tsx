@@ -37,7 +37,7 @@ import { markReadyAfterWords } from '../utils/exerciseReady';
 import { CEFRLevel, Gender, WordEntry, FlashcardSubMode, FSRSCardRecord } from '../types';
 import { checkEnglish, checkEnglishPair, checkGerman, englishSenses, meaningLines } from '../utils/answerCheck';
 import { highlightWord, stemLabel } from '../utils/sentenceParts';
-import { genderButton, genderText, accusativeGender } from '../utils/genderColors';
+import { genderButton, genderText, accusativeGender, pluralButton, pluralText } from '../utils/genderColors';
 import {
   WordCard,
   cardsFor,
@@ -2430,11 +2430,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         /**
          * "der Student" / "die Studenten": the article in its gender's colour, the
-         * noun in black. The plural "die" belongs to no gender, so it stays grey.
+         * noun in black. The plural "die" belongs to no gender: orange, as in the book.
          */
         const germanWord = (card: WordCard, size = 'text-3xl sm:text-4xl', showPlural = true) => {
           const gender = card.word.nounDetails?.gender;
-          const articleTone = asksPlural(card) ? 'text-zinc-500 dark:text-zinc-400' : genderText(gender);
+          const articleTone = asksPlural(card) || card.word.nounDetails?.pluralOnly ? pluralText() : genderText(gender);
           const text = germanShown(card);
           const tag = numberTag(card);
           const article = gender ? text.match(/^(der|die|das)\s+/i)?.[1] : undefined;
@@ -2555,6 +2555,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             ? genderButton('der')
             : mark === 'F'
             ? genderButton('die')
+            : mark === 'P'
+            ? pluralButton()
             : 'bg-zinc-100 border-zinc-300 text-zinc-800 dark:bg-zinc-800 dark:border-zinc-600 dark:text-zinc-100';
         const markChips = (marks?: string[]) =>
           marks && marks.length > 0 ? (
@@ -2833,13 +2835,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   <>
                     {/* Direction on the left, the counter in the middle (the lesson bar above says which lesson) */}
                     <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-bold text-zinc-400 mb-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => changeDirection(learnDirection === 'DE_TO_EN' ? 'EN_TO_DE' : 'DE_TO_EN')}
-                        className="justify-self-start px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 shadow-2xs flex items-center gap-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer active:scale-95 transition-all"
-                      >
-                        <span>{learnDirection === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}</span>
-                      </button>
+                      {/* Which way, shown only: the direction is chosen on the Start page */}
+                      <span className="justify-self-start px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 whitespace-nowrap select-none">
+                        {learnDirection === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
+                      </span>
                       <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
                         {flashcardIndex + 1} / {filteredCards.length}
                       </span>
@@ -3036,7 +3035,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           }`
                         : ''}
                     </span>
-                    <span className="pointer-events-none select-none px-2 py-1 rounded-xl text-[11px] font-black bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 whitespace-nowrap">
+                    <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 whitespace-nowrap select-none">
                       {practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}
                     </span>
                     <span className="flex items-center gap-2">
