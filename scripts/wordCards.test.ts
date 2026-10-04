@@ -28,9 +28,11 @@ const word = (id: string) => {
 };
 const card = (id: string, plural = false) => cardsFor([word(id)]).find((c) => c.plural === plural)!;
 
-console.log('1. A plural card wants the English plural');
+console.log('1. A plural card takes the English plural or the singular');
 check('die Kellner: "waiters" is right', checkCardEnglish('waiters', card('a12_l8_kellner', true)));
-check('die Kellner: "waiter" is wrong', !checkCardEnglish('waiter', card('a12_l8_kellner', true)));
+check('die Kellner: "waiter" is right too', checkCardEnglish('waiter', card('a12_l8_kellner', true)));
+check('die Hotels: "hotel" and "hotels"', checkCardEnglish('hotel', card('a12_l9_hotel', true)) && checkCardEnglish('hotels', card('a12_l9_hotel', true)));
+check('die Kellner: "cook" is wrong', !checkCardEnglish('cook', card('a12_l8_kellner', true)));
 check('der Kellner: "waiter" is right', checkCardEnglish('waiter', card('a12_l8_kellner')));
 check('die Hausmeister: either meaning, plural', checkCardEnglish('janitors', card('a12_l8_hausmeister', true)));
 check('die Chefinnen: "bosses"', checkCardEnglish('bosses', card('a12_l8_chefin', true)));
@@ -45,8 +47,8 @@ check(
   checkEnglishPair([asListedEnglish('areas', bereiche), asListedEnglish('fields', bereiche)], bereiche.word).every(Boolean)
 );
 check(
-  'two boxes: "area" + "field" wrong on the plural card',
-  !checkEnglishPair([asListedEnglish('area', bereiche), asListedEnglish('field', bereiche)], bereiche.word).every(Boolean)
+  'two boxes: "area" + "field" right on the plural card too',
+  checkEnglishPair([asListedEnglish('area', bereiche), asListedEnglish('field', bereiche)], bereiche.word).every(Boolean)
 );
 
 console.log('2. The book\'s marks and spellings');

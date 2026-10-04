@@ -228,13 +228,13 @@ export function cardMeaningLines(card: WordCard): string[] {
   return card.plural ? lines.map(pluralEnglish) : lines;
 }
 
-/** Which listed meaning a typed plural belongs to ("waiters" → "waiter"), or null. */
+/** Which listed meaning a typed plural — or the singular, also fine — belongs to ("waiters" → "waiter"), or null. */
 function listedForPlural(input: string, card: WordCard): string | null {
   const user = normalizeEnglish(input);
   if (!user) return null;
   for (const sense of englishOptions(card.word)) {
     for (const option of sense) {
-      if (pluralPhrases(option).includes(user)) return option;
+      if (option === user || pluralPhrases(option).includes(user)) return option;
     }
   }
   return null;
@@ -248,7 +248,7 @@ export function checkCardGerman(input: string, card: WordCard) {
   return checkGerman(input, { ...card.word, answers: pluralAnswers(card.word), isStem: false });
 }
 
-/** DE → EN: the meaning. A plural card wants it in the plural: "students", not "student". */
+/** DE → EN: the meaning. A plural card takes the plural ("students") or the singular ("student"). */
 export function checkCardEnglish(input: string, card: WordCard): boolean {
   if (!card.plural) return checkEnglish(input, card.word);
   return listedForPlural(input, card) !== null;
@@ -257,6 +257,5 @@ export function checkCardEnglish(input: string, card: WordCard): boolean {
 /** The typed meaning as the word list writes it ("areas" → "area" on a plural card), for the two-box check. */
 export function asListedEnglish(input: string, card: WordCard): string {
   if (!card.plural) return input;
-  // A singular typed on a plural card matches nothing, so it is marked wrong.
   return listedForPlural(input, card) ?? '\u0000';
 }
