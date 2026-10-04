@@ -89,6 +89,8 @@ export default function App() {
   const [previousTab, setPreviousTab] = useState<'home' | DuolingoTab>('home');
   const [activeExerciseMode, setActiveExerciseMode] = useState<string | null>(null);
   const [isQuizActive, setIsQuizActive] = useState(false);
+  // A session is open (Learn, Practice, Review…): the top bar shows ✕ instead of ←
+  const [sessionOpen, setSessionOpen] = useState(false);
   const [quizProgressSaved, setQuizProgressSaved] = useState(false);
   // An exercise can take the back arrow for itself (Vocabulary: back to its Start screen).
   const exerciseBackRef = useRef<(() => boolean) | null>(null);
@@ -544,6 +546,7 @@ export default function App() {
         onOpenSettings={() => handleSelectTab('settings')}
         canGoBack={currentTab !== 'home' || activeExerciseMode !== null}
         onBack={handleTopBack}
+        closeMode={sessionOpen && activeExerciseMode !== null}
         onGoHome={handleGoHome}
         title={getTopBarTitle()}
         crumbs={getTopBarCrumbs()}
@@ -609,6 +612,7 @@ export default function App() {
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
               backHandlerRef={exerciseBackRef}
+              onSessionOpenChange={setSessionOpen}
               onQuizActiveChange={(active, saved) => {
                 setIsQuizActive(active);
                 setQuizProgressSaved(!!saved);
@@ -628,6 +632,7 @@ export default function App() {
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
               backHandlerRef={exerciseBackRef}
+              onSessionOpenChange={setSessionOpen}
               onQuizActiveChange={(active, saved) => {
                 setIsQuizActive(active);
                 setQuizProgressSaved(!!saved);
@@ -640,6 +645,7 @@ export default function App() {
             <SchritteGrammarView
               drillBadges={grammarDrillBadges}
               backHandlerRef={exerciseBackRef}
+              onSessionOpenChange={setSessionOpen}
               onCorrectAnswer={handleCorrectAnswer}
               onWrongAnswer={handleWrongAnswer}
               activeExerciseMode={activeExerciseMode}
@@ -676,6 +682,7 @@ export default function App() {
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
               backHandlerRef={exerciseBackRef}
+              onSessionOpenChange={setSessionOpen}
               onQuizActiveChange={(active, saved) => {
                 setIsQuizActive(active);
                 setQuizProgressSaved(!!saved);

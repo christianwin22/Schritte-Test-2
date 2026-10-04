@@ -208,6 +208,8 @@ interface SchritteVocabViewProps {
    * anywhere else it returns false and the top bar does its usual thing.
    */
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  /** Tells the top bar a session is open, so its back arrow becomes ✕. */
+  onSessionOpenChange?: (open: boolean) => void;
   appLanguage?: AppLanguage;
   /**
    * Speaking: the same Words Practice and Review, answered out loud only — no
@@ -224,6 +226,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   onRequestAbandon,
   onQuizActiveChange,
   backHandlerRef,
+  onSessionOpenChange,
   appLanguage = 'en',
   speakOnly = false,
 }) => {
@@ -1149,8 +1152,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   }, [flashcardIndex, isLearnComplete, sessionStarted, flashcardSubMode]);
 
   /** Learn: is the English side of the card showing? It has nothing to hear, so only the arrows. */
-  const englishSideUp = (learnDirection === 'DE_TO_EN') === isCardFlipped;
-
   const handleNextFlashcard = () => {
     playSound('tap');
     cancelFlip();
@@ -1470,17 +1471,21 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     activeExerciseMode === 'explorer' && flashcardSubMode === 'learn' && sessionStarted && !isLearnComplete && currentLearnCard
       ? `${currentLearnCard.key}|${learnDirection}|${isCardFlipped}`
       : '';
+  const learnAudioLines = (): string[] => {
+    const card = currentLearnCard;
+    return learnDirection === 'DE_TO_EN'
+      ? isCardFlipped
+        ? germanSentenceLines(card)
+        : germanWordLines(card)
+      : isCardFlipped
+      ? [...germanWordLines(card), ...germanSentenceLines(card)]
+      : [];
+  };
+  // Only the English word showing: nothing German to hear, so Learn's Audio button steps aside.
+  const learnSilent = learnAudioLines().length === 0;
   useEffect(() => {
     if (!learnAudioKey) return;
-    const card = currentLearnCard;
-    const lines =
-      learnDirection === 'DE_TO_EN'
-        ? isCardFlipped
-          ? germanSentenceLines(card)
-          : germanWordLines(card)
-        : isCardFlipped
-        ? [...germanWordLines(card), ...germanSentenceLines(card)]
-        : [];
+    const lines = learnAudioLines();
     return lines.length ? speakGermanSequence(lines) : undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [learnAudioKey]);
@@ -1527,6 +1532,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     return speakGermanSequence([`${drillSessionNoun.nounDetails.gender} ${drillSessionNoun.lemma}`]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drillAudioKey]);
+
+  const sessionOpen = (activeExerciseMode === 'explorer' && sessionStarted) || (!!activeDrillSkill && drillStarted);
+  useEffect(() => {
+    onSessionOpenChange?.(sessionOpen);
+  }, [sessionOpen, onSessionOpenChange]);
+  useEffect(() => () => onSessionOpenChange?.(false), [onSessionOpenChange]);
 
   useEffect(() => {
     if (!backHandlerRef) return;
@@ -2449,8 +2460,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 ) : (
                   <span className="font-black text-zinc-900 dark:text-zinc-100">{text}</span>
                 )}
-                {/* The book's mark: Sg. = no plural, Pl. = only a plural */}
-                {tag && <span className="ml-1.5 text-[0.45em] font-bold text-zinc-400 dark:text-zinc-500 align-middle">({tag})</span>}
+                {/* The book's mark: Sg. = no plural, Pl. = only a plural. Hidden on a
+                    question — it would give away singular or plural. */}
+                {tag && showPlural && <span className="ml-1.5 text-[0.45em] font-bold text-zinc-400 dark:text-zinc-500 align-middle">({tag})</span>}
               </h3>
               {card.plural && showPlural && pluralChip}
             </div>
@@ -2480,7 +2492,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         };
 
         /** The lower half of a card: the example, the same size as the word above it, its English under it. */
-        const exampleHalf = (card: WordCard) => {
+        const exampleHalf = (card: WordCard, withAudio: boolean) => {
           const example = exampleOf(card);
           if (!example) return null;
           const shownWord = card.plural ? { ...card.word, lemma: (pluralOf(card.word) ?? card.word.lemma).replace(/^die\s+/i, '') } : card.word;
@@ -2490,6 +2502,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
                   <SentenceWithWord sentence={example.german} word={shownWord} />
                 </p>
+                {withAudio && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -2502,6 +2515,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 >
                   <Volume2 className="w-4 h-4" />
                 </button>
+                )}
               </div>
               {example.english && (
                 <p className="text-sm sm:text-base font-medium text-zinc-500 dark:text-zinc-400">{example.english}</p>
@@ -2511,8 +2525,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         };
 
         /** A card face: the word fills it, or — once the example shows — the top half, a line, the example below. */
-        const cardFace = (top: React.ReactNode, card: WordCard | undefined, withExample: boolean) => {
-          const bottom = withExample && card ? exampleHalf(card) : null;
+        const cardFace = (top: React.ReactNode, card: WordCard | undefined, withExample: boolean, exampleAudio = true) => {
+          const bottom = withExample && card ? exampleHalf(card, exampleAudio) : null;
           return bottom ? (
             <div className="flex-1 w-full flex flex-col">
               <div className="flex-1 flex flex-col items-center justify-center">{top}</div>
@@ -2842,17 +2856,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
                         {flashcardIndex + 1} / {filteredCards.length}
                       </span>
-                      <button
-                        type="button"
-                        aria-label={en ? 'Close' : 'Schließen'}
-                        onClick={() => {
-                          playSound('tap');
-                          handleBackInExercise();
-                        }}
-                        className="justify-self-end p-1.5 -m-1 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer active:scale-95 transition-all"
-                      >
-                        <X className="w-4 h-4 stroke-[3]" />
-                      </button>
+                      <span />
                     </div>
 
                     {currentLearnCard && (
@@ -2875,29 +2879,31 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             ? germanWord(currentLearnCard, isCardFlipped ? 'text-2xl sm:text-3xl' : undefined)
                             : englishWord(currentLearnCard),
                           currentLearnCard,
-                          isCardFlipped
+                          isCardFlipped,
+                          false
                         )}
                       </div>
                     )}
 
-                    {/* Prev, the word's sound, Next. On the English side there is
-                        nothing to hear, so the arrows grow into its room. */}
+                    {/* Prev, Audio, Next. Audio plays what the card shows in German — the
+                        word, and once turned over its sentence. With only English
+                        showing there is nothing to hear, so the arrows grow into its room. */}
                     <div className="flex items-center mt-3 shrink-0">
                       <button
                         type="button"
                         onClick={() => goToCard(1)}
-                        style={{ flexGrow: englishSideUp ? 1 : 0, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
-                        className="p-3 mr-2 basis-auto shrink-0 flex justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95"
+                        style={{ flexGrow: learnSilent ? 1 : 0.6, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
+                        className="p-3 mr-2 basis-0 min-w-11 flex justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95"
                         title="Previous"
                       >
                         <ArrowLeft className="w-4 h-4" />
                       </button>
                       <div
-                        inert={englishSideUp}
-                        aria-hidden={englishSideUp}
+                        inert={learnSilent}
+                        aria-hidden={learnSilent}
                         style={{
-                          flexGrow: englishSideUp ? 0 : 1,
-                          opacity: englishSideUp ? 0 : 1,
+                          flexGrow: learnSilent ? 0 : 1,
+                          opacity: learnSilent ? 0 : 1,
                           transition: 'flex-grow 180ms ease-out, opacity 150ms ease-out',
                         }}
                         className="basis-0 min-w-0 overflow-hidden"
@@ -2907,7 +2913,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             type="button"
                             onClick={() => {
                               playSound('tap');
-                              if (currentLearnCard) speakGerman(germanOf(currentLearnCard));
+                              const lines = learnAudioLines();
+                              if (lines.length) speakGermanSequence(lines);
                             }}
                             className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
                           >
@@ -2919,8 +2926,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       <button
                         type="button"
                         onClick={() => goToCard(-1)}
-                        style={{ flexGrow: englishSideUp ? 1 : 0, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
-                        className="p-3 basis-auto shrink-0 flex justify-center bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent cursor-pointer active:scale-95"
+                        style={{ flexGrow: learnSilent ? 1 : 0.6, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
+                        className="p-3 basis-0 min-w-11 flex justify-center bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent cursor-pointer active:scale-95"
                         title="Next"
                       >
                         <ArrowRight className="w-4 h-4" />
@@ -3038,7 +3045,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 whitespace-nowrap select-none">
                       {practiceDirection === 'EN_TO_DE' ? 'EN → DE' : 'DE → EN'}
                     </span>
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center">
                       {roundNumber > 1 ? (
                         <span className="px-2 py-1 rounded-xl text-[11px] font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 whitespace-nowrap">
                           {en ? `Redo ${roundNumber - 1}` : `Wdh. ${roundNumber - 1}`} · {position}/{activeQueue.length}
@@ -3048,17 +3055,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           {position} / {activeQueue.length}
                         </span>
                       )}
-                      <button
-                          type="button"
-                          aria-label={en ? 'Close' : 'Schließen'}
-                          onClick={() => {
-                            playSound('tap');
-                            handleBackInExercise();
-                          }}
-                          className="p-1.5 -m-1 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer active:scale-95 transition-all"
-                        >
-                          <X className="w-4 h-4 stroke-[3]" />
-                        </button>
                     </span>
                   </div>
 
@@ -3198,7 +3194,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       {!practiceFeedback.correct && (
                         <div className="w-full px-4 py-3 bg-red-50 dark:bg-red-950/40 border-2 border-red-500 dark:border-red-600 rounded-2xl flex items-center gap-2.5 shadow-xs">
                           <X className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 stroke-[3]" />
-                          <span className="flex-1 min-w-0 text-left font-bold text-base sm:text-lg text-red-900 dark:text-red-100 truncate">
+                          <span className="flex-1 min-w-0 text-left font-bold text-base sm:text-lg text-red-900 dark:text-red-100 break-words">
                             {practiceFeedback.userText || (en ? 'No answer' : 'Keine Antwort')}
                           </span>
                           {markChips(practiceFeedback.userMarks)}
@@ -3206,7 +3202,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       )}
                       <div className="w-full px-4 py-3 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500 dark:border-emerald-600 rounded-2xl flex items-center gap-2.5 shadow-xs">
                         <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 stroke-[3]" />
-                        <span className="flex-1 min-w-0 text-left font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 truncate">
+                        <span className="flex-1 min-w-0 text-left font-black text-base sm:text-lg text-emerald-900 dark:text-emerald-100 break-words">
                           {practiceFeedback.expected}
                         </span>
                         {markChips(practiceFeedback.marks)}

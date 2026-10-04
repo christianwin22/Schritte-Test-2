@@ -36,6 +36,8 @@ interface SentenceViewProps {
   onRequestAbandon: (onConfirmLeave: () => void) => void;
   onQuizActiveChange?: (isActive: boolean, progressIsSaved?: boolean) => void;
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  /** Tells the top bar a session is open, so its back arrow becomes ✕. */
+  onSessionOpenChange?: (open: boolean) => void;
   appLanguage?: AppLanguage;
 }
 
@@ -83,6 +85,7 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
   onRequestAbandon,
   onQuizActiveChange,
   backHandlerRef,
+  onSessionOpenChange,
   appLanguage = 'en',
 }) => {
   const en = appLanguage === 'en';
@@ -205,6 +208,11 @@ export const SentenceView: React.FC<SentenceViewProps> = ({
     onQuizActiveChange?.(inProgress, mode === 'review');
   }, [inProgress, mode, onQuizActiveChange]);
   useEffect(() => () => onQuizActiveChange?.(false), [onQuizActiveChange]);
+  const sessionOpen = started;
+  useEffect(() => {
+    onSessionOpenChange?.(sessionOpen);
+  }, [sessionOpen, onSessionOpenChange]);
+  useEffect(() => () => onSessionOpenChange?.(false), [onSessionOpenChange]);
 
   // Back arrow / title: out of a running session to the Start screen, asking first once answered.
   const leave = () => {

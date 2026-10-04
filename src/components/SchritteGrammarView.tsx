@@ -30,6 +30,8 @@ interface SchritteGrammarViewProps {
   onQuizActiveChange?: (isActive: boolean, progressIsSaved?: boolean) => void;
   /** The top bar's back arrow asks here first (Conjugation: back to its Start screen). */
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  /** Tells the top bar a session is open, so its back arrow becomes ✕. */
+  onSessionOpenChange?: (open: boolean) => void;
   /** Badges on Nominative and Accusative: lessons ready to practise, nouns due. */
   drillBadges?: Record<GrammarDrill, { waiting: number; due: number }>;
   appLanguage?: AppLanguage;
@@ -58,6 +60,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
   onRequestAbandon,
   onQuizActiveChange,
   backHandlerRef,
+  onSessionOpenChange,
   drillBadges,
   appLanguage = 'en',
 }) => {
@@ -481,6 +484,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
         onRequestAbandon={onRequestAbandon}
         onQuizActiveChange={onQuizActiveChange}
         backHandlerRef={backHandlerRef}
+        onSessionOpenChange={onSessionOpenChange}
         appLanguage={appLanguage}
       />
     );
@@ -497,6 +501,7 @@ export const SchritteGrammarView: React.FC<SchritteGrammarViewProps> = ({
         onRequestAbandon={onRequestAbandon}
         onQuizActiveChange={onQuizActiveChange}
         backHandlerRef={backHandlerRef}
+        onSessionOpenChange={onSessionOpenChange}
         appLanguage={appLanguage}
       />
     );

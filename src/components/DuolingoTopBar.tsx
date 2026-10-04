@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft, User, X } from 'lucide-react';
 import { playSound } from '../utils/audioEffects';
 import { AppLanguage, getTranslation } from '../utils/translations';
 import { AppLogo } from './AppLogo';
@@ -9,6 +9,8 @@ interface DuolingoTopBarProps {
   onOpenSettings?: () => void;
   canGoBack?: boolean;
   onBack?: () => void;
+  /** Inside a session: the back button is a ✕ (Close). */
+  closeMode?: boolean;
   onGoHome?: () => void;
   title?: string;
   /**
@@ -27,6 +29,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
   onOpenProfile,
   canGoBack,
   onBack,
+  closeMode,
   onGoHome,
   title,
   crumbs,
@@ -108,10 +111,14 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
                 }
               }}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white text-zinc-950 border border-zinc-300 dark:border-zinc-200 shadow-xs hover:bg-zinc-100 dark:hover:bg-zinc-100 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
-              title={appLanguage === 'en' ? 'Back' : 'Zurück'}
-              aria-label="Back"
+              title={closeMode ? (appLanguage === 'en' ? 'Close' : 'Schließen') : appLanguage === 'en' ? 'Back' : 'Zurück'}
+              aria-label={closeMode ? 'Close' : 'Back'}
             >
-              <ArrowLeft className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-zinc-950 stroke-[2.5]" />
+              {closeMode ? (
+                <X className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-zinc-950 stroke-[2.5]" />
+              ) : (
+                <ArrowLeft className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-zinc-950 stroke-[2.5]" />
+              )}
             </button>
           ) : (
             <button

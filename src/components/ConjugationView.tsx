@@ -39,6 +39,8 @@ interface ConjugationViewProps {
   onRequestAbandon: (onConfirmLeave: () => void) => void;
   onQuizActiveChange?: (isActive: boolean, progressIsSaved?: boolean) => void;
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  /** Tells the top bar a session is open, so its back arrow becomes ✕. */
+  onSessionOpenChange?: (open: boolean) => void;
   /**
    * A fixed set of verbs instead of a lesson (Auxiliary, Modal): no lesson bar,
    * and their review cards under their own prefix, apart from Präsens.
@@ -165,6 +167,7 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
   onRequestAbandon,
   onQuizActiveChange,
   backHandlerRef,
+  onSessionOpenChange,
   fixed,
   tense = 'present',
   appLanguage = 'en',
@@ -322,6 +325,11 @@ export const ConjugationView: React.FC<ConjugationViewProps> = ({
     onQuizActiveChange?.(inProgress, mode === 'review');
   }, [inProgress, mode, onQuizActiveChange]);
   useEffect(() => () => onQuizActiveChange?.(false), [onQuizActiveChange]);
+  const sessionOpen = mode !== 'learn' && started;
+  useEffect(() => {
+    onSessionOpenChange?.(sessionOpen);
+  }, [sessionOpen, onSessionOpenChange]);
+  useEffect(() => () => onSessionOpenChange?.(false), [onSessionOpenChange]);
 
   // Back arrow / title: out of a running Practice or Review to its Start screen.
   const leaveSession = () => {
