@@ -34,6 +34,7 @@ A1.1	Intro	verbinden
 A1.1	Intro	die Antwort
 A1.1	Intro	antworten
 A1.1	Lesson 1	was
+A1.1	Lesson 1	sprechen
 A1.1	Lesson 1	das Foto
 A1.1	Lesson 1	Guten Tag
 A1.1	Lesson 1	Auf Wiedersehen
@@ -128,8 +129,11 @@ A1.1	Lesson 2	die Pause
 A1.1	Lesson 2	der Park
 A1.1	Lesson 2	die Familie
 A1.1	Lesson 2	der Vater
+A1.1	Lesson 2	die Großeltern (Pl.)
 A1.1	Lesson 2	die Mutter
+A1.1	Lesson 2	die Eltern (Pl.)
 A1.1	Lesson 2	der Bruder
+A1.1	Lesson 2	die Geschwister (Pl.)
 A1.1	Lesson 2	das Jahr
 A1.1	Lesson 2	leben
 A1.1	Lesson 2	in
@@ -261,6 +265,7 @@ A1.1	Lesson 3	das Steak
 A1.1	Lesson 3	der Salat
 A1.1	Lesson 3	die Soße
 A1.1	Lesson 3	das Hähnchen
+A1.1	Lesson 3	die Pommes frites (Pl.)
 A1.1	Lesson 3	die Pizza
 A1.1	Lesson 3	das / die Cola
 A1.1	Lesson 3	der Durst
@@ -350,6 +355,7 @@ A1.1	Lesson 4	die Arbeit
 A1.1	Lesson 4	die Anzeige
 A1.1	Lesson 4	nett
 A1.1	Lesson 4	das Ehepaar
+A1.1	Lesson 4	suchen
 A1.1	Lesson 4	der Garten
 A1.1	Lesson 4	vermieten
 A1.1	Lesson 4	das Apartment
@@ -405,6 +411,7 @@ A1.1	Lesson 4	leer
 A1.1	Lesson 4	dreckig
 A1.1	Lesson 4	der Drucker
 A1.1	Lesson 5	bis
+A1.1	Lesson 5	machen
 A1.1	Lesson 5	die Präsentation
 A1.1	Lesson 5	frühstücken
 A1.1	Lesson 5	einkaufen
@@ -413,19 +420,23 @@ A1.1	Lesson 5	aufräumen
 A1.1	Lesson 5	aufstehen
 A1.1	Lesson 5	gehen
 A1.1	Lesson 5	oder
+A1.1	Lesson 5	arbeiten
 A1.1	Lesson 5	müde
 A1.1	Lesson 5	anrufen
 A1.1	Lesson 5	früh
 A1.1	Lesson 5	der Supermarkt
 A1.1	Lesson 5	fernsehen
 A1.1	Lesson 5	mit
+A1.1	Lesson 5	spielen
 A1.1	Lesson 5	spät
+A1.1	Lesson 5	schon
 A1.1	Lesson 5	erst
 A1.1	Lesson 5	das Viertel
 A1.1	Lesson 5	vor
 A1.1	Lesson 5	nach
 A1.1	Lesson 5	halb
 A1.1	Lesson 5	die Uhr
+A1.1	Lesson 5	zeichnen
 A1.1	Lesson 5	kurz
 A1.1	Lesson 5	gleich
 A1.1	Lesson 5	der Intensivkurs
@@ -461,6 +472,8 @@ A1.1	Lesson 5	der Abend
 A1.1	Lesson 5	die Nacht
 A1.1	Lesson 5	das Kino
 A1.1	Lesson 5	chatten
+A1.1	Lesson 5	hören
+A1.1	Lesson 5	raten
 A1.1	Lesson 5	jeder
 A1.1	Lesson 5	jedes
 A1.1	Lesson 5	jede
@@ -479,6 +492,7 @@ A1.1	Lesson 5	geöffnet
 A1.1	Lesson 5	das Schiff
 A1.1	Lesson 5	die Tour
 A1.1	Lesson 5	das Kaufhaus
+A1.1	Lesson 5	der Moment
 A1.1	Lesson 5	Europa
 A1.1	Lesson 5	kennenlernen (sich)
 A1.1	Lesson 5	die Abfahrt
@@ -563,6 +577,7 @@ A1.1	Lesson 6	fahren
 A1.1	Lesson 6	joggen
 A1.1	Lesson 6	schwimmen
 A1.1	Lesson 6	tanzen
+A1.1	Lesson 6	lesen
 A1.1	Lesson 6	der Spaß
 A1.1	Lesson 6	treffen
 A1.1	Lesson 6	grillen
@@ -604,6 +619,7 @@ A1.1	Lesson 7	Es ist warm.
 A1.1	Lesson 7	der Reifen
 A1.1	Lesson 7	weiter
 A1.1	Lesson 7	üben
+A1.1	Lesson 7	tragen
 A1.1	Lesson 7	schicken
 A1.1	Lesson 7	funktionieren
 A1.1	Lesson 7	der Kommentar
@@ -621,6 +637,7 @@ A1.1	Lesson 7	das Klavier
 A1.1	Lesson 7	senkrecht
 A1.1	Lesson 7	waagerecht
 A1.1	Lesson 7	wollen
+A1.1	Lesson 7	der Kurs
 A1.1	Lesson 7	der Stress
 A1.1	Lesson 7	die Kommunikation
 A1.1	Lesson 7	das Training
@@ -628,9 +645,12 @@ A1.1	Lesson 7	die Psychologie
 A1.1	Lesson 7	das Theater
 A1.1	Lesson 7	die Produktion
 A1.1	Lesson 7	die Mathematik
+A1.1	Lesson 7	die Ferien (Pl.)
+A1.1	Lesson 7	schreiben
 A1.1	Lesson 7	die Mathe
 A1.1	Lesson 7	noch
 A1.1	Lesson 7	gestern
+A1.1	Lesson 7	finden
 A1.1	Lesson 7	früher
 A1.1	Lesson 7	oft
 A1.1	Lesson 7	nach Hause
@@ -641,6 +661,7 @@ A1.1	Lesson 7	schwer
 A1.1	Lesson 7	cool
 A1.1	Lesson 7	die Zeitung
 A1.1	Lesson 7	meistens
+A1.1	Lesson 7	die Antwort
 A1.1	Lesson 7	leicht
 A1.1	Lesson 7	der Bus
 A1.1	Lesson 7	das Plakat
@@ -676,17 +697,22 @@ A1.2	Lesson 9	das Ziel
 A1.2	Lesson 9	wählen
 A1.2	Lesson 9	man
 A1.2	Lesson 9	zuerst
+A1.2	Lesson 9	danach
+A1.2	Lesson 9	dann
 A1.2	Lesson 9	der Schluss
 A1.2	Lesson 9	vorne
 A1.2	Lesson 9	der Laden
 A1.2	Lesson 9	abholen
+A1.2	Lesson 9	leise
 A1.2	Lesson 9	die Übung
 A1.2	Lesson 9	erklären
+A1.2	Lesson 9	laut
 A1.2	Lesson 9	ausmachen
 A1.2	Lesson 9	schließen
 A1.2	Lesson 9	öffnen
 A1.2	Lesson 9	zuhören
 A1.2	Lesson 9	der Text
+A1.2	Lesson 9	aufstehen
 A1.2	Lesson 9	pünktlich
 A1.2	Lesson 9	warten
 A1.2	Lesson 9	die Anmeldung
@@ -707,6 +733,7 @@ A1.2	Lesson 9	warum
 A1.2	Lesson 9	erlaubt (sein)
 A1.2	Lesson 9	verboten (sein)
 A1.2	Lesson 9	mitnehmen
+A1.2	Lesson 9	das Eis
 A1.2	Lesson 9	das Gepäck
 A1.2	Lesson 9	abgeben
 A1.2	Lesson 9	benutzen
@@ -728,6 +755,7 @@ A1.2	Lesson 9	der Stadtplan
 A1.2	Lesson 9	besuchen
 A1.2	Lesson 9	die Geburt
 A1.2	Lesson 9	die Ermäßigung
+A1.2	Lesson 9	die Senioren (Pl.)
 A1.2	Lesson 9	die Oper
 A1.2	Lesson 9	besichtigen
 A1.2	Lesson 9	die Führung
@@ -783,6 +811,7 @@ A1.2	Lesson 10	die Tablette
 A1.2	Lesson 10	beide
 A1.2	Lesson 10	lustig
 A1.2	Lesson 10	das Bein
+A1.2	Lesson 10	das Haar
 A1.2	Lesson 10	das Ohr
 A1.2	Lesson 10	der Arm
 A1.2	Lesson 10	der Bauch
@@ -798,6 +827,8 @@ A1.2	Lesson 10	der Mund
 A1.2	Lesson 10	der Zahn
 A1.2	Lesson 10	krank
 A1.2	Lesson 10	informieren
+A1.2	Lesson 10	sein-
+A1.2	Lesson 10	ihr-
 A1.2	Lesson 10	unser-
 A1.2	Lesson 10	ausfallen
 A1.2	Lesson 10	das Lied
@@ -819,6 +850,7 @@ A1.2	Lesson 10	das Fieber
 A1.2	Lesson 10	der Schnupfen
 A1.2	Lesson 10	der Wald
 A1.2	Lesson 10	dick
+A1.2	Lesson 10	die Leute (Pl.)
 A1.2	Lesson 10	nichts
 A1.2	Lesson 10	aufpassen
 A1.2	Lesson 10	das Fitness-Studio
@@ -854,6 +886,7 @@ A1.2	Lesson 11	die Apotheke
 A1.2	Lesson 11	die S-Bahn
 A1.2	Lesson 11	die Autobahn
 A1.2	Lesson 11	die Tankstelle
+A1.2	Lesson 11	der Platz
 A1.2	Lesson 11	die Brücke
 A1.2	Lesson 11	die Ampel
 A1.2	Lesson 11	rechts
@@ -867,6 +900,9 @@ A1.2	Lesson 11	fremd
 A1.2	Lesson 11	bedeuten
 A1.2	Lesson 11	okay
 A1.2	Lesson 11	der Bahnhof
+A1.2	Lesson 11	das Kino
+A1.2	Lesson 11	die Straße
+A1.2	Lesson 11	das Hotel
 A1.2	Lesson 11	die Metzgerei
 A1.2	Lesson 11	die Schule
 A1.2	Lesson 11	der Kindergarten
@@ -887,6 +923,7 @@ A1.2	Lesson 11	die Buchhandlung
 A1.2	Lesson 11	sitzen
 A1.2	Lesson 11	die Bücherei
 A1.2	Lesson 11	die Bäckerei
+A1.2	Lesson 11	der Baum
 A1.2	Lesson 11	die Bank
 A1.2	Lesson 11	an
 A1.2	Lesson 11	auf
@@ -925,6 +962,8 @@ A1.2	Lesson 11	die Durchsage
 A1.2	Lesson 11	der Anschluss
 A1.2	Lesson 11	hin und zurück
 A1.2	Lesson 11	der Fahrplan
+A1.2	Lesson 11	das Museum
+A1.2	Lesson 11	der Supermarkt
 A1.2	Lesson 11	der Fußballplatz
 A1.2	Lesson 12	die Tasche
 A1.2	Lesson 12	die Tüte
@@ -936,6 +975,7 @@ A1.2	Lesson 12	reparieren
 A1.2	Lesson 12	sauer
 A1.2	Lesson 12	unfreundlich
 A1.2	Lesson 12	normal
+A1.2	Lesson 12	die Kleider (Pl.)
 A1.2	Lesson 12	die Reparatur
 A1.2	Lesson 12	nähen
 A1.2	Lesson 12	das Mittagessen
@@ -947,9 +987,11 @@ A1.2	Lesson 12	vorbeibringen
 A1.2	Lesson 12	zurückgeben
 A1.2	Lesson 12	anmachen
 A1.2	Lesson 12	die Tür
+A1.2	Lesson 12	zumachen
 A1.2	Lesson 12	das Fenster
 A1.2	Lesson 12	aufmachen
 A1.2	Lesson 12	das Papier
+A1.2	Lesson 12	der Drucker
 A1.2	Lesson 12	das Licht
 A1.2	Lesson 12	die Bitte
 A1.2	Lesson 12	empfehlen
@@ -990,6 +1032,7 @@ A1.2	Lesson 12	die Laune
 A1.2	Lesson 13	die Jacke
 A1.2	Lesson 13	der Mantel
 A1.2	Lesson 13	dünn
+A1.2	Lesson 13	passen
 A1.2	Lesson 13	allein
 A1.2	Lesson 13	die Kleidung
 A1.2	Lesson 13	die Bluse
@@ -1010,13 +1053,16 @@ A1.2	Lesson 13	die (Sonnen-)Brille
 A1.2	Lesson 13	langweilig
 A1.2	Lesson 13	der (Regen-)Schirm
 A1.2	Lesson 13	perfekt
+A1.2	Lesson 13	stehen
 A1.2	Lesson 13	die Bratwurst
 A1.2	Lesson 13	die Landschaft
+A1.2	Lesson 13	der Berg
 A1.2	Lesson 13	das Dorf
 A1.2	Lesson 13	die Nordsee
 A1.2	Lesson 13	der Strand
 A1.2	Lesson 13	das Meer
 A1.2	Lesson 13	der Hafen
+A1.2	Lesson 13	besser
 A1.2	Lesson 13	am besten
 A1.2	Lesson 13	der Steward
 A1.2	Lesson 13	die Stewardess
@@ -1042,6 +1088,7 @@ A1.2	Lesson 13	der Ausgang
 A1.2	Lesson 13	der Eingang
 A1.2	Lesson 13	die Drogerie
 A1.2	Lesson 13	die Kosmetik
+A1.2	Lesson 13	die Uhr
 A1.2	Lesson 13	der Schmuck
 A1.2	Lesson 13	die Zeitschrift
 A1.2	Lesson 13	das Geschirr
@@ -1057,6 +1104,7 @@ A1.2	Lesson 14	das Ende
 A1.2	Lesson 14	der Geburtstag
 A1.2	Lesson 14	schenken
 A1.2	Lesson 14	traurig
+A1.2	Lesson 14	erzählen
 A1.2	Lesson 14	feiern
 A1.2	Lesson 14	der Abschied
 A1.2	Lesson 14	(sich) wünschen
@@ -1067,12 +1115,25 @@ A1.2	Lesson 14	enden
 A1.2	Lesson 14	erste
 A1.2	Lesson 14	zweite
 A1.2	Lesson 14	dritte
+A1.2	Lesson 14	der Januar
+A1.2	Lesson 14	der Februar
+A1.2	Lesson 14	der März
+A1.2	Lesson 14	der April
+A1.2	Lesson 14	der Mai
+A1.2	Lesson 14	der Juni
+A1.2	Lesson 14	der Juli
+A1.2	Lesson 14	der August
+A1.2	Lesson 14	der September
+A1.2	Lesson 14	der Oktober
+A1.2	Lesson 14	der November
+A1.2	Lesson 14	der Dezember
 A1.2	Lesson 14	die Blume
 A1.2	Lesson 14	der Karneval
 A1.2	Lesson 14	die Veranstaltung
 A1.2	Lesson 14	die Jahreszeit
 A1.2	Lesson 14	die Umfrage
 A1.2	Lesson 14	mitmachen
+A1.2	Lesson 14	der Feiertag
 A1.2	Lesson 14	die (Gruß-)Karte
 A1.2	Lesson 14	lieb
 A1.2	Lesson 14	lieb haben
@@ -1120,6 +1181,7 @@ A1.2	Lesson 14	stellen
 A1.2	Lesson 14	die Hochzeit
 A2.1	Lesson 1	ziehen
 A2.1	Lesson 1	glücklich
+A2.1	Lesson 1	ansehen
 A2.1	Lesson 1	klappen
 A2.1	Lesson 1	das Gefühl
 A2.1	Lesson 1	der Anfang
@@ -1129,7 +1191,9 @@ A2.1	Lesson 1	draußen
 A2.1	Lesson 1	der Arbeitgeber
 A2.1	Lesson 1	die Arbeitgeberin
 A2.1	Lesson 1	umziehen
+A2.1	Lesson 1	sagen
 A2.1	Lesson 1	der Umzug
+A2.1	Lesson 1	die Sachen (Pl.)
 A2.1	Lesson 1	einschlafen
 A2.1	Lesson 1	der Wecker
 A2.1	Lesson 1	schließlich
@@ -1149,6 +1213,7 @@ A2.1	Lesson 1	stoßen
 A2.1	Lesson 1	peinlich
 A2.1	Lesson 1	erfahren
 A2.1	Lesson 1	das Pech
+A2.1	Lesson 1	die Papiere (Pl.)
 A2.1	Lesson 1	der Verwandte
 A2.1	Lesson 1	die Verwandte
 A2.1	Lesson 1	der Onkel
@@ -1156,12 +1221,17 @@ A2.1	Lesson 1	die Tante
 A2.1	Lesson 1	der Cousin
 A2.1	Lesson 1	die Cousine
 A2.1	Lesson 1	der Neffe
+A2.1	Lesson 1	die Tochter
+A2.1	Lesson 1	die Schwester
 A2.1	Lesson 1	die Nichte
+A2.1	Lesson 1	der Bruder
+A2.1	Lesson 1	der Sohn
 A2.1	Lesson 1	sympathisch
 A2.1	Lesson 1	das Mitglied
 A2.1	Lesson 1	die Wohngemeinschaft (WG)
 A2.1	Lesson 1	wahrscheinlich
 A2.1	Lesson 1	verschieden
+A2.1	Lesson 1	das Viertel
 A2.1	Lesson 1	der Mieter
 A2.1	Lesson 1	die Mieterin
 A2.1	Lesson 1	einziehen
@@ -1179,12 +1249,16 @@ A2.1	Lesson 1	nun
 A2.1	Lesson 1	schwanger
 A2.1	Lesson 1	getrennt leben
 A2.1	Lesson 1	der Schwiegervater
+A2.1	Lesson 1	der Großvater
 A2.1	Lesson 1	die Rente
 A2.1	Lesson 1	pensioniert
 A2.1	Lesson 1	die Schwiegermutter
+A2.1	Lesson 1	die Großmutter
 A2.1	Lesson 1	der Schwager
 A2.1	Lesson 1	der Ehemann
+A2.1	Lesson 1	der Vater
 A2.1	Lesson 1	die Schwägerin
+A2.1	Lesson 1	die Mutter
 A2.1	Lesson 2	die Energie
 A2.1	Lesson 2	wechseln
 A2.1	Lesson 2	die Decke
@@ -1196,12 +1270,14 @@ A2.1	Lesson 2	die Kassette
 A2.1	Lesson 2	der Kugelschreiber
 A2.1	Lesson 2	stecken
 A2.1	Lesson 2	das Schloss
+A2.1	Lesson 2	das Bild
 A2.1	Lesson 2	die Wand
 A2.1	Lesson 2	legen
 A2.1	Lesson 2	die Ruhe
 A2.1	Lesson 2	das Schild
 A2.1	Lesson 2	stören
 A2.1	Lesson 2	wieder
+A2.1	Lesson 2	bauen
 A2.1	Lesson 2	dahin
 A2.1	Lesson 2	da
 A2.1	Lesson 2	die Pflanze
@@ -1246,6 +1322,7 @@ A2.1	Lesson 2	positiv
 A2.1	Lesson 2	nötig
 A2.1	Lesson 2	die Leitung
 A2.1	Lesson 2	recht haben
+A2.1	Lesson 2	das Land (Sg.)
 A2.1	Lesson 2	realistisch
 A2.1	Lesson 2	die Lösung
 A2.1	Lesson 2	verzichten
@@ -1254,6 +1331,7 @@ A2.1	Lesson 2	sicher
 A2.1	Lesson 2	die (Müll-)Tonne
 A2.1	Lesson 2	die Notiz
 A2.1	Lesson 2	das Waschmittel
+A2.1	Lesson 2	leer
 A2.1	Lesson 2	der Zettel
 A2.1	Lesson 2	das Spielzeug
 A2.1	Lesson 2	das Kostüm
@@ -1275,6 +1353,7 @@ A2.1	Lesson 3	vegetarisch
 A2.1	Lesson 3	die Gewohnheit
 A2.1	Lesson 3	übernehmen
 A2.1	Lesson 3	die Marmelade
+A2.1	Lesson 3	deutsch
 A2.1	Lesson 3	das Schwein
 A2.1	Lesson 3	der Alkohol
 A2.1	Lesson 3	zweimal
@@ -1285,6 +1364,7 @@ A2.1	Lesson 3	die Gabel
 A2.1	Lesson 3	das Quartett
 A2.1	Lesson 3	der Topf
 A2.1	Lesson 3	die Kanne
+A2.1	Lesson 3	das Glas
 A2.1	Lesson 3	die Schüssel
 A2.1	Lesson 3	die Pfanne
 A2.1	Lesson 3	die Spülmaschine
@@ -1319,6 +1399,7 @@ A2.1	Lesson 3	regional
 A2.1	Lesson 3	das Produkt
 A2.1	Lesson 3	die Umgebung
 A2.1	Lesson 3	die Fabrik
+A2.1	Lesson 3	gegen
 A2.1	Lesson 3	planen
 A2.1	Lesson 3	zufrieden
 A2.1	Lesson 3	das Schnitzel
@@ -1403,6 +1484,10 @@ A2.1	Lesson 4	die Angestellte
 A2.1	Lesson 4	insgesamt
 A2.1	Lesson 4	gelten
 A2.1	Lesson 4	mindestens
+A2.1	Lesson 5	genug
+A2.1	Lesson 5	der Tanz
+A2.1	Lesson 5	der Basketball (Sg.)
+A2.1	Lesson 5	statt·finden
 A2.1	Lesson 5	(sich) fühlen
 A2.1	Lesson 5	das Video
 A2.1	Lesson 5	hin·fallen
@@ -1429,6 +1514,8 @@ A2.1	Lesson 5	(sich) beeilen
 A2.1	Lesson 5	(sich) konzentrieren (auf)
 A2.1	Lesson 5	(sich) beschweren (über)
 A2.1	Lesson 5	überhaupt
+A2.1	Lesson 5	die Geschichte
+A2.1	Lesson 5	die Nachrichten (Pl.)
 A2.1	Lesson 5	die Weltmeisterschaft
 A2.1	Lesson 5	die Wettervorhersage
 A2.1	Lesson 5	die Mannschaft
@@ -1437,8 +1524,10 @@ A2.1	Lesson 5	(sich) kümmern um
 A2.1	Lesson 5	träumen von
 A2.1	Lesson 5	die Angst
 A2.1	Lesson 5	ehrlich
+A2.1	Lesson 5	das Gold
 A2.1	Lesson 5	(sich) erinnern an
 A2.1	Lesson 5	denken an
+A2.1	Lesson 5	die Ferien (Pl.)
 A2.1	Lesson 5	die Gymnastik
 A2.1	Lesson 5	das Tischtennis
 A2.1	Lesson 5	der Volleyball
@@ -1475,8 +1564,13 @@ A2.1	Lesson 5	klar
 A2.1	Lesson 5	selbstverständlich
 A2.1	Lesson 5	übertreiben
 A2.1	Lesson 5	Fußball spielen
+A2.1	Lesson 5	Ski fahren
+A2.1	Lesson 5	joggen
 A2.1	Lesson 5	Basketball spielen
 A2.1	Lesson 5	Eishockey spielen
+A2.1	Lesson 5	Fahrrad fahren
+A2.1	Lesson 5	schwimmen
+A2.1	Lesson 5	tanzen
 A2.1	Lesson 6	die Karriere
 A2.1	Lesson 6	das (Schul-)Fach
 A2.1	Lesson 6	die Note
@@ -1495,6 +1589,8 @@ A2.1	Lesson 6	(sich) streiten
 A2.1	Lesson 6	(sich) verbessern
 A2.1	Lesson 6	das Verhalten
 A2.1	Lesson 6	streng
+A2.1	Lesson 6	der Wunsch
+A2.1	Lesson 6	der Plan
 A2.1	Lesson 6	der Friseur
 A2.1	Lesson 6	die Friseurin
 A2.1	Lesson 6	der Jugendliche
@@ -1519,10 +1615,13 @@ A2.1	Lesson 6	die Grundschule
 A2.1	Lesson 6	der Mechatroniker
 A2.1	Lesson 6	die Mechatronikerin
 A2.1	Lesson 6	die Physik
+A2.1	Lesson 6	die Musik
 A2.1	Lesson 6	die Biologie
 A2.1	Lesson 6	die Chemie
 A2.1	Lesson 6	die Geografie
 A2.1	Lesson 6	die Kunst
+A2.1	Lesson 6	die Geschichte
+A2.1	Lesson 6	der Sport
 A2.1	Lesson 6	die Sozialkunde
 A2.1	Lesson 6	echt
 A2.1	Lesson 6	hassen
@@ -1538,6 +1637,7 @@ A2.1	Lesson 6	löschen
 A2.1	Lesson 6	die Festplatte
 A2.1	Lesson 6	die Voraussetzung
 A2.1	Lesson 6	die Politik
+A2.1	Lesson 6	die Wirtschaft
 A2.1	Lesson 6	die Kultur
 A2.1	Lesson 6	der Vortrag
 A2.1	Lesson 6	(sich) bewerben
@@ -1564,6 +1664,7 @@ A2.1	Lesson 6	der Verkehr
 A2.1	Lesson 6	(sich) verletzen
 A2.1	Lesson 6	bluten
 A2.1	Lesson 6	der Notarzt
+A2.1	Lesson 6	der Traum
 A2.1	Lesson 6	unbedingt
 A2.1	Lesson 6	nebenbei
 A2.1	Lesson 6	die Heimat
@@ -1586,9 +1687,12 @@ A2.1	Lesson 7	basteln
 A2.1	Lesson 7	entscheiden
 A2.1	Lesson 7	das Baby
 A2.1	Lesson 7	die Kette
+A2.1	Lesson 7	die DVD
 A2.1	Lesson 7	die Puppe
 A2.1	Lesson 7	das Motorrad
 A2.1	Lesson 7	der Geldbeutel
+A2.1	Lesson 7	die Schokolade
+A2.1	Lesson 7	das Buch
 A2.1	Lesson 7	die Creme
 A2.1	Lesson 7	das Parfüm
 A2.1	Lesson 7	probieren
@@ -1655,6 +1759,7 @@ A2.2	Lesson 8	die Teilnahme
 A2.2	Lesson 8	auf·treten
 A2.2	Lesson 8	der Jazz
 A2.2	Lesson 8	die Bahn
+A2.2	Lesson 8	offen
 A2.2	Lesson 8	die Volkshochschule
 A2.2	Lesson 8	die Fotografie
 A2.2	Lesson 8	erforderlich
@@ -1676,6 +1781,7 @@ A2.2	Lesson 9	scheußlich
 A2.2	Lesson 9	gucken
 A2.2	Lesson 9	schauen
 A2.2	Lesson 9	der Bikini
+A2.2	Lesson 9	die Kamera
 A2.2	Lesson 9	die Brieftasche
 A2.2	Lesson 9	das Feuerzeug
 A2.2	Lesson 9	hübsch
@@ -1690,11 +1796,17 @@ A2.2	Lesson 9	die Qualität
 A2.2	Lesson 9	das Besteck
 A2.2	Lesson 9	das Metall
 A2.2	Lesson 9	der Stoff
+A2.2	Lesson 9	das Holz
+A2.2	Lesson 9	das Plastik
+A2.2	Lesson 9	die Lampe
+A2.2	Lesson 9	das Glas
+A2.2	Lesson 9	das Papier
 A2.2	Lesson 9	der Rucksack
 A2.2	Lesson 9	der Hut
 A2.2	Lesson 9	die Liebe
 A2.2	Lesson 9	der Roman
 A2.2	Lesson 9	spannend
+A2.2	Lesson 9	als
 A2.2	Lesson 9	der Pudding
 A2.2	Lesson 9	das Schaufenster
 A2.2	Lesson 9	vor·schlagen
@@ -1713,10 +1825,12 @@ A2.2	Lesson 9	damals
 A2.2	Lesson 9	deshalb
 A2.2	Lesson 9	froh
 A2.2	Lesson 9	drin
+A2.2	Lesson 9	die Schüssel
 A2.2	Lesson 10	der Briefumschlag
 A2.2	Lesson 10	die Postkarte
 A2.2	Lesson 10	die Schere
 A2.2	Lesson 10	verschicken
+A2.2	Lesson 10	das Handy
 A2.2	Lesson 10	ordentlich
 A2.2	Lesson 10	die Sendung
 A2.2	Lesson 10	die Sorge
@@ -1755,6 +1869,7 @@ A2.2	Lesson 10	hoffen
 A2.2	Lesson 10	versprechen
 A2.2	Lesson 10	vor·kommen
 A2.2	Lesson 10	das Netzwerk
+A2.2	Lesson 10	die E-Mail
 A2.2	Lesson 10	testen
 A2.2	Lesson 10	das Wissen
 A2.2	Lesson 10	das Quiz
@@ -1780,6 +1895,7 @@ A2.2	Lesson 11	gegenüber
 A2.2	Lesson 11	die Richtung
 A2.2	Lesson 11	der Fluss
 A2.2	Lesson 11	die Kreuzung
+A2.2	Lesson 11	die Autobahn
 A2.2	Lesson 11	ab·biegen
 A2.2	Lesson 11	die Ausfahrt
 A2.2	Lesson 11	der Stau
@@ -1845,14 +1961,21 @@ A2.2	Lesson 11	reden
 A2.2	Lesson 11	der Unterschied
 A2.2	Lesson 11	beachten
 A2.2	Lesson 11	das Tempo
+A2.2	Lesson 12	die Ostsee (Sg.)
+A2.2	Lesson 12	begeistert
 A2.2	Lesson 12	die Unterkunft
 A2.2	Lesson 12	die Küste
+A2.2	Lesson 12	die Aktivität
 A2.2	Lesson 12	das Gebirge
+A2.2	Lesson 12	Luxemburg
+A2.2	Lesson 12	baden
+A2.2	Lesson 12	der Sand (Sg.)
 A2.2	Lesson 12	kühl
 A2.2	Lesson 12	die Kuh
 A2.2	Lesson 12	das Pferd
 A2.2	Lesson 12	das Schaf
 A2.2	Lesson 12	umsonst
+A2.2	Lesson 12	das Boot
 A2.2	Lesson 12	das Festival
 A2.2	Lesson 12	trocken
 A2.2	Lesson 12	die Pension
@@ -1860,6 +1983,7 @@ A2.2	Lesson 12	das Camping
 A2.2	Lesson 12	das Tal
 A2.2	Lesson 12	die Wiese
 A2.2	Lesson 12	romantisch
+A2.2	Lesson 12	das Schloss
 A2.2	Lesson 12	zahlreich
 A2.2	Lesson 12	die Übernachtung
 A2.2	Lesson 12	die Jugendherberge
@@ -1883,6 +2007,7 @@ A2.2	Lesson 12	eine Reise buchen
 A2.2	Lesson 12	eine Stadtführung machen
 A2.2	Lesson 12	die Spezialistin
 A2.2	Lesson 12	die Altstadt besichtigen
+A2.2	Lesson 12	die Auskunft
 A2.2	Lesson 13	der Betrag
 A2.2	Lesson 13	das Girokonto
 A2.2	Lesson 13	beantworten
@@ -1897,6 +2022,7 @@ A2.2	Lesson 13	der Zoll
 A2.2	Lesson 13	der Staat
 A2.2	Lesson 13	bar
 A2.2	Lesson 13	sondern
+A2.2	Lesson 13	die Zinsen (Pl.)
 A2.2	Lesson 13	das Bargeld
 A2.2	Lesson 13	das Taschengeld
 A2.2	Lesson 13	erledigen
@@ -1914,6 +2040,7 @@ A2.2	Lesson 13	erreichen
 A2.2	Lesson 13	renovieren
 A2.2	Lesson 13	schneiden
 A2.2	Lesson 13	die Bremse
+A2.2	Lesson 13	die Kosten (Pl.)
 A2.2	Lesson 13	der Artikel
 A2.2	Lesson 13	mitten
 A2.2	Lesson 13	arm
@@ -1941,6 +2068,7 @@ A2.2	Lesson 14	zuletzt
 A2.2	Lesson 14	versorgen
 A2.2	Lesson 14	tot
 A2.2	Lesson 14	die Kindheit
+A2.2	Lesson 14	die Zukunft
 A2.2	Lesson 14	nebenan
 A2.2	Lesson 14	derselbe
 A2.2	Lesson 14	dieselbe
@@ -1953,6 +2081,10 @@ A2.2	Lesson 14	seitdem
 A2.2	Lesson 14	einzig-
 A2.2	Lesson 14	das Gegenteil
 A2.2	Lesson 14	das Paar
+A2.2	Lesson 14	der Streit
+A2.2	Lesson 14	die Entscheidung
+A2.2	Lesson 14	die Umfrage
+A2.2	Lesson 14	die Welt
 A2.2	Lesson 14	die Erziehung
 A2.2	Lesson 14	der Ratschlag
 A2.2	Lesson 14	die Maus
@@ -1982,7 +2114,11 @@ B1.1	Lesson 1	mutig
 B1.1	Lesson 1	weg sein
 B1.1	Lesson 1	die Religion
 B1.1	Lesson 1	die Meldung
+B1.1	Lesson 1	das Interview
 B1.1	Lesson 1	die Überschrift
+B1.1	Lesson 1	die Information
+B1.1	Lesson 1	der Artikel
+B1.1	Lesson 1	die Anzeige
 B1.1	Lesson 1	während
 B1.1	Lesson 1	verschwinden
 B1.1	Lesson 1	der Rentner
@@ -2033,12 +2169,14 @@ B1.1	Lesson 1	deutlich
 B1.1	Lesson 1	das Verhältnis
 B1.1	Lesson 1	die Metropole
 B1.1	Lesson 1	unterstützen
+B1.1	Lesson 1	unbekannt
 B1.1	Lesson 1	der Bericht
 B1.1	Lesson 1	die Mitternacht
 B1.1	Lesson 1	der Stein
 B1.1	Lesson 1	der Löwe
 B1.1	Lesson 2	die Serie
 B1.1	Lesson 2	die Folge
+B1.1	Lesson 2	das Kino
 B1.1	Lesson 2	der Charakter
 B1.1	Lesson 2	obwohl
 B1.1	Lesson 2	dauernd
@@ -2098,10 +2236,12 @@ B1.1	Lesson 2	begegnen
 B1.1	Lesson 2	das Abenteuer
 B1.1	Lesson 2	sich erfüllen
 B1.1	Lesson 2	zustimmen
+B1.1	Lesson 2	die Medien (Pl.)
 B1.1	Lesson 2	knapp
 B1.1	Lesson 2	der Rundfunk
 B1.1	Lesson 2	relativ
 B1.1	Lesson 3	der Magen
+B1.1	Lesson 3	meinen
 B1.1	Lesson 3	überreden
 B1.1	Lesson 3	das Mittel
 B1.1	Lesson 3	der Schlaf
@@ -2123,6 +2263,7 @@ B1.1	Lesson 3	tagsüber
 B1.1	Lesson 3	extrem
 B1.1	Lesson 3	die Wunde
 B1.1	Lesson 3	der Verband
+B1.1	Lesson 3	das Pflaster
 B1.1	Lesson 3	das Insekt
 B1.1	Lesson 3	behandeln
 B1.1	Lesson 3	der Abfalleimer
@@ -2140,6 +2281,12 @@ B1.1	Lesson 3	die Schulter
 B1.1	Lesson 3	die Sprechstunde
 B1.1	Lesson 3	vermuten
 B1.1	Lesson 3	das Schmerzmittel
+B1.1	Lesson 3	führen
+B1.1	Lesson 3	die Salbe
+B1.1	Lesson 3	der Schnupfen
+B1.1	Lesson 3	das Fieber
+B1.1	Lesson 3	der Husten
+B1.1	Lesson 3	der Schmerz
 B1.1	Lesson 3	verschreiben
 B1.1	Lesson 3	erhalten
 B1.1	Lesson 3	die Realität
@@ -2152,13 +2299,17 @@ B1.1	Lesson 3	abnehmen
 B1.1	Lesson 3	integrieren
 B1.1	Lesson 3	treiben
 B1.1	Lesson 3	die Hälfte
+B1.1	Lesson 3	das Viertel
 B1.1	Lesson 3	das Drittel
 B1.1	Lesson 3	grundsätzlich
+B1.1	Lesson 3	die Frucht
 B1.1	Lesson 3	der Quark
 B1.1	Lesson 3	das Vitamin
 B1.1	Lesson 3	der Unsinn
 B1.1	Lesson 3	das Gewicht
 B1.1	Lesson 3	verbrauchen
+B1.1	Lesson 3	untersuchen
+B1.1	Lesson 3	impfen
 B1.1	Lesson 4	worüber
 B1.1	Lesson 4	die Eile
 B1.1	Lesson 4	der Keller
@@ -2179,6 +2330,7 @@ B1.1	Lesson 4	die Präsidentin
 B1.1	Lesson 4	das Portemonnaie
 B1.1	Lesson 4	fließend
 B1.1	Lesson 4	die Fremdsprache
+B1.1	Lesson 4	die Sprachenschule
 B1.1	Lesson 4	darum
 B1.1	Lesson 4	übersetzen
 B1.1	Lesson 4	die Muttersprache
@@ -2191,6 +2343,7 @@ B1.1	Lesson 4	noch mal
 B1.1	Lesson 4	die Wiederholung
 B1.1	Lesson 4	jahrelang
 B1.1	Lesson 4	sich anstrengen
+B1.1	Lesson 4	die Aussprache
 B1.1	Lesson 4	der Spiegel
 B1.1	Lesson 4	die Trennung
 B1.1	Lesson 4	ausschließlich
@@ -2199,8 +2352,10 @@ B1.1	Lesson 4	die Autorin
 B1.1	Lesson 4	erziehen
 B1.1	Lesson 4	unterscheiden
 B1.1	Lesson 4	der Dialekt
+B1.1	Lesson 4	vergleichen
 B1.1	Lesson 4	stammen
 B1.1	Lesson 4	die Schrift
+B1.1	Lesson 4	die Kenntnisse (Pl.)
 B1.1	Lesson 5	der Ausbildungsplatz
 B1.1	Lesson 5	zu
 B1.1	Lesson 5	Video-
@@ -2232,6 +2387,7 @@ B1.1	Lesson 5	spätestens
 B1.1	Lesson 5	die Vorbereitung
 B1.1	Lesson 5	die Sicherheit
 B1.1	Lesson 5	der Zeitpunkt
+B1.1	Lesson 5	rechnen
 B1.1	Lesson 5	sich beruhigen
 B1.1	Lesson 5	technisch
 B1.1	Lesson 5	herein-, rein-
@@ -2254,12 +2410,27 @@ B1.1	Lesson 5	sich überlegen
 B1.1	Lesson 5	anwenden
 B1.1	Lesson 5	sinnvoll
 B1.1	Lesson 5	die Wanderung
+B1.1	Lesson 5	der Hausmeister
 B1.1	Lesson 5	der Lehrer
+B1.1	Lesson 5	der Arzt
 B1.1	Lesson 5	die Lehrerin
+B1.1	Lesson 5	die Ärztin
+B1.1	Lesson 5	die Hausmeisterin
+B1.1	Lesson 5	der Architekt
+B1.1	Lesson 5	der Friseur
+B1.1	Lesson 5	der Journalist
+B1.1	Lesson 5	die Architektin
+B1.1	Lesson 5	die Friseurin
+B1.1	Lesson 5	die Journalistin
+B1.1	Lesson 5	der Krankenpfleger
+B1.1	Lesson 5	der Polizist
+B1.1	Lesson 5	die Polizistin
+B1.1	Lesson 5	die Krankenschwester
 B1.1	Lesson 5	der Verkäufer
 B1.1	Lesson 5	die Verkäuferin
 B1.1	Lesson 6	statt
 B1.1	Lesson 6	erst-
+B1.1	Lesson 6	bestimmt
 B1.1	Lesson 6	das Geheimnis
 B1.1	Lesson 6	die Änderung
 B1.1	Lesson 6	damit
@@ -2308,13 +2479,25 @@ B1.1	Lesson 6	jedoch
 B1.1	Lesson 6	fordern
 B1.1	Lesson 6	enttäuschen
 B1.1	Lesson 6	auffordern
+B1.1	Lesson 6	der Betrieb
+B1.1	Lesson 6	der Handel
+B1.1	Lesson 6	die Firma
+B1.1	Lesson 6	die Produktion
+B1.1	Lesson 6	überzeugen
 B1.1	Lesson 7	vermutlich
+B1.1	Lesson 7	das Gericht
 B1.1	Lesson 7	der Prozess
 B1.1	Lesson 7	brennen
 B1.1	Lesson 7	der Lärm
 B1.1	Lesson 7	der Rechtsanwalt
 B1.1	Lesson 7	die Rechtsanwältin
 B1.1	Lesson 7	das Grundstück
+B1.1	Lesson 7	der Keller
+B1.1	Lesson 7	die Treppe
+B1.1	Lesson 7	der Lift
+B1.1	Lesson 7	die Terrasse
+B1.1	Lesson 7	der Balkon
+B1.1	Lesson 7	der Garten
 B1.1	Lesson 7	verdächtigen
 B1.1	Lesson 7	die Wirklichkeit
 B1.1	Lesson 7	der Rasen
@@ -2323,6 +2506,7 @@ B1.1	Lesson 7	das Bundesland
 B1.1	Lesson 7	der Anwalt
 B1.1	Lesson 7	die Anwältin
 B1.1	Lesson 7	entweder ... oder
+B1.1	Lesson 7	zentral
 B1.1	Lesson 7	die Pflicht
 B1.1	Lesson 7	das Eigentum
 B1.1	Lesson 7	hinterlassen
@@ -2358,6 +2542,7 @@ B1.1	Lesson 7	die Schwierigkeit
 B1.1	Lesson 7	abhängen
 B1.1	Lesson 7	der Nachteil
 B1.1	Lesson 7	erfordern
+B1.1	Lesson 7	Griechenland
 B1.1	Lesson 7	neulich
 B1.1	Lesson 7	das Zuhause
 B1.1	Lesson 7	umso
@@ -2366,9 +2551,14 @@ B1.1	Lesson 7	die Seite
 B1.1	Lesson 7	sich gewöhnen
 B1.1	Lesson 7	gemütlich
 B1.1	Lesson 7	verteilen
+B1.1	Lesson 7	das Dach
+B1.1	Lesson 7	die Tür
+B1.1	Lesson 7	das Haus
+B1.1	Lesson 7	das Fenster
 B1.2	Lesson 8	der Sportler
 B1.2	Lesson 8	die Sportlerin
 B1.2	Lesson 8	falls
+B1.2	Lesson 8	der Chat
 B1.2	Lesson 8	sich wenden
 B1.2	Lesson 8	die Grenze
 B1.2	Lesson 8	plötzlich
@@ -2386,6 +2576,7 @@ B1.2	Lesson 8	je
 B1.2	Lesson 8	desto
 B1.2	Lesson 8	je … desto
 B1.2	Lesson 8	die Freundschaft
+B1.2	Lesson 8	die Karriere
 B1.2	Lesson 8	der Einfluss
 B1.2	Lesson 8	warnen
 B1.2	Lesson 8	der Arbeitsplatz
@@ -2408,14 +2599,19 @@ B1.2	Lesson 8	außer
 B1.2	Lesson 8	das Betriebsklima
 B1.2	Lesson 8	siezen
 B1.2	Lesson 8	die Arbeitsatmosphäre
+B1.2	Lesson 8	die Distanz
 B1.2	Lesson 9	virtuell
+B1.2	Lesson 9	der Computer
+B1.2	Lesson 9	die Festplatte
 B1.2	Lesson 9	der Ordner
 B1.2	Lesson 9	die Datei
 B1.2	Lesson 9	die Kopie
 B1.2	Lesson 9	das/der Virus
+B1.2	Lesson 9	erstellen
 B1.2	Lesson 9	der Monitor
 B1.2	Lesson 9	(he)runterladen
 B1.2	Lesson 9	anschließen
+B1.2	Lesson 9	löschen
 B1.2	Lesson 9	die Tastatur
 B1.2	Lesson 9	anklicken
 B1.2	Lesson 9	der Gott
@@ -2474,6 +2670,9 @@ B1.2	Lesson 10	sowohl … als auch
 B1.2	Lesson 10	weder … noch
 B1.2	Lesson 10	die Limonade
 B1.2	Lesson 10	die Lieferung
+B1.2	Lesson 10	der Fachmann
+B1.2	Lesson 10	die Fachfrau
+B1.2	Lesson 10	der Mangel
 B1.2	Lesson 10	das Zelt
 B1.2	Lesson 10	wegwerfen
 B1.2	Lesson 10	der Hersteller
@@ -2521,8 +2720,11 @@ B1.2	Lesson 10	der Kanal
 B1.2	Lesson 10	der Rand
 B1.2	Lesson 10	wecken
 B1.2	Lesson 10	schweigen
+B1.2	Lesson 10	die Beratung
+B1.2	Lesson 10	bestellen
 B1.2	Lesson 11	der Bauer
 B1.2	Lesson 11	betrügen
+B1.2	Lesson 11	lügen
 B1.2	Lesson 11	illegal
 B1.2	Lesson 11	anzeigen
 B1.2	Lesson 11	bestrafen
@@ -2616,13 +2818,18 @@ B1.2	Lesson 12	anerkennen
 B1.2	Lesson 12	die Integration
 B1.2	Lesson 12	hinweisen
 B1.2	Lesson 12	die Bürgerinitiative
+B1.2	Lesson 12	das Mitglied
+B1.2	Lesson 12	die Betreuung
 B1.2	Lesson 12	das Verfallsdatum
 B1.2	Lesson 12	die Kälte
 B1.2	Lesson 12	ökologisch
 B1.2	Lesson 12	das Altenheim
 B1.2	Lesson 12	die Einrichtung
+B1.2	Lesson 12	die Gesellschaft
+B1.2	Lesson 12	unterstützen
 B1.2	Lesson 12	egoistisch
 B1.2	Lesson 12	sich einsetzen
+B1.2	Lesson 12	der Verein
 B1.2	Lesson 12	der Umweltschutz
 B1.2	Lesson 12	der Friede
 B1.2	Lesson 12	fröhlich
@@ -2664,6 +2871,7 @@ B1.2	Lesson 13	die Demonstration
 B1.2	Lesson 13	die Gewerkschaft
 B1.2	Lesson 13	das Zeichen
 B1.2	Lesson 13	politisch
+B1.2	Lesson 13	wählen
 B1.2	Lesson 13	fair
 B1.2	Lesson 13	der Hof
 B1.2	Lesson 13	protestieren
@@ -2675,7 +2883,9 @@ B1.2	Lesson 13	die Mauer
 B1.2	Lesson 13	der Bundeskanzler
 B1.2	Lesson 13	die Bundeskanzlerin
 B1.2	Lesson 13	die Regierung
+B1.2	Lesson 13	der Präsident
 B1.2	Lesson 13	die Macht
+B1.2	Lesson 13	die Präsidentin
 B1.2	Lesson 13	die Zone
 B1.2	Lesson 13	die Freiheit
 B1.2	Lesson 13	blühen
@@ -2707,4 +2917,12 @@ B1.2	Lesson 14	die Fläche
 B1.2	Lesson 14	der Kontinent
 B1.2	Lesson 14	die EU
 B1.2	Lesson 14	die Demokratie
+B1.2	Lesson 14	das Gewürz
+B1.2	Lesson 14	zubereiten
+B1.2	Lesson 14	das Rezept
+B1.2	Lesson 14	der Nachtisch
 B1.2	Lesson 14	die Zutat
+B1.2	Lesson 14	kochen
+B1.2	Lesson 14	das Gericht
+B1.2	Lesson 14	der Kuchen
+B1.2	Lesson 14	backen

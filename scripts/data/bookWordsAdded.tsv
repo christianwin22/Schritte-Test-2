@@ -1,0 +1,219 @@
+volume	lesson	word	after	book_position	from
+A1.1	Lesson 1	sprechen	was	176:0.418	A1.1/0 sprechen
+A1.1	Lesson 2	die Großeltern (Pl.)	der Vater	178:0.381	new
+A1.1	Lesson 2	die Eltern (Pl.)	die Mutter	178:0.426	new
+A1.1	Lesson 2	die Geschwister (Pl.)	der Bruder	178:0.487	new
+A1.1	Lesson 3	die Pommes frites (Pl.)	das Hähnchen	183:0.353	new
+A1.1	Lesson 4	suchen	das Ehepaar	187:0.189	A1.1/0 suchen
+A1.1	Lesson 5	machen	bis	189:0.567	A1.1/0 machen
+A1.1	Lesson 5	arbeiten	oder	189:0.847	A1.1/0 arbeiten
+A1.1	Lesson 5	spielen	mit	190:0.275	A1.1/0 spielen
+A1.1	Lesson 5	schon	spät	190:0.352	A1.1/2 schon
+A1.1	Lesson 5	zeichnen	die Uhr	190:0.507	A1.1/0 zeichnen
+A1.1	Lesson 5	hören	chatten	191:0.651	A1.1/0 hören
+A1.1	Lesson 5	raten	chatten	191:0.674	A1.1/0 raten
+A1.1	Lesson 5	der Moment	das Kaufhaus	192:0.444	A1.1/1 der Moment
+A1.1	Lesson 6	lesen	tanzen	195:0.773	A1.1/0 lesen
+A1.1	Lesson 7	tragen	üben	197:0.690	A1.2/13 tragen
+A1.1	Lesson 7	der Kurs	wollen	198:0.320	A1.1/0 der Kurs
+A1.1	Lesson 7	die Ferien (Pl.)	die Mathematik	198:0.600	new
+A1.1	Lesson 7	schreiben	die Mathematik	198:0.654	A1.1/0 schreiben
+A1.1	Lesson 7	finden	gestern	198:0.721	A1.1/4 finden
+A1.1	Lesson 7	die Antwort	meistens	199:0.299	A1.1/0 die Antwort
+A1.2	Lesson 9	das Eis	mitnehmen	182:0.334	A1.1/3 das Eis
+A1.2	Lesson 9	leise	abholen	181:0.208	A1.1/4 leise
+A1.2	Lesson 9	laut	erklären	181:0.285	A1.1/4 laut
+A1.2	Lesson 9	aufstehen	der Text	181:0.441	A1.1/5 aufstehen
+A1.2	Lesson 9	danach	zuerst	180:0.772	A1.2/8 danach
+A1.2	Lesson 9	dann	zuerst	180:0.793	A1.1/3 dann
+A1.2	Lesson 9	die Senioren (Pl.)	die Ermäßigung	183:0.385	new
+A1.2	Lesson 10	das Haar	das Bein	185:0.706	new
+A1.2	Lesson 10	sein-	informieren	186:0.213	new
+A1.2	Lesson 10	ihr-	informieren	186:0.236	new
+A1.2	Lesson 10	die Leute (Pl.)	dick	187:0.218	new
+A1.2	Lesson 11	der Baum	die Bäckerei	190:0.443	new
+A1.2	Lesson 11	das Museum	der Fahrplan	192:0.160	A1.1/5 das Museum
+A1.2	Lesson 11	die Straße	der Bahnhof	192:0.190	A1.1/1 die Straße
+A1.2	Lesson 11	der Supermarkt	der Fahrplan	192:0.169	A1.1/5 der Supermarkt
+A1.2	Lesson 11	das Kino	der Bahnhof	192:0.184	A1.1/5 das Kino
+A1.2	Lesson 11	das Hotel	der Bahnhof	192:0.199	A1.2/9 das Hotel
+A1.2	Lesson 11	der Platz	die Tankstelle	192:0.245	new
+A1.2	Lesson 12	der Drucker	das Papier	193:0.574	A1.1/4 der Drucker
+A1.2	Lesson 12	zumachen	die Tür	193:0.430	A1.2/11 zumachen
+A1.2	Lesson 12	die Kleider (Pl.)	normal	192:0.734	new
+A1.2	Lesson 13	passen	dünn	195:0.567	A1.1/5 passen
+A1.2	Lesson 13	stehen	perfekt	196:0.392	new
+A1.2	Lesson 13	besser	der Hafen	196:0.657	new
+A1.2	Lesson 13	der Berg	die Landschaft	196:0.471	A1.1/6 der Berg
+A1.2	Lesson 13	die Uhr	die Kosmetik	197:0.689	A1.1/5 die Uhr
+A1.2	Lesson 14	der Feiertag	mitmachen	200:0.282	A1.1/5 der Feiertag
+A1.2	Lesson 14	der Januar	dritte	199:0.461	A1.1/5 der Januar
+A1.2	Lesson 14	der Februar	dritte	199:0.483	A1.1/5 der Februar
+A1.2	Lesson 14	der März	dritte	199:0.518	A1.1/5 der März
+A1.2	Lesson 14	der April	dritte	199:0.555	A1.1/5 der April
+A1.2	Lesson 14	der Mai	dritte	199:0.576	A1.1/5 der Mai
+A1.2	Lesson 14	der Juni	dritte	199:0.597	A1.1/5 der Juni
+A1.2	Lesson 14	der Juli	dritte	199:0.618	A1.1/5 der Juli
+A1.2	Lesson 14	der August	dritte	199:0.638	A1.1/5 der August
+A1.2	Lesson 14	der September	dritte	199:0.660	A1.1/5 der September
+A1.2	Lesson 14	der Oktober	dritte	199:0.680	A1.1/5 der Oktober
+A1.2	Lesson 14	der November	dritte	199:0.701	A1.1/5 der November
+A1.2	Lesson 14	der Dezember	dritte	199:0.722	A1.1/5 der Dezember
+A1.2	Lesson 14	erzählen	traurig	199:0.094	A1.1/0 erzählen
+A2.1	Lesson 1	das Viertel	verschieden	179:0.088	new
+A2.1	Lesson 1	ansehen	glücklich	177:0.184	A1.1/0 ansehen
+A2.1	Lesson 1	sagen	umziehen	177:0.541	A1.1/0 sagen
+A2.1	Lesson 1	der Großvater	der Schwiegervater	180:0.181	A1.1/2 der Großvater
+A2.1	Lesson 1	die Großmutter	die Schwiegermutter	180:0.164	A1.1/2 die Großmutter
+A2.1	Lesson 1	der Vater	der Ehemann	180:0.282	A1.1/2 der Vater
+A2.1	Lesson 1	die Mutter	die Schwägerin	180:0.299	A1.1/2 die Mutter
+A2.1	Lesson 1	der Bruder	die Nichte	180:0.433	A1.1/2 der Bruder
+A2.1	Lesson 1	die Schwester	der Neffe	180:0.416	A1.1/2 die Schwester
+A2.1	Lesson 1	der Sohn	die Nichte	180:0.434	A1.1/2 der Sohn
+A2.1	Lesson 1	die Tochter	der Neffe	180:0.415	A1.1/2 die Tochter
+A2.1	Lesson 1	die Sachen (Pl.)	der Umzug	177:0.597	new
+A2.1	Lesson 1	die Papiere (Pl.)	das Pech	178:0.490	new
+A2.1	Lesson 2	das Bild	das Schloss	181:0.274	A1.1/0 das Bild
+A2.1	Lesson 2	bauen	wieder	181:0.544	new
+A2.1	Lesson 2	das Land (Sg.)	recht haben	183:0.490	new
+A2.1	Lesson 2	leer	das Waschmittel	183:0.804	A1.1/4 leer
+A2.1	Lesson 3	das Glas	die Kanne	187:0.766	A1.1/3 das Glas
+A2.1	Lesson 3	deutsch	die Marmelade	185:0.265	new
+A2.1	Lesson 3	gegen	die Fabrik	187:0.234	new
+A2.1	Lesson 5	Ski fahren	Fußball spielen	196:0.580	A1.1/7 Ski fahren
+A2.1	Lesson 5	Fahrrad fahren	Eishockey spielen	196:0.763	A1.1/7 Fahrrad fahren
+A2.1	Lesson 5	joggen	Fußball spielen	196:0.673	A1.1/6 joggen
+A2.1	Lesson 5	schwimmen	Eishockey spielen	196:0.764	A1.1/6 schwimmen
+A2.1	Lesson 5	tanzen	Eishockey spielen	196:0.764	A1.1/6 tanzen
+A2.1	Lesson 5	die Geschichte	überhaupt	194:0.307	A1.2/8 die Geschichte
+A2.1	Lesson 5	das Gold	ehrlich	194:0.683	A1.1/4 das Gold
+A2.1	Lesson 5	genug	(start)	192:0.676	new
+A2.1	Lesson 5	der Tanz	(start)	192:0.746	new
+A2.1	Lesson 5	der Basketball (Sg.)	(start)	192:0.783	new
+A2.1	Lesson 5	statt·finden	(start)	192:0.819	new
+A2.1	Lesson 5	die Nachrichten (Pl.)	überhaupt	194:0.342	new
+A2.1	Lesson 5	die Ferien (Pl.)	denken an	194:0.792	new
+A2.1	Lesson 6	die Geschichte	die Kunst	199:0.183	A1.2/8 die Geschichte
+A2.1	Lesson 6	die Musik	die Physik	202:0.324	A1.1/1 die Musik
+A2.1	Lesson 6	der Sport	die Kunst	202:0.423	A1.1/1 der Sport
+A2.1	Lesson 6	der Wunsch	streng	197:0.792	A1.2/9 der Wunsch
+A2.1	Lesson 6	der Plan	streng	197:0.817	A1.1/5 der Plan
+A2.1	Lesson 6	der Traum	der Notarzt	201:0.245	A1.2/8 der Traum
+A2.1	Lesson 6	die Wirtschaft	die Politik	199:0.656	A1.2/8 die Wirtschaft
+A2.1	Lesson 7	die DVD	die Kette	205:0.154	A1.2/11 die DVD
+A2.1	Lesson 7	die Schokolade	der Geldbeutel	205:0.318	A1.1/3 die Schokolade
+A2.1	Lesson 7	das Buch	der Geldbeutel	205:0.321	A1.1/4 das Buch
+A2.2	Lesson 8	offen	die Bahn	177:0.432	A1.1/5 offen
+A2.2	Lesson 9	die Kamera	der Bikini	178:0.822	A1.2/12 die Kamera
+A2.2	Lesson 9	das Holz	der Stoff	181:0.260	A1.1/4 das Holz
+A2.2	Lesson 9	die Lampe	der Stoff	181:0.303	A1.1/4 die Lampe
+A2.2	Lesson 9	das Glas	der Stoff	181:0.366	A1.1/3 das Glas
+A2.2	Lesson 9	die Schüssel	(end)	999	A2.1/3 die Schüssel
+A2.2	Lesson 9	das Plastik	der Stoff	181:0.266	A2.1/2 das Plastik
+A2.2	Lesson 9	das Papier	der Stoff	181:0.366	A1.2/12 das Papier
+A2.2	Lesson 9	als	spannend	179:0.772	new
+A2.2	Lesson 10	die E-Mail	das Netzwerk	184:0.628	A1.1/1 die E-Mail
+A2.2	Lesson 10	das Handy	verschicken	184:0.642	A1.1/4 das Handy
+A2.2	Lesson 11	die Autobahn	die Kreuzung	189:0.407	A1.2/11 die Autobahn
+A2.2	Lesson 12	das Boot	umsonst	190:0.267	new
+A2.2	Lesson 12	das Schloss	romantisch	190:0.602	new
+A2.2	Lesson 12	die Aktivität	die Küste	191:0.664	A2.1/6 die Aktivität
+A2.2	Lesson 12	die Auskunft	die Altstadt besichtigen	191:0.744	A1.2/9 die Auskunft
+A2.2	Lesson 12	die Ostsee (Sg.)	(start)	189:0.563	new
+A2.2	Lesson 12	begeistert	(start)	189:0.584	new
+A2.2	Lesson 12	Luxemburg	das Gebirge	189:0.738	new
+A2.2	Lesson 12	baden	das Gebirge	189:0.777	new
+A2.2	Lesson 12	der Sand (Sg.)	das Gebirge	189:0.815	new
+A2.2	Lesson 13	die Zinsen (Pl.)	sondern	192:0.802	new
+A2.2	Lesson 13	die Kosten (Pl.)	die Bremse	193:0.813	new
+A2.2	Lesson 14	die Entscheidung	das Paar	197:0.571	A2.1/4 die Entscheidung
+A2.2	Lesson 14	die Umfrage	das Paar	197:0.592	A1.2/14 die Umfrage
+A2.2	Lesson 14	die Welt	das Paar	197:0.615	A1.1/3 die Welt
+A2.2	Lesson 14	die Zukunft	die Kindheit	197:0.543	A2.1/6 die Zukunft
+A2.2	Lesson 14	der Streit	das Paar	197:0.564	A2.1/6 der Streit
+B1.1	Lesson 1	der Artikel	die Überschrift	177:0.734	A2.2/13 der Artikel
+B1.1	Lesson 1	das Interview	die Meldung	177:0.670	A1.2/8 das Interview
+B1.1	Lesson 1	die Information	die Überschrift	177:0.702	A1.2/8 die Information
+B1.1	Lesson 1	die Anzeige	die Überschrift	177:0.736	A1.1/4 die Anzeige
+B1.1	Lesson 1	unbekannt	unterstützen	177:0.398	A2.1/7 unbekannt
+B1.1	Lesson 2	das Kino	die Folge	182:0.360	A1.1/5 das Kino
+B1.1	Lesson 2	die Medien (Pl.)	zustimmen	181:0.519	new
+B1.1	Lesson 3	untersuchen	verbrauchen	186:0.426	A2.2/10 untersuchen
+B1.1	Lesson 3	impfen	(end)	999	A2.2/10 impfen
+B1.1	Lesson 3	die Salbe	das Schmerzmittel	186:0.543	A1.2/10 die Salbe
+B1.1	Lesson 3	das Pflaster	der Verband	186:0.542	A2.2/11 das Pflaster
+B1.1	Lesson 3	der Schnupfen	das Schmerzmittel	186:0.653	A1.2/10 der Schnupfen
+B1.1	Lesson 3	das Fieber	das Schmerzmittel	186:0.657	A1.2/10 das Fieber
+B1.1	Lesson 3	der Husten	das Schmerzmittel	186:0.657	A1.2/10 der Husten
+B1.1	Lesson 3	der Schmerz	das Schmerzmittel	186:0.658	A1.2/10 der Schmerz
+B1.1	Lesson 3	führen	das Schmerzmittel	184:0.826	A2.1/6 führen
+B1.1	Lesson 3	meinen	der Magen	182:0.603	A1.1/0 meinen
+B1.1	Lesson 3	die Frucht	grundsätzlich	185:0.726	A2.1/3 die Frucht
+B1.1	Lesson 3	das Viertel	die Hälfte	185:0.664	A1.1/5 das Viertel
+B1.1	Lesson 4	die Sprachenschule	die Fremdsprache	189:0.696	A2.2/8 die Sprachenschule
+B1.1	Lesson 4	die Aussprache	sich anstrengen	188:0.700	new
+B1.1	Lesson 4	vergleichen	der Dialekt	189:0.366	A1.1/0 vergleichen
+B1.1	Lesson 4	die Kenntnisse (Pl.)	die Schrift	189:0.598	A1.2/8 die Kenntnisse (Pl.)
+B1.1	Lesson 5	rechnen	der Zeitpunkt	191:0.792	A1.1/7 rechnen
+B1.1	Lesson 5	der Hausmeister	die Wanderung	193:0.378	A1.2/8 der Hausmeister
+B1.1	Lesson 5	die Hausmeisterin	die Lehrerin	193:0.394	A1.2/8 die Hausmeisterin
+B1.1	Lesson 5	der Arzt	der Lehrer	193:0.379	A1.1/2 der Arzt
+B1.1	Lesson 5	die Ärztin	die Lehrerin	193:0.393	A1.2/8 die Ärztin
+B1.1	Lesson 5	der Architekt	die Lehrerin	193:0.548	A1.2/8 der Architekt
+B1.1	Lesson 5	die Architektin	die Lehrerin	193:0.565	A1.2/8 die Architektin
+B1.1	Lesson 5	der Friseur	die Lehrerin	193:0.551	A2.1/6 der Friseur
+B1.1	Lesson 5	die Friseurin	die Lehrerin	193:0.565	A2.1/6 die Friseurin
+B1.1	Lesson 5	der Journalist	die Lehrerin	193:0.551	A1.2/8 der Journalist
+B1.1	Lesson 5	die Journalistin	die Lehrerin	193:0.566	A1.2/8 die Journalistin
+B1.1	Lesson 5	der Krankenpfleger	die Lehrerin	193:0.722	A1.2/8 der Krankenpfleger
+B1.1	Lesson 5	die Krankenschwester	die Lehrerin	193:0.738	A1.2/8 die Krankenschwester
+B1.1	Lesson 5	der Polizist	die Lehrerin	193:0.722	A1.2/8 der Polizist
+B1.1	Lesson 5	die Polizistin	die Lehrerin	193:0.736	A1.2/8 die Polizistin
+B1.1	Lesson 6	der Betrieb	auffordern	197:0.320	A2.1/4 der Betrieb
+B1.1	Lesson 6	die Firma	auffordern	197:0.353	A1.1/1 die Firma
+B1.1	Lesson 6	die Produktion	auffordern	197:0.384	A1.1/7 die Produktion
+B1.1	Lesson 6	der Handel	auffordern	197:0.323	A1.2/8 der Handel
+B1.1	Lesson 6	überzeugen	(end)	999	A2.1/7 überzeugen
+B1.1	Lesson 6	bestimmt	erst-	194:0.275	A2.1/3 bestimmt
+B1.1	Lesson 7	das Gericht	vermutlich	197:0.627	new
+B1.1	Lesson 7	zentral	entweder ... oder	198:0.589	A1.2/9 zentral
+B1.1	Lesson 7	Griechenland	erfordern	200:0.750	A1.1/1 Griechenland
+B1.1	Lesson 7	das Dach	verteilen	201:0.397	A1.2/12 das Dach
+B1.1	Lesson 7	das Haus	verteilen	201:0.428	A1.1/4 das Haus
+B1.1	Lesson 7	die Treppe	das Grundstück	201:0.534	A2.1/5 die Treppe
+B1.1	Lesson 7	die Terrasse	das Grundstück	201:0.674	A1.2/9 die Terrasse
+B1.1	Lesson 7	der Garten	das Grundstück	201:0.709	A1.1/4 der Garten
+B1.1	Lesson 7	die Tür	verteilen	201:0.399	A1.2/12 die Tür
+B1.1	Lesson 7	das Fenster	verteilen	201:0.432	A1.2/12 das Fenster
+B1.1	Lesson 7	der Keller	das Grundstück	201:0.464	B1.1/4 der Keller
+B1.1	Lesson 7	der Lift	das Grundstück	201:0.539	A1.2/9 der Lift
+B1.1	Lesson 7	der Balkon	das Grundstück	201:0.676	A1.1/4 der Balkon
+B1.2	Lesson 8	die Karriere	die Freundschaft	179:0.597	A2.1/6 die Karriere
+B1.2	Lesson 8	die Distanz	die Arbeitsatmosphäre	179:0.565	B1.1/7 die Distanz
+B1.2	Lesson 8	der Chat	falls	177:0.231	A2.2/10 der Chat
+B1.2	Lesson 9	der Computer	virtuell	183:0.118	A1.1/4 der Computer
+B1.2	Lesson 9	die Festplatte	virtuell	183:0.135	A2.1/6 die Festplatte
+B1.2	Lesson 9	löschen	anschließen	183:0.235	A2.1/6 löschen
+B1.2	Lesson 9	erstellen	das/der Virus	183:0.184	A2.2/13 erstellen
+B1.2	Lesson 10	die Beratung	schweigen	187:0.216	A1.2/12 die Beratung
+B1.2	Lesson 10	der Fachmann	die Lieferung	187:0.233	B1.1/3 der Fachmann
+B1.2	Lesson 10	die Fachfrau	die Lieferung	187:0.250	B1.1/3 die Fachfrau
+B1.2	Lesson 10	der Mangel	die Lieferung	187:0.266	B1.1/3 der Mangel
+B1.2	Lesson 10	bestellen	schweigen	187:0.216	A1.2/12 bestellen
+B1.2	Lesson 11	lügen	betrügen	191:0.461	B1.1/4 lügen
+B1.2	Lesson 12	unterstützen	die Einrichtung	195:0.237	B1.1/1 unterstützen
+B1.2	Lesson 12	die Betreuung	die Bürgerinitiative	195:0.252	A2.1/4 die Betreuung
+B1.2	Lesson 12	der Verein	sich einsetzen	195:0.269	A2.1/5 der Verein
+B1.2	Lesson 12	das Mitglied	die Bürgerinitiative	195:0.251	A2.1/1 das Mitglied
+B1.2	Lesson 12	die Gesellschaft	die Einrichtung	195:0.235	A2.1/6 die Gesellschaft
+B1.2	Lesson 13	der Präsident	die Regierung	198:0.657	B1.1/4 der Präsident
+B1.2	Lesson 13	die Präsidentin	die Macht	198:0.674	B1.1/4 die Präsidentin
+B1.2	Lesson 13	wählen	politisch	198:0.594	new
+B1.2	Lesson 14	das Gewürz	die Demokratie	200:0.690	B1.1/6 das Gewürz
+B1.2	Lesson 14	das Rezept	die Demokratie	200:0.707	A1.1/3 das Rezept
+B1.2	Lesson 14	das Gericht	die Zutat	200:0.740	A1.2/12 das Gericht
+B1.2	Lesson 14	der Nachtisch	die Demokratie	200:0.707	A1.2/14 der Nachtisch
+B1.2	Lesson 14	der Kuchen	die Zutat	200:0.740	A1.1/3 der Kuchen
+B1.2	Lesson 14	kochen	die Zutat	200:0.724	A1.1/3 kochen
+B1.2	Lesson 14	backen	die Zutat	200:0.740	A1.1/7 backen
+B1.2	Lesson 14	zubereiten	die Demokratie	200:0.693	B1.2/13 zubereiten
