@@ -17,6 +17,7 @@ import {
   type OtherDeviceEvent,
 } from '../lib/progressSync';
 import { flushQueue } from '../lib/suggestions';
+import { whenAppIdle } from '../lib/appIdle';
 import { displayName, rememberAccount } from '../lib/knownAccounts';
 import { LoginScreen, SandboxTag, friendlyAuthError } from './LoginScreen';
 import { WelcomeSetup } from './WelcomeSetup';
@@ -158,7 +159,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       // device holds, the screens are rebuilt so they show — and later save —
       // the merged progress, not the copy they loaded before.
       if (event.merged) {
-        if (event.merged.changedHere) setDataVersion((n) => n + 1);
+        // Rebuilding goes back to home, so not while you are in an exercise.
+        if (event.merged.changedHere) whenAppIdle(() => setDataVersion((n) => n + 1));
         return;
       }
       if (!event.hasLocalChanges) {

@@ -18,6 +18,7 @@ import { loadExerciseReady, readyLessonKeys } from './utils/exerciseReady';
 import { loadAllFSRSRecords, isCardDueForReview, loadDrillPracticeState, readyLessons } from './utils/srsEngine';
 import { isTabLocked } from './config/features';
 import { SuggestionButton } from './components/SuggestionButton';
+import { setAppBusy } from './lib/appIdle';
 import { ChooserSheet } from './components/ChooserSheet';
 import { currentStreak, recordActivity } from './utils/streak';
 
@@ -94,6 +95,11 @@ export default function App() {
   const [quizProgressSaved, setQuizProgressSaved] = useState(false);
   // An exercise can take the back arrow for itself (Vocabulary: back to its Start screen).
   const exerciseBackRef = useRef<(() => boolean) | null>(null);
+
+  // Away from home, a new version or another device's progress waits (lib/appIdle).
+  useEffect(() => {
+    setAppBusy(currentTab !== 'home');
+  }, [currentTab]);
 
   // Abandon Confirmation Modal State
   const [isAbandonModalOpen, setIsAbandonModalOpen] = useState(false);

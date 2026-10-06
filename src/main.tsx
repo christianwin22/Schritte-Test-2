@@ -4,6 +4,7 @@ import App from './App.tsx';
 import { AuthGate } from './components/AuthGate';
 import './index.css';
 import { forgetStoredSessions } from './lib/knownAccounts';
+import { whenAppIdle } from './lib/appIdle';
 
 /**
  * Keeps the app as tall as the part of the screen you can see.
@@ -93,7 +94,8 @@ async function updateIfStale(): Promise<void> {
     // Once per new build, so a mismatch we cannot resolve can't loop.
     if (sessionStorage.getItem('cpa_reloaded_for') === latest) return;
     sessionStorage.setItem('cpa_reloaded_for', latest);
-    window.location.reload();
+    // Not in the middle of an exercise: a reload starts you on home again.
+    whenAppIdle(() => window.location.reload());
   } catch {
     // offline: carry on with what is already here
   }

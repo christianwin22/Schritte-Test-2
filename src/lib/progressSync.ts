@@ -187,11 +187,17 @@ export function mergeSnapshots(base: ProgressSnapshot, mine: ProgressSnapshot, t
  */
 export async function mergeWithRemote(userId: string): Promise<boolean | null> {
   try {
-    const { snapshot: remote } = await pullRemote(userId);
+    const { snapshot: remote, updatedAt } = await pullRemote(userId);
     const mine = takeSnapshot();
     const merged = mergeSnapshots(loadBase(), mine, remote ?? {});
     const changedHere = JSON.stringify(merged) !== JSON.stringify(mine);
     if (changedHere) applySnapshot(merged);
+    // Nothing new for the other device: don't save, or the two keep waking each other.
+    if (remote && JSON.stringify(merged) === JSON.stringify(remote)) {
+      lastSeenUpdatedAt = updatedAt;
+      saveBase(merged);
+      return changedHere;
+    }
     const saved = await pushSnapshot(userId, merged);
     return saved ? changedHere : null;
   } catch {
@@ -312,7 +318,9 @@ export async function otherDeviceHasSaved(userId: string): Promise<boolean> {
   if (!client || lastSeenUpdatedAt === null) return false;
   try {
     const { updatedAt } = await pullRemote(userId);
-    return updatedAt !== null && updatedAt !== lastSeenUpdatedAt;
+    // Compared as times: Supabase sends "…+00:00" back for the "…Z" we wrote,
+    // and as text those never match — every check then looked like another device.
+    return updatedAt !== null && Date.parse(updatedAt) !== Date.parse(lastSeenUpdatedAt);
   } catch {
     return false;
   }
