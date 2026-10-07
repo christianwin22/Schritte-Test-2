@@ -29,6 +29,9 @@ if (typeof document !== 'undefined') {
     }
   });
 }
+// Phones and tablets type on a screen keyboard, which has no Shift + Enter
+const touchScreen = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+
 function backToAnswerBox() {
   const el = lastTextField;
   if (el && el.isConnected && !el.disabled) el.focus({ preventScroll: true });
@@ -55,6 +58,7 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
   const [viewing, setViewing] = useState<number | null>(null);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'queued'>('idle');
   const [onScreen, setOnScreen] = useState<string | undefined>();
+  const lastKeyWasEnter = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const en = appLanguage === 'en';
@@ -121,8 +125,23 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
   const onDialogKey = (e: React.KeyboardEvent) => {
     e.stopPropagation();
     if (e.key === 'Escape') close();
-    // ⌘/Ctrl + Enter saves, so you can stay on the keyboard
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void submit();
+    const enter = e.key === 'Enter' && !e.nativeEvent.isComposing;
+    const afterEnter = lastKeyWasEnter.current;
+    lastKeyWasEnter.current = enter && !e.shiftKey;
+    if (!enter) return;
+    // ⌘/Ctrl + Enter always saves
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault();
+      void submit();
+      return;
+    }
+    if (e.shiftKey || !(e.target instanceof HTMLTextAreaElement)) return;
+    // Real keyboard: Enter saves, Shift + Enter makes a new line (like chat apps).
+    // Phone keyboard has no Shift + Enter: Enter makes a new line, Enter twice saves.
+    if (!touchScreen || afterEnter) {
+      e.preventDefault();
+      void submit();
+    }
   };
 
   useEffect(() => {
@@ -190,6 +209,7 @@ export const SuggestionButton: React.FC<SuggestionButtonProps> = ({ where, appLa
 
             <textarea
               ref={inputRef}
+              enterKeyHint={touchScreen ? 'enter' : 'send'}
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
