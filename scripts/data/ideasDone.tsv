@@ -73,7 +73,7 @@ efafd696-e3be-460a-bdb4-a5be8b9c634c	done	b37a33c	(Sg.) hidden until answered
 beeb8b15-d6c6-4e12-9d37-1d89e0fe3de8	done	76adf8b	EU accepted
 6619d41e-e7c5-499a-ab94-0b567590c362	done	0fd2656	Enter saves, Shift+Enter new line
 14b2ba77-920b-4a68-8a20-9cf20c315746	done	0fd2656	phone: Enter twice saves
-6ab76db7-e685-443c-b7bd-fa6fe20bca1c	asked	0632597	mieten: borrow is not mieten (leihen) - asked
+6ab76db7-e685-443c-b7bd-fa6fe20bca1c	done	e7e939e	mieten: (you pay; to borrow for free = leihen)
 22fab634-5933-4c32-9d99-7801d4a5d930	done	0632597	Altstadt: old city accepted
 96f080d4-16c0-483c-b78e-0464c58d3f7b	done	0632597	inklusive: inclusive accepted
 6cebbe1b-ff87-4752-96f2-fc81c7fde1d9	done	48a325b	verbs need 'to' in DE-EN
@@ -84,12 +84,12 @@ b94650f9-cda3-4eb0-8268-e9c21c97397e	done	0632597	air condition accepted; Q answ
 b139ca18-6a08-4059-9409-475aa1121b43	done	0632597	Ausweis mitbringen: shows 'the'
 4c5817e6-f655-473f-875d-ec0cb17d1b2e	done	0632597	Eis: ice, ice cream
 4abf9741-1102-4f24-a516-b1c5eea0cc08	done	0632597	einen Antrag ausfuellen: application form
-208a25e3-d9c9-46c4-8fda-17cce2c8e8f7	asked	0632597	mieten borrow - asked
+208a25e3-d9c9-46c4-8fda-17cce2c8e8f7	done	e7e939e	mieten: borrow explained in note
 0028fc6c-d63d-4b90-b3ba-3886528c2ebc	done	48a325b	several answers at once now accepted
 788262f6-36ad-44bc-b564-3a3cab0d6ac4	done	0632597	Unterricht: class first; Q answered
 4adfe4a9-99cf-4a10-9833-58818d7a74e6	done	0632597	Fahrt: Q answered
-a83d0696-8953-4ce3-8357-2f675c9478ac	asked	-	lesson title at start - asked what he means
-f05b718b-0791-4705-8aa8-c61508533f56	asked	-	mieten borrow - asked
+a83d0696-8953-4ce3-8357-2f675c9478ac	done	e7e939e	card 1 of every lesson is its title
+f05b718b-0791-4705-8aa8-c61508533f56	done	e7e939e	mieten: borrow explained in note, not added
 370e46f5-7164-4e18-a30e-a3fd791c0d4b	asked	48a325b	counter right done; more detail on iPad/Mac - asked
 6170fc3c-779d-49ad-bc48-2accbc29ef61	done	0632597	Fahrkarte: travel ticket, travel card
 584a1b77-cc4e-4cd9-9d85-0c43db638319	done	0632597	Fahrt: ride (drive accepted)
@@ -98,9 +98,9 @@ d32d4efa-dee3-41a6-a4f4-2f8fbd689ada	done	48a325b	bracket notes never needed
 1cfee2c6-b2b2-4e1b-b684-f46277cdb54f	done	0632597	replaced by 6056ebc1
 df35bc9b-4513-44fd-ac53-f8b64e503b2c	done	0632597	das Ticket: book sentence
 d3113845-70c7-4a4a-b851-b40140542ee3	done	0632597	Automat: ticket / vending machine
-b5092e92-4c20-48de-a9de-31400737657a	asked	0632597	book sentences: Lesson 9 done; other lessons next
+b5092e92-4c20-48de-a9de-31400737657a	done	7a9a846	book sentences A1.2-B1.2
 796757b4-ed61-4c31-9294-ad1b47d0ab8a	done	0632597	auswaehlen: replaced by 6056ebc1 list
-6056ebc1-2dfd-4d54-8258-b1c2e7aaa207	done	48a325b 0632597	meaning list + notes on own line; Meldeformular not in list
+6056ebc1-2dfd-4d54-8258-b1c2e7aaa207	done	48a325b 7a9a846	meaning list + Meldeformular added
 3c9d9e9e-9336-41fb-81a8-3daa1de8bf81	done	0632597	Ziel: destination (travel) / goal (life, career)
 f7cf21bc-fbb3-4aa6-8e2d-04b31683fa83	done	0632597	Uebung: (homework)
 d88415d2-0c9e-4add-ac91-dfcb48f64fea	done	0632597	ausmachen, schliessen
@@ -113,12 +113,12 @@ e8aa0e65-d4f9-4b0f-99c0-b4d16c3cd22a	done	0632597	duerfen: may first
 446ace05-ee77-40dd-8f25-48ddad3e9454	done	0632597	Parkplatz: car park first
 e9838cb3-8b0a-47dc-ae3e-e562553e5272	done	0632597	erlaubt: allowed
 da662b1a-f34d-48d9-8368-20e380f90444	done	0632597	verboten: forbidden
-213256dd-ed71-4814-b332-35930209c528	asked	-	verboten decline/reject - asked
-a08ff025-3b7c-40b8-b840-b2013a0556f3	asked	-	verboten decline/reject - asked
+213256dd-ed71-4814-b332-35930209c528	done	e7e939e	verboten: prohibited (banned, not allowed accepted)
+a08ff025-3b7c-40b8-b840-b2013a0556f3	done	e7e939e	verboten: correct synonyms instead of decline/reject
 0c70f3e0-d631-43ac-b9e5-592d05b5178b	done	0632597	Eis: ice cream
 882b194d-5d99-4039-bf22-8db5f21d91a1	done	0632597	Gepaeck: baggage
 18054f47-644c-4814-85a0-10b6e98f31fb	done	48a325b 0632597	Einkauf senses + Einkaeufe = purchases
-f3f5e8b7-f3c4-45aa-a1bb-ed9ceb563214	asked	-	Einwohner population - asked
+f3f5e8b7-f3c4-45aa-a1bb-ed9ceb563214	done	e7e939e	Einwohner: inhabitant is right; resident accepted
 86bff8af-f603-4c5b-adf9-3d1436f697a7	done	0632597	Dom: church
 7c716ecc-1136-4dc4-b20b-41066bae1f05	done	0632597	besichtigen
 680f3b16-4e67-45dd-be6b-8cd034156bc1	done	0632597	Fuehrung: 2 meanings
