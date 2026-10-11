@@ -106,6 +106,14 @@ const einkauf = byId('der Einkauf');
 check('der Einkauf has its own plural meaning', einkauf.pluralTranslation === 'purchases (items bought)');
 check('...and no "Pl.:" in the singular', !einkauf.translation.includes('Pl.'));
 
+console.log('8c. Lesson titles are cards too');
+const t1 = INITIAL_VOCABULARY.find((w) => w.id === 'a11_l1_title')!;
+check('"Guten Tag. Mein Name ist" — the … is not typed', checkGerman('Guten Tag. Mein Name ist', t1).isCorrect);
+check('"hello, my name is" is right', checkEnglish('hello, my name is', t1));
+const t7 = INITIAL_VOCABULARY.find((w) => w.id === 'a11_l7_title')!;
+check('"Lernen - ein Leben lang" with a short dash is right', checkGerman('Lernen - ein Leben lang', t7).isCorrect);
+check('mieten: "to borrow" is still wrong', !checkEnglish('to borrow', byId('mieten')));
+
 console.log('9. Junk never passes');
 const junk = ['the', 'a', 'to', 'x', 'asdf', '???', '1', 'der'];
 // A word whose meaning really is one of these (der = "the") is not a false accept.

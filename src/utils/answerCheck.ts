@@ -18,7 +18,7 @@ import { WordEntry } from '../types';
  * A word with two numbered meanings is asked for both, in either order.
  */
 
-const PUNCTUATION = /[.,/#!$%^&*;:{}=_`~"'?]/g;
+const PUNCTUATION = /[.,/#!$%^&*;:{}=_`~"'?–—-]/g;
 
 function squash(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
@@ -27,7 +27,9 @@ function squash(text: string): string {
 /* ------------------------------------------------------------------ German */
 
 function normalizeGerman(text: string): string {
-  return squash(text.toLowerCase().replace(/[.!?,;:]+$/g, '').replace(/·/g, ''));
+  // "Guten Tag. Mein Name ist …": the dots and the long dash are not typed
+  const t = text.toLowerCase().replace(/[–—]/g, '-').replace(/\s*(…|\.\.\.)\s*$/, '');
+  return squash(t.replace(/[.!?,;:]+$/g, '').replace(/·/g, ''));
 }
 
 /** "besonder-" also answers to besondere, besonderen, Lieblingsfarbe, … */
@@ -112,6 +114,7 @@ export function normalizeEnglish(text: string, keepTo = false): string {
   let t = text.toLowerCase();
   t = t.replace(/\([^)]*\)/g, ' ');       // "Mrs (title)" → "mrs"
   t = t.replace(/\[[^\]]*\]/g, ' ');      // "[church]" is not part of the answer
+  t = t.replace(/\s*(…|\.\.\.)\s*$/, ' ');  // "My name is …"
   t = t.replace(PUNCTUATION, ' ');
   t = squash(t);
   t = t.replace(keepTo ? /^(a|an|the)\s+/ : /^(to|a|an|the)\s+/, '');  // "to hear" → "hear"

@@ -186,7 +186,9 @@ def main():
         pos = POS.get(word_type, "phrase")
         lemma, genders, answers = german_forms(display, pos)
 
-        base_id = f"{vol_slug}_{'intro' if lesson == 0 else f'l{lesson}'}_{KEEP_ID.get(display) or slug(lemma) or slug(display)}"
+        lesson_slug = f"{vol_slug}_{'intro' if lesson == 0 else f'l{lesson}'}"
+        # a lesson's title card has an id of its own, so it never takes a word's id
+        base_id = f"{lesson_slug}_title" if word_type == "title" else f"{lesson_slug}_{KEEP_ID.get(display) or slug(lemma) or slug(display)}"
         word_id = base_id
         n = 2
         while word_id in seen_ids:

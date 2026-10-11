@@ -60,7 +60,8 @@ check('die Kenntnisse has one card', cardsFor([word('a12_l8_kenntnisse')]).lengt
 check('shown "die Uni(versität)"', germanShown(card('a12_l8_universitaet')) === 'die Uni(versität)');
 check('shown "(an)bieten"', germanShown(card('a12_l8_anbieten')) === '(an)bieten');
 check('shown "die Kenntnisse"', germanShown(card('a12_l8_kenntnisse')) === 'die Kenntnisse');
-check('Lesson 8 starts with die Geschichte (book order)', INITIAL_VOCABULARY.find((w) => w.lektion === 8 && w.volume === 'A1.2')?.id === 'a12_l8_geschichte');
+check('Lesson 8 starts with its title, then die Geschichte (book order)', INITIAL_VOCABULARY.find((w) => w.lektion === 8 && w.volume === 'A1.2')?.id === 'a12_l8_title');
+check('...die Geschichte next', INITIAL_VOCABULARY.find((w) => w.lektion === 8 && w.volume === 'A1.2' && w.wordType !== 'Title')?.id === 'a12_l8_geschichte');
 
 console.log('3. What Practice still waits for');
 const l8 = cardsFor(INITIAL_VOCABULARY.filter((w) => w.level === 'A1' && w.lektion === 8));
