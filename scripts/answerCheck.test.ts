@@ -58,16 +58,16 @@ check('"the" is WRONG (the old bug)', !checkEnglish('the', vater));
 check('"fat" is wrong', !checkEnglish('fat', vater));
 const hoeren = find('hören');
 check('"to hear" is right', checkEnglish('to hear', hoeren));
-check('"hear" is right without the to', checkEnglish('hear', hoeren));
+check('"hear" is WRONG — a verb needs its "to"', !checkEnglish('hear', hoeren));
 const mrs = find('die Frau');
 check('"Mrs" is right — the bracket note is ignored', checkEnglish('Mrs', mrs));
 
 console.log('6. Two meanings: two boxes, either order');
 check('both right', checkEnglishPair(['to hear', 'to listen'], hoeren).every(Boolean));
-check('both right the other way round', checkEnglishPair(['listen', 'hear'], hoeren).every(Boolean));
-check('the same meaning twice is not both', !checkEnglishPair(['hear', 'to hear'], hoeren).every(Boolean));
-check('one right one wrong marks only the right one', JSON.stringify(checkEnglishPair(['hear', 'to see'], hoeren)) === '[true,false]');
-check('an empty box is not right', !checkEnglishPair(['hear', ''], hoeren).every(Boolean));
+check('both right the other way round', checkEnglishPair(['to listen', 'to hear'], hoeren).every(Boolean));
+check('the same meaning twice is not both', !checkEnglishPair(['to hear', 'to hear'], hoeren).every(Boolean));
+check('one right one wrong marks only the right one', JSON.stringify(checkEnglishPair(['to hear', 'to see'], hoeren)) === '[true,false]');
+check('an empty box is not right', !checkEnglishPair(['to hear', ''], hoeren).every(Boolean));
 
 console.log('7. Meanings are shown without the raw <br>');
 check('two lines for a two-meaning word', meaningLines(hoeren).length === 2);
@@ -78,11 +78,33 @@ let germanBad = 0;
 let englishBad = 0;
 for (const w of INITIAL_VOCABULARY) {
   if (!checkGerman(w.answers?.[0] ?? w.lemma, w).isCorrect) germanBad++;
-  const first = (w.senses?.[0]?.[0] ?? w.translation);
+  const first = (w.senses?.[0]?.[0] ?? w.translation).replace(/\s*\[[^\]]*\]/g, '');
   if (!checkEnglish(first, w)) englishBad++;
 }
 check(`all 2,823 German answers accepted (${germanBad} refused)`, germanBad === 0);
 check(`all 2,823 English answers accepted (${englishBad} refused)`, englishBad === 0);
+
+console.log('8b. Chris\'s rules from Lesson 9');
+const byId = (id: string) => INITIAL_VOCABULARY.find((w) => w.display === id && w.lektion === 9)!;
+const zuhoeren = byId('zuhören');
+check('"listen" is wrong for zuhören', !checkEnglish('listen', zuhoeren));
+check('"to listen" is right', checkEnglish('to listen', zuhoeren));
+const dom = byId('der Dom');
+check('"church" is accepted for der Dom [church]', checkEnglish('church', dom));
+check('...but [church] is never shown', !meaningLines(dom).join(' ').includes('['));
+check('"major church" alone is wrong — a note is not an answer', !checkEnglish('major church', dom));
+const automat = byId('der Automat');
+for (const a of ['ticket / vending machine', 'ticket /vending machine', 'ticket machine', 'vending machine'])
+  check(`"${a}" is right for der Automat`, checkEnglish(a, automat));
+check('"application" is right for der Antrag, the note left out', checkEnglish('application', byId('der Antrag')));
+check('"to select, to dial" — two at once, both right', checkEnglish('to select, to dial', byId('wählen')));
+check('"to select, to eat" — one wrong is wrong', !checkEnglish('to select, to eat', byId('wählen')));
+const halte = byId('die Haltestelle');
+check('Haltestelle asks for two', checkEnglishPair(['tram stop', 'bus stop'], halte).every(Boolean));
+check('"stop" alone is not one of them', !checkEnglishPair(['stop', 'bus stop'], halte).every(Boolean));
+const einkauf = byId('der Einkauf');
+check('der Einkauf has its own plural meaning', einkauf.pluralTranslation === 'purchases (items bought)');
+check('...and no "Pl.:" in the singular', !einkauf.translation.includes('Pl.'));
 
 console.log('9. Junk never passes');
 const junk = ['the', 'a', 'to', 'x', 'asdf', '???', '1', 'der'];

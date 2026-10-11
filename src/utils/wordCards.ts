@@ -42,11 +42,17 @@ export function pluralAnswers(word: WordEntry): string[] {
   return [...new Set(all)];
 }
 
+/** The word as its plural card means it: die Einkäufe = "purchases", not "1. shopping 2. purchase". */
+function asPlural(word: WordEntry): WordEntry {
+  if (!word.pluralTranslation) return word;
+  return { ...word, translation: word.pluralTranslation, senses: word.pluralSenses ?? [[word.pluralTranslation]] };
+}
+
 export function cardsFor(words: WordEntry[], prefix = ''): WordCard[] {
   const out: WordCard[] = [];
   for (const word of words) {
     out.push({ word, plural: false, key: cardKey(word.id, false, prefix) });
-    if (pluralOf(word)) out.push({ word, plural: true, key: cardKey(word.id, true, prefix) });
+    if (pluralOf(word)) out.push({ word: asPlural(word), plural: true, key: cardKey(word.id, true, prefix) });
   }
   return out;
 }
@@ -225,7 +231,13 @@ export function pluralEnglish(text: string): string {
 /** What the card shows as its meaning: the plural card says it in the plural. */
 export function cardMeaningLines(card: WordCard): string[] {
   const lines = meaningLines(card.word);
-  return card.plural ? lines.map(pluralEnglish) : lines;
+  return card.plural && !card.word.pluralTranslation ? lines.map(pluralEnglish) : lines;
+}
+
+/** "ticket (travel)" → { main: "ticket", note: "(travel)" }: the note goes on its own, smaller line. */
+export function splitMeaningNote(line: string): { main: string; note: string } {
+  const m = line.match(/^(.*\S)\s+(\([^()]*\))\s*$/);
+  return m ? { main: m[1], note: m[2] } : { main: line, note: '' };
 }
 
 /** Which listed meaning a typed plural — or the singular, also fine — belongs to ("waiters" → "waiter"), or null. */
@@ -251,7 +263,10 @@ export function checkCardGerman(input: string, card: WordCard) {
 /** DE → EN: the meaning. A plural card takes the plural ("students") or the singular ("student"). */
 export function checkCardEnglish(input: string, card: WordCard): boolean {
   if (!card.plural) return checkEnglish(input, card.word);
-  return listedForPlural(input, card) !== null;
+  if (listedForPlural(input, card) !== null) return true;
+  // several at once ("machines, ticket machines"): every one must be right
+  const pieces = input.split(/[,;/]/).filter((p) => normalizeEnglish(p));
+  return pieces.length > 1 && pieces.every((p) => listedForPlural(p, card) !== null);
 }
 
 /** The typed meaning as the word list writes it ("areas" → "area" on a plural card), for the two-box check. */

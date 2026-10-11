@@ -59,6 +59,9 @@ export interface WordEntry {
   answers?: string[];
   /** English meanings: one entry per numbered sense, each with its comma variants. */
   senses?: string[][];
+  /** What the plural card means, when it is not just the singular in the plural (die Einkäufe = purchases). */
+  pluralTranslation?: string;
+  pluralSenses?: string[][];
   /** The sentence shown under the card. */
   sentence?: string;
   /** Der/Die/Das drill: the sentence, and the same with {{blank}} in place of the article. */

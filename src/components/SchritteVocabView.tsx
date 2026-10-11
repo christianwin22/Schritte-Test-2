@@ -54,6 +54,7 @@ import {
   numberTag,
   asksPlural,
   cardMeaningLines,
+  splitMeaningNote,
   germanShown,
 } from '../utils/wordCards';
 import {
@@ -1038,7 +1039,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         const said = transcript.trim().replace(/[.!?,]+$/, '');
         if (!said) return;
         setPracticeTypeInput(said);
-        const { isCorrect, expectedDisplay } = evaluateAnswer(said, card, practiceDirection);
+        // A typed verb needs its "to"; a spoken one is heard as "2 listen" or without it — so it is added.
+        const heard =
+          practiceDirection === 'DE_TO_EN' && card.word.partOfSpeech === 'verb'
+            ? `to ${said.replace(/^(to|too|two|2)\s+/i, '')}`
+            : said;
+        const asSaid = evaluateAnswer(said, card, practiceDirection);
+        const { isCorrect, expectedDisplay } = asSaid.isCorrect ? asSaid : evaluateAnswer(heard, card, practiceDirection);
         recordPracticeAnswer(card, isCorrect);
         setPracticeFeedback({ correct: isCorrect, userText: said, expected: expectedDisplay });
       },
@@ -2469,22 +2476,34 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           );
         };
 
+        /** A bracket note ("(travel)") on its own line under the meaning, smaller. */
+        const meaningNote = (note: string) =>
+          note ? (
+            <div className="mt-0.5 text-sm sm:text-base lg:text-lg font-semibold text-zinc-500 dark:text-zinc-400 leading-snug">{note}</div>
+          ) : null;
+
         /** The English: one line, or "1." and "2." each on its own line. */
         const englishWord = (card: WordCard, size = 'text-2xl sm:text-3xl', showPlural = true) => {
-          const lines = cardMeaningLines(card);
+          const lines = cardMeaningLines(card).map(splitMeaningNote);
           return (
             <div className="flex flex-col items-center gap-1.5">
               {lines.length > 1 ? (
-                <div className="space-y-1">
-                  {lines.map((line, i) => (
-                    <div key={i} className={`${size} font-black text-zinc-950 dark:text-white leading-tight`}>
-                      <span className="text-zinc-400 font-bold mr-1">{i + 1}.</span>
-                      {line}
+                <div className="space-y-1.5">
+                  {lines.map(({ main, note }, i) => (
+                    <div key={i}>
+                      <div className={`${size} font-black text-zinc-950 dark:text-white leading-tight`}>
+                        <span className="text-zinc-400 font-bold mr-1">{i + 1}.</span>
+                        {main}
+                      </div>
+                      {meaningNote(note)}
                     </div>
                   ))}
                 </div>
               ) : (
-                <h3 className={`${size} font-black text-zinc-950 dark:text-white tracking-tight leading-tight`}>{lines[0]}</h3>
+                <div className="text-center">
+                  <h3 className={`${size} font-black text-zinc-950 dark:text-white tracking-tight leading-tight`}>{lines[0].main}</h3>
+                  {meaningNote(lines[0].note)}
+                </div>
               )}
               {card.plural && showPlural && pluralChip}
             </div>
@@ -2847,16 +2866,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 ) : (
                   /* LEARN: the card turns over; swipe or the arrows for the next one */
                   <>
-                    {/* Direction on the left, the counter in the middle (the lesson bar above says which lesson) */}
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs font-bold text-zinc-400 mb-2 shrink-0">
+                    {/* Direction on the left, the counter on the right like Practice and Review (the lesson bar above says which lesson) */}
+                    <div className="flex items-center justify-between text-xs font-bold text-zinc-400 mb-2 shrink-0">
                       {/* Which way, shown only: the direction is chosen on the Start page */}
-                      <span className="justify-self-start px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 whitespace-nowrap select-none">
+                      <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 whitespace-nowrap select-none">
                         {learnDirection === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
                       </span>
-                      <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider">
+                      <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 tracking-wider whitespace-nowrap">
                         {flashcardIndex + 1} / {filteredCards.length}
                       </span>
-                      <span />
                     </div>
 
                     {currentLearnCard && (

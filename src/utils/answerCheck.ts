@@ -11,7 +11,9 @@ import { WordEntry } from '../types';
  *
  * English (DE → EN) is loose, because it is only there to show you knew which
  * word it was: any one of the comma-separated meanings will do, a leading
- * "to", "a" or "the" is optional, and notes in brackets are ignored.
+ * "a" or "the" is optional, and notes in brackets are ignored. A verb needs
+ * its "to" ("to listen", not "listen") — Chris's rule. Words in square
+ * brackets ("cathedral [church]") are accepted but never shown.
  *
  * A word with two numbered meanings is asked for both, in either order.
  */
@@ -105,13 +107,25 @@ export function checkGerman(input: string, word: WordEntry): GermanResult {
 
 /* ----------------------------------------------------------------- English */
 
-export function normalizeEnglish(text: string): string {
+/** keepTo: a verb's "to" stays, so "listen" no longer answers "to listen". */
+export function normalizeEnglish(text: string, keepTo = false): string {
   let t = text.toLowerCase();
   t = t.replace(/\([^)]*\)/g, ' ');       // "Mrs (title)" → "mrs"
+  t = t.replace(/\[[^\]]*\]/g, ' ');      // "[church]" is not part of the answer
   t = t.replace(PUNCTUATION, ' ');
   t = squash(t);
-  t = t.replace(/^(to|a|an|the)\s+/, '');  // "to hear" → "hear"
+  t = t.replace(keepTo ? /^(a|an|the)\s+/ : /^(to|a|an|the)\s+/, '');  // "to hear" → "hear"
   return squash(t);
+}
+
+/** Verbs keep their "to". */
+export function needsTo(word: WordEntry): boolean {
+  return word.partOfSpeech === 'verb';
+}
+
+/** "cathedral (major church) [church]" → "cathedral (major church)", for showing. */
+export function withoutExtras(text: string): string {
+  return squash(text.replace(/\s*\[[^\]]*\]/g, ''));
 }
 
 /** The meanings of a word, one list per numbered sense. */
@@ -120,26 +134,42 @@ export function englishSenses(word: WordEntry): string[][] {
   return [[word.translation]];
 }
 
-/** Every spelling that answers one sense: "to lie, to be lying" → both. */
-function optionsFor(sense: string[]): string[] {
-  return sense
+/**
+ * Every spelling that answers one sense: "to lie, to be lying" → both;
+ * "ticket / vending machine" → ticket, vending machine, and the whole thing;
+ * "[church]" → church.
+ */
+function optionsFor(sense: string[], keepTo = false): string[] {
+  const extras = sense.flatMap((part) => [...part.matchAll(/\[([^\]]*)\]/g)].flatMap((m) => m[1].split(/[,;]/)));
+  const shown = sense
     // the brackets go first: "cream (AT/CH)" is one meaning, not two
-    .map((part) => part.replace(/\([^)]*\)/g, ' '))
-    .flatMap((part) => part.split(/[,;/]/))
-    .map(normalizeEnglish)
+    .map((part) => part.replace(/\[[^\]]*\]/g, ' ').replace(/\([^)]*\)/g, ' '));
+  const all = [...shown, ...shown.flatMap((part) => part.split(/[,;/]/)), ...extras]
+    .map((part) => normalizeEnglish(part, keepTo))
     .filter(Boolean);
+  return [...new Set(all)];
 }
 
 /** Every accepted English answer for each numbered sense, already normalised. */
 export function englishOptions(word: WordEntry): string[][] {
-  return englishSenses(word).map(optionsFor);
+  return englishSenses(word).map((sense) => optionsFor(sense, needsTo(word)));
+}
+
+/**
+ * Does this answer one sense? One meaning will do; several typed at once
+ * ("machines, ticket machines") are fine too when every one of them is right.
+ */
+export function answersSense(input: string, options: string[], keepTo = false): boolean {
+  const user = normalizeEnglish(input, keepTo);
+  if (!user) return false;
+  if (options.includes(user)) return true;
+  const pieces = input.split(/[,;/]/).map((p) => normalizeEnglish(p, keepTo)).filter(Boolean);
+  return pieces.length > 1 && pieces.every((p) => options.includes(p));
 }
 
 /** Does this answer any one of the word's meanings? */
 export function checkEnglish(input: string, word: WordEntry): boolean {
-  const user = normalizeEnglish(input);
-  if (!user) return false;
-  return englishSenses(word).some((sense) => optionsFor(sense).includes(user));
+  return englishOptions(word).some((options) => answersSense(input, options, needsTo(word)));
 }
 
 /**
@@ -147,12 +177,12 @@ export function checkEnglish(input: string, word: WordEntry): boolean {
  * matter which box you put which in. The same meaning twice is not both.
  */
 export function checkEnglishPair(inputs: string[], word: WordEntry): boolean[] {
-  const senses = englishSenses(word).map(optionsFor);
+  const senses = englishOptions(word);
+  const keepTo = needsTo(word);
   const claimed = new Set<number>();
   return inputs.map((raw) => {
-    const user = normalizeEnglish(raw);
-    if (!user) return false;
-    const index = senses.findIndex((options, i) => !claimed.has(i) && options.includes(user));
+    if (!normalizeEnglish(raw, keepTo)) return false;
+    const index = senses.findIndex((options, i) => !claimed.has(i) && answersSense(raw, options, keepTo));
     if (index === -1) return false;
     claimed.add(index);
     return true;
@@ -162,6 +192,6 @@ export function checkEnglishPair(inputs: string[], word: WordEntry): boolean[] {
 /** "1. woman<br>2. Mrs (title)" → ["woman", "Mrs (title)"], for showing. */
 export function meaningLines(word: WordEntry): string[] {
   const senses = englishSenses(word);
-  if (senses.length > 1) return senses.map((s) => s.join(', '));
-  return [word.translation.replace(/<br\s*\/?>/g, ' · ')];
+  if (senses.length > 1) return senses.map((s) => withoutExtras(s.join(', ')));
+  return [withoutExtras(word.translation.replace(/<br\s*\/?>/g, ' · '))];
 }

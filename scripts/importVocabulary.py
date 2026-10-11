@@ -89,8 +89,22 @@ def split_senses(english: str):
     parts = [p.strip() for p in re.split(r"<br\s*/?>", english) if p.strip()]
     if len(parts) > 1 or re.match(r"^\s*1\.\s", english):
         parts = [re.sub(r"^\s*\d+\.\s*", "", p).strip() for p in parts]
-    # commas inside brackets belong to the note: "number (a numeral: 0, 1, 2 …)"
-    return [[w.strip() for w in re.split(r",(?![^()]*\))", sense) if w.strip()] for sense in parts]
+    # commas inside brackets belong to the note: "number (a numeral: 0, 1, 2 …)",
+    # and inside [also accepted] to that list
+    return [[w.strip() for w in re.split(r",(?![^()]*\))(?![^\[\]]*\])", sense) if w.strip()] for sense in parts]
+
+
+def without_extras(english: str) -> str:
+    """'cathedral (major church) [church]' → 'cathedral (major church)': [answers] are never shown."""
+    return re.sub(r"\s*\[[^\]]*\]", "", english).strip()
+
+
+def plural_meaning(english: str):
+    """'1. shopping<br>2. purchase<br>Pl.: purchases' → ('1. shopping<br>2. purchase', 'purchases')."""
+    m = re.search(r"<br\s*/?>\s*Pl\.:\s*(.+)$", english)
+    if not m:
+        return english, ""
+    return english[: m.start()].strip(), m.group(1).strip()
 
 
 def bracket_forms(text: str):
@@ -160,7 +174,7 @@ def main():
     words, seen_ids, skipped = [], set(), 0
     for row in read_rows():
         display = cell(row, "german word (singular)")
-        english = cell(row, "english meaning")
+        english, plural_english = plural_meaning(cell(row, "english meaning"))
         if not display or not english:
             skipped += 1
             continue
@@ -196,7 +210,7 @@ def main():
             "id": word_id,
             "display": display,                      # exactly as written in the .md
             "lemma": lemma,
-            "translation": english,                  # full text, shown after answering
+            "translation": without_extras(english),  # full text, shown after answering
             "senses": split_senses(english),         # for the two answer boxes
             "level": level,
             "volume": volume,
@@ -208,6 +222,9 @@ def main():
             "answers": answers,                      # accepted German answers (EN → DE)
             "exampleSentences": [{"id": f"{word_id}_ex", "german": sentence, "english": sentence_english}] if sentence else [],
         }
+        if plural_english:
+            entry["pluralTranslation"] = without_extras(plural_english)  # what the plural card means
+            entry["pluralSenses"] = split_senses(plural_english)
         if sentence:
             entry["sentence"] = sentence
         # Verbs: ich · du · er/sie/es · wir · ihr · sie/Sie ("-" where a form is not used)
