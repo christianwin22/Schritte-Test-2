@@ -18,7 +18,8 @@ interface DuolingoTopBarProps {
    * Grammar page, Conjugation to that exercise's own page. Each part grows a
    * little under the pointer. Without an onClick a part is plain text.
    */
-  crumbs?: { label: string; onClick?: () => void }[];
+  /** wideOnly: shown on an iPad or a Mac only ("Lesson 9 • Unterwegs"); a phone has no room. */
+  crumbs?: { label: string; onClick?: () => void; wideOnly?: boolean }[];
   appLanguage?: AppLanguage;
   currentTab?: string;
   /** Rendered on the right, before Back/Profile (the 'note an idea' button). */
@@ -62,12 +63,12 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
         </div>
 
         {/* Center: the title sits in the middle of the bar, whatever is beside it */}
-        <div className="absolute left-1/2 -translate-x-1/2 max-w-[55%] px-2 text-center pointer-events-none">
+        <div className="absolute left-1/2 -translate-x-1/2 max-w-[55%] md:max-w-[70%] px-2 text-center pointer-events-none">
           {crumbs && crumbs.length > 0 ? (
             <span className="flex items-center justify-center gap-1 min-w-0 text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
               {crumbs.map((crumb, i) => (
                 <React.Fragment key={`${crumb.label}-${i}`}>
-                  {i > 0 && <span className="text-zinc-400 shrink-0">•</span>}
+                  {i > 0 && <span className={`text-zinc-400 shrink-0 ${crumb.wideOnly ? 'hidden md:inline' : ''}`}>•</span>}
                   {crumb.onClick ? (
                     <button
                       type="button"
@@ -83,7 +84,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
                       {crumb.label}
                     </button>
                   ) : (
-                    <span className="truncate">{crumb.label}</span>
+                    <span className={`truncate ${crumb.wideOnly ? 'hidden md:inline text-zinc-500 dark:text-zinc-400' : ''}`}>{crumb.label}</span>
                   )}
                 </React.Fragment>
               ))}

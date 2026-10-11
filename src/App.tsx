@@ -440,6 +440,9 @@ export default function App() {
   const handleCrumbToExercise = () => {
     exerciseBackRef.current?.(); // nothing to do when already on its page
   };
+  // Words and Speaking say a little more on a big screen: Learn • Lesson 9 • Unterwegs
+  const [topBarDetail, setTopBarDetail] = useState<string[]>([]);
+
   const getTopBarCrumbs = () => {
     const title = getTopBarTitle();
     if (!title) return undefined;
@@ -457,7 +460,7 @@ export default function App() {
       }
       setActiveExerciseMode(parent);
     };
-    return parts.map((label, i) => ({
+    const crumbs: { label: string; onClick?: () => void; wideOnly?: boolean }[] = parts.map((label, i) => ({
       label,
       onClick:
         parts.length === 1
@@ -468,6 +471,9 @@ export default function App() {
           ? toParent
           : handleCrumbToExercise,
     }));
+    // only inside Words (or Speaking's Words), not on the hub pages around it
+    const inWords = activeExerciseMode === 'explorer' || (currentTab === 'speaking' && !!activeExerciseMode);
+    return inWords ? [...crumbs, ...topBarDetail.map((label) => ({ label, wideOnly: true }))] : crumbs;
   };
 
   const handleRequestAbandon = (onConfirmLeave: () => void) => {
@@ -615,6 +621,7 @@ export default function App() {
               onCorrectAnswer={handleCorrectAnswer}
               onWrongAnswer={handleWrongAnswer}
               activeExerciseMode={activeExerciseMode}
+              onTopBarDetail={setTopBarDetail}
               onSelectExerciseMode={setActiveExerciseMode}
               onRequestAbandon={handleRequestAbandon}
               backHandlerRef={exerciseBackRef}
@@ -682,6 +689,7 @@ export default function App() {
           {currentTab === 'speaking' && (
             <SchritteVocabView
               speakOnly
+              onTopBarDetail={setTopBarDetail}
               onCorrectAnswer={handleCorrectAnswer}
               onWrongAnswer={handleWrongAnswer}
               activeExerciseMode={activeExerciseMode}
