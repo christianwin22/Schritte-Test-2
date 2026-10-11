@@ -2510,6 +2510,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           );
         };
 
+        /** The book's sentences can run to three lines or more: the longer, the smaller, so the card still holds it. */
+        const exampleSize = (german: string) =>
+          german.length > 160 ? 'text-sm sm:text-lg' : german.length > 110 ? 'text-base sm:text-xl' : german.length > 70 ? 'text-lg sm:text-2xl' : 'text-xl sm:text-2xl';
+
         /** The lower half of a card: the example, the same size as the word above it, its English under it. */
         const exampleHalf = (card: WordCard, withAudio: boolean) => {
           const example = exampleOf(card);
@@ -2518,7 +2522,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           return (
             <div className="flex-1 w-full flex flex-col items-center justify-center gap-1.5 px-1">
               <div className="flex items-center justify-center gap-2">
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
+                <p className={`${exampleSize(example.german)} font-bold text-zinc-900 dark:text-zinc-100 leading-snug`}>
                   <SentenceWithWord sentence={example.german} word={shownWord} />
                 </p>
                 {withAudio && (
@@ -2537,7 +2541,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 )}
               </div>
               {example.english && (
-                <p className="text-sm sm:text-base font-medium text-zinc-500 dark:text-zinc-400">{example.english}</p>
+                <p className={`${example.german.length > 110 ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'} font-medium text-zinc-500 dark:text-zinc-400`}>{example.english}</p>
               )}
             </div>
           );

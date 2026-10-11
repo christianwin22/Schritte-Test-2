@@ -80,6 +80,26 @@ function umlautTolerant(stem: string): string {
     .replace(/[uü]/gi, '[uü]');
 }
 
+/** No "ge-" in the participle: besuchen → besucht, telefonieren → telefoniert. */
+const NO_GE = /^(be|emp|ent|er|ge|miss|ver|zer|über|unter|wider|hinter)/;
+
+/**
+ * The verb as the book often prints it: the participle (heiraten → geheiratet,
+ * einschlafen → eingeschlafen) and the zu-infinitive (aufhalten → aufzuhalten).
+ */
+function participles(word: WordEntry): string[] {
+  if (word.partOfSpeech !== 'verb') return [];
+  const lemma = word.lemma.toLowerCase().replace(/^sich\s+/, '').replace(/·/g, '');
+  const halves = separableHalves(word.display ?? lemma, lemma);
+  const [prefix, rest] = halves.length === 2 ? [halves[0].toLowerCase(), halves[1].toLowerCase()] : ['', lemma];
+  const stem = rest.replace(/e?n$/, '');
+  if (stem.length < 3 || /ieren$/.test(rest)) return [];
+  const out = [];
+  if (!NO_GE.test(rest)) out.push(`${escape(prefix)}ge${umlautTolerant(stem)}\\p{L}{0,3}`);
+  if (prefix) out.push(`${escape(prefix)}zu${umlautTolerant(stem)}\\p{L}{0,3}`);
+  return out;
+}
+
 /**
  * Splits a sentence into plain pieces and the piece(s) that are the word.
  * A sentence with no recognisable match comes back as one plain piece.
@@ -93,12 +113,14 @@ export function highlightWord(sentence: string, word: WordEntry): SentencePart[]
       const stem = stemOf(t);
       if (stem.length < 3) return escape(t);
       const front = compoundable && stem.length >= 4 ? '\\p{L}*' : '';
-      // a stem like "Lieblings-" carries a whole second word behind it
-      const tail = word.isStem ? 9 : 5;
+      // a stem like "Lieblings-" carries a whole second word behind it;
+      // a noun can lead a compound too: Einkauf → Einkaufsstraße
+      const tail = word.isStem ? '{0,9}' : compoundable && stem.length >= 5 ? '*' : '{0,5}';
       // the stem, plus whatever ending it wears here
-      return `${front}${umlautTolerant(stem)}\\p{L}{0,${tail}}`;
+      return `${front}${umlautTolerant(stem)}\\p{L}${tail}`;
     })
     .filter(Boolean);
+  patterns.push(...participles(word));
   if (!patterns.length) return [{ text: sentence, hit: false }];
 
   const re = new RegExp(`(?<!\\p{L})(${patterns.join('|')})(?!\\p{L})`, 'giu');
