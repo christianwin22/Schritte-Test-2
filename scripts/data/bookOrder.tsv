@@ -157,7 +157,6 @@ A1.1	Lesson 2	der Großvater
 A1.1	Lesson 2	dein-
 A1.1	Lesson 2	mein-
 A1.1	Lesson 2	Ihr-
-A1.1	Lesson 2	ihr
 A1.1	Lesson 2	der Ehemann
 A1.1	Lesson 2	die Ehefrau
 A1.1	Lesson 2	falsch
@@ -169,6 +168,7 @@ A1.1	Lesson 2	sie (Plural)
 A1.1	Lesson 2	geschieden
 A1.1	Lesson 2	wohnen
 A1.1	Lesson 2	jetzt
+A1.1	Lesson 2	ihr
 A1.1	Lesson 2	wir
 A1.1	Lesson 2	die Zahl
 A1.1	Lesson 2	die Null
@@ -301,9 +301,7 @@ A1.1	Lesson 4	das Bad
 A1.1	Lesson 4	neu
 A1.1	Lesson 4	klein
 A1.1	Lesson 4	hell
-A1.1	Lesson 4	hell- (+ Farbe)
 A1.1	Lesson 4	dunkel
-A1.1	Lesson 4	dunkel- (+ Farbe)
 A1.1	Lesson 4	billig
 A1.1	Lesson 4	schön
 A1.1	Lesson 4	hässlich
@@ -348,6 +346,8 @@ A1.1	Lesson 4	braun
 A1.1	Lesson 4	blau
 A1.1	Lesson 4	rot
 A1.1	Lesson 4	gelb
+A1.1	Lesson 4	hell- (+ Farbe)
+A1.1	Lesson 4	dunkel- (+ Farbe)
 A1.1	Lesson 4	der Zentimeter (cm)
 A1.1	Lesson 4	mal
 A1.1	Lesson 4	das Handy
@@ -492,8 +492,8 @@ A1.1	Lesson 5	geöffnet
 A1.1	Lesson 5	das Schiff
 A1.1	Lesson 5	die Tour
 A1.1	Lesson 5	das Kaufhaus
-A1.1	Lesson 5	der Moment
 A1.1	Lesson 5	Europa
+A1.1	Lesson 5	der Moment
 A1.1	Lesson 5	kennenlernen (sich)
 A1.1	Lesson 5	die Abfahrt
 A1.1	Lesson 5	der Erwachsene
@@ -824,11 +824,11 @@ A1.2	Lesson 10	die Brust
 A1.2	Lesson 10	die Hand
 A1.2	Lesson 10	die Nase
 A1.2	Lesson 10	der Mund
+A1.2	Lesson 10	sein-
+A1.2	Lesson 10	ihr-
 A1.2	Lesson 10	der Zahn
 A1.2	Lesson 10	krank
 A1.2	Lesson 10	informieren
-A1.2	Lesson 10	sein-
-A1.2	Lesson 10	ihr-
 A1.2	Lesson 10	unser-
 A1.2	Lesson 10	ausfallen
 A1.2	Lesson 10	das Lied
