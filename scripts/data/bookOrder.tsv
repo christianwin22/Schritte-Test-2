@@ -33,8 +33,6 @@ A1.1	Intro	zeichnen
 A1.1	Intro	verbinden
 A1.1	Intro	die Antwort
 A1.1	Intro	antworten
-A1.1	Lesson 1	was
-A1.1	Lesson 1	sprechen
 A1.1	Lesson 1	das Foto
 A1.1	Lesson 1	Guten Tag
 A1.1	Lesson 1	Auf Wiedersehen
@@ -69,10 +67,14 @@ A1.1	Lesson 1	kommen
 A1.1	Lesson 1	aus
 A1.1	Lesson 1	die Firma
 A1.1	Lesson 1	von
+A1.1	Lesson 1	Deutschland
+A1.1	Lesson 1	Österreich
 A1.1	Lesson 1	die Schweiz
 A1.1	Lesson 1	aha
 A1.1	Lesson 1	und
 A1.1	Lesson 1	nur
+A1.1	Lesson 1	was
+A1.1	Lesson 1	sprechen
 A1.1	Lesson 1	ein bisschen
 A1.1	Lesson 1	die Sprache
 A1.1	Lesson 1	das Alphabet
@@ -116,8 +118,6 @@ A1.1	Lesson 1	Frankreich
 A1.1	Lesson 1	Deutsch
 A1.1	Lesson 1	Italien
 A1.1	Lesson 1	das Italienisch
-A1.1	Lesson 1	Deutschland
-A1.1	Lesson 1	Österreich
 A1.1	Lesson 1	Griechenland
 A1.1	Lesson 1	das Griechisch
 A1.1	Lesson 2	der Lehrer
@@ -2871,7 +2871,6 @@ B1.2	Lesson 13	die Demonstration
 B1.2	Lesson 13	die Gewerkschaft
 B1.2	Lesson 13	das Zeichen
 B1.2	Lesson 13	politisch
-B1.2	Lesson 13	wählen
 B1.2	Lesson 13	fair
 B1.2	Lesson 13	der Hof
 B1.2	Lesson 13	protestieren
@@ -2883,15 +2882,16 @@ B1.2	Lesson 13	die Mauer
 B1.2	Lesson 13	der Bundeskanzler
 B1.2	Lesson 13	die Bundeskanzlerin
 B1.2	Lesson 13	die Regierung
-B1.2	Lesson 13	der Präsident
 B1.2	Lesson 13	die Macht
-B1.2	Lesson 13	die Präsidentin
 B1.2	Lesson 13	die Zone
 B1.2	Lesson 13	die Freiheit
 B1.2	Lesson 13	blühen
-B1.2	Lesson 13	folgend
 B1.2	Lesson 13	allgemein
 B1.2	Lesson 13	national
+B1.2	Lesson 13	folgend
+B1.2	Lesson 13	wählen
+B1.2	Lesson 13	der Präsident
+B1.2	Lesson 13	die Präsidentin
 B1.2	Lesson 14	diesmal
 B1.2	Lesson 14	das Rüebli
 B1.2	Lesson 14	das Gebäck
