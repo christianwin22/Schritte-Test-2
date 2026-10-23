@@ -39,8 +39,8 @@ check('die Chefinnen: "bosses"', checkCardEnglish('bosses', card('a12_l8_chefin'
 check('die Polizisten: "police officers"', checkCardEnglish('police officers', card('a12_l8_polizist', true)));
 check('die Studien: "studies" (already plural)', checkCardEnglish('studies', card('a12_l8_studium', true)));
 check('die Informationen: "information"', checkCardEnglish('information', card('a12_l8_information', true)));
-check('shown in the plural: "caretakers, janitors"', cardMeaningLines(card('a12_l8_hausmeister', true))[0] === 'caretakers, janitors');
-check('note kept: "bosses (f.)"', cardMeaningLines(card('a12_l8_chefin', true))[0] === 'bosses (f.)');
+check('shown in the plural: "caretakers, janitors (male)"', cardMeaningLines(card('a12_l8_hausmeister', true))[0] === 'caretakers, janitors (male)');
+check('note kept: "bosses (female)"', cardMeaningLines(card('a12_l8_chefin', true))[0] === 'bosses (female)');
 const bereiche = card('a12_l8_bereich', true);
 check(
   'two boxes: "areas" + "fields" right',

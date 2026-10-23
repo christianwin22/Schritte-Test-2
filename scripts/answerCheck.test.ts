@@ -114,6 +114,18 @@ const t7 = INITIAL_VOCABULARY.find((w) => w.id === 'a11_l7_title')!;
 check('"Lernen - ein Leben lang" with a short dash is right', checkGerman('Lernen - ein Leben lang', t7).isCorrect);
 check('mieten: "to borrow" is still wrong', !checkEnglish('to borrow', byId('mieten')));
 
+console.log('8d. Lesson 11 ideas: brackets are optional, (male) / (female) too');
+const sbahn = INITIAL_VOCABULARY.find((w) => w.id === 'a12_l11_s_bahn')!;
+check('S-Bahn: "train" is right', checkEnglish('train', sbahn));
+check('S-Bahn: "suburban train" is right', checkEnglish('suburban train', sbahn));
+const kunde = INITIAL_VOCABULARY.find((w) => w.id === 'a12_l11_kunde')!;
+const kundin = INITIAL_VOCABULARY.find((w) => w.id === 'a12_l11_kundin')!;
+check('der Kunde: "customer" is right', checkEnglish('customer', kunde));
+check('die Kundin: "customer" is right', checkEnglish('customer', kundin));
+check('der Kunde shows (male)', kunde.translation === 'customer (male)');
+const autobahn = INITIAL_VOCABULARY.find((w) => w.id === 'a12_l11_autobahn')!;
+check('Autobahn: "road" is right', checkEnglish('road', autobahn));
+
 console.log('9. Junk never passes');
 const junk = ['the', 'a', 'to', 'x', 'asdf', '???', '1', 'der'];
 // A word whose meaning really is one of these (der = "the") is not a false accept.
