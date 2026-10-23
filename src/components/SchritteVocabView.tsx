@@ -1698,6 +1698,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Typing a note: none of this is for the cards.
       if ((e.target as HTMLElement)?.closest?.('[data-note-dialog]')) return;
+      // The Start page: no card is showing yet, so → must not move past card 1 (the title).
+      if (!sessionStarted) return;
       const targetTag = (e.target as HTMLElement)?.tagName;
       const isInput = targetTag === 'INPUT' || targetTag === 'TEXTAREA' || targetTag === 'SELECT';
       if (targetTag === 'TEXTAREA') return;
@@ -1786,6 +1788,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     activeExerciseMode,
     flashcardSubMode,
     isHotkeyModalOpen,
+    sessionStarted,
     hotkeys,
     currentFlashcard,
     filteredWords.length,
@@ -2661,7 +2664,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {i > 0 && (
                       <div
                         className={`flex-1 h-1 mt-[11px] rounded-full ${
-                          st.done ? 'bg-emerald-500' : 'bg-zinc-200 dark:bg-zinc-700'
+                          st.done ? 'bg-zinc-950 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-700'
                         }`}
                       />
                     )}
@@ -2669,7 +2672,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       <span
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-black ${
                           st.done
-                            ? 'bg-emerald-500 border-emerald-500 text-white'
+                            ? 'bg-zinc-950 border-zinc-950 text-white dark:bg-white dark:border-white dark:text-zinc-950'
                             : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-600 text-zinc-400'
                         }`}
                       >
@@ -2858,7 +2861,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   /* LEARN ROUND COMPLETE */
                   <div className="flex-1 flex flex-col justify-between items-center text-center p-2 sm:p-4 animate-fadeIn w-full gap-3 sm:gap-4">
                     <div className="text-center space-y-1 pt-1">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-black mb-1">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 text-xs font-black mb-1">
                         <Check className="w-3.5 h-3.5 stroke-[3]" />
                         <span>{en ? 'Learn Round Complete' : 'Lernrunde Abgeschlossen'}</span>
                       </div>
