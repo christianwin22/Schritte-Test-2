@@ -507,15 +507,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // One card per thing to learn: a noun with a plural is two ("der Student", "die Studenten").
   const filteredCards = useMemo(() => cardsFor(filteredWords, CARD_PREFIX), [filteredWords, CARD_PREFIX]);
 
-  // The top bar on a big screen: which part (Learn, Practice, Review). The lesson and its
-  // title are on the page itself.
+  // The top bar on a big screen: which part (Learn, Practice, Review), once a session has
+  // started. On the Start page the switch already says it, and the page shows the lesson.
   useEffect(() => {
     if (!onTopBarDetail) return;
     const en = appLanguage === 'en';
     const part =
       flashcardSubMode === 'learn' ? (en ? 'Learn' : 'Lernen') : flashcardSubMode === 'practice' ? (en ? 'Practice' : 'Üben') : en ? 'Review' : 'Wiederholen';
-    onTopBarDetail([part]);
-  }, [onTopBarDetail, flashcardSubMode, appLanguage]);
+    onTopBarDetail(sessionStarted ? [part] : []);
+  }, [onTopBarDetail, flashcardSubMode, appLanguage, sessionStarted]);
   useEffect(() => () => onTopBarDetail?.([]), [onTopBarDetail]);
   const allCards = useMemo(() => cardsFor(INITIAL_VOCABULARY, CARD_PREFIX), [CARD_PREFIX]);
   const cardByKey = useMemo(() => new Map(allCards.map((c) => [c.key, c])), [allCards]);
