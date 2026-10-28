@@ -1,8 +1,6 @@
 import React from 'react';
 import {
   BookOpen,
-  ArrowDownLeft,
-  ArrowRight,
   ChevronDown,
   Zap,
   Headphones,
@@ -98,6 +96,18 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
     },
   ];
 
+  // Long thin arrows for the big-screen order: along a row, and down to the next row's start.
+  const arrowAlong = (
+    <svg width="56" height="12" viewBox="0 0 56 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 6h52M48 1l6 5-6 5" />
+    </svg>
+  );
+  const arrowDown = (
+    <svg width="56" height="24" viewBox="0 0 56 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M54 2L3 22M3 14v8h9" />
+    </svg>
+  );
+
   const en = appLanguage === 'en';
   const stages = [
     { row: 'sm:row-start-1', label: en ? 'Basic' : 'Grundlagen' },
@@ -152,21 +162,22 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col justify-center pt-3 sm:pt-4">
-      <div className="grid grid-cols-2 sm:grid-cols-[auto_1fr_auto_1fr] gap-2.5 sm:gap-x-3 sm:gap-y-1 w-full max-w-4xl mx-auto">
-        {/* Bigger screens: each row's name, an arrow inside the row, and one on to the next row */}
+      <div className="grid grid-cols-2 sm:grid-cols-[4rem_minmax(0,13rem)_auto_minmax(0,13rem)_4rem] sm:justify-center gap-2.5 sm:gap-x-4 sm:gap-y-1 w-full max-w-4xl mx-auto">
+        {/* Bigger screens: each row's name, an arrow inside the row, and one on to the next row.
+            The empty last column matches the names' column, so the tiles sit in the middle. */}
         {stages.map((stage, i) => (
           <React.Fragment key={stage.label}>
             <span
-              className={`hidden sm:flex sm:col-start-1 ${stage.row} items-center justify-end w-16 text-[10px] font-black uppercase tracking-wider text-zinc-400`}
+              className={`hidden sm:flex sm:col-start-1 ${stage.row} items-center justify-end text-[10px] font-black uppercase tracking-wider text-zinc-400`}
             >
               {stage.label}
             </span>
             <span className={`hidden sm:flex sm:col-start-3 ${stage.row} items-center justify-center text-zinc-400`}>
-              <ArrowRight className="w-5 h-5" />
+              {arrowAlong}
             </span>
             {i < stages.length - 1 && (
               <span className={`hidden sm:flex sm:col-start-3 ${i === 0 ? 'sm:row-start-2' : 'sm:row-start-4'} items-center justify-center text-zinc-400`}>
-                <ArrowDownLeft className="w-5 h-5" />
+                {arrowDown}
               </span>
             )}
           </React.Fragment>
