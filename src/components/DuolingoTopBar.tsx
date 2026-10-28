@@ -84,7 +84,7 @@ export const DuolingoTopBar: React.FC<DuolingoTopBarProps> = ({
                       {crumb.label}
                     </button>
                   ) : (
-                    <span className={`truncate ${crumb.wideOnly ? 'hidden md:inline text-zinc-500 dark:text-zinc-400' : ''}`}>{crumb.label}</span>
+                    <span className={`truncate ${crumb.wideOnly ? 'hidden md:inline' : ''}`}>{crumb.label}</span>
                   )}
                 </React.Fragment>
               ))}

@@ -507,21 +507,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // One card per thing to learn: a noun with a plural is two ("der Student", "die Studenten").
   const filteredCards = useMemo(() => cardsFor(filteredWords, CARD_PREFIX), [filteredWords, CARD_PREFIX]);
 
-  // The top bar on a big screen: which part, which lesson, and the lesson's title.
+  // The top bar on a big screen: which part (Learn, Practice, Review). The lesson and its
+  // title are on the page itself.
   useEffect(() => {
     if (!onTopBarDetail) return;
     const en = appLanguage === 'en';
     const part =
       flashcardSubMode === 'learn' ? (en ? 'Learn' : 'Lernen') : flashcardSubMode === 'practice' ? (en ? 'Practice' : 'Üben') : en ? 'Review' : 'Wiederholen';
-    const lesson =
-      typeof selectedLektion === 'number'
-        ? selectedLektion === 0
-          ? 'Intro'
-          : `${en ? 'Lesson' : 'Lektion'} ${selectedLektion}`
-        : '';
-    const title = typeof selectedLektion === 'number' ? BOOK_LESSON_TITLES[`${selectedLevel}_${selectedLektion}`] ?? '' : '';
-    onTopBarDetail([part, lesson, title].filter(Boolean));
-  }, [onTopBarDetail, flashcardSubMode, selectedLektion, selectedLevel, appLanguage]);
+    onTopBarDetail([part]);
+  }, [onTopBarDetail, flashcardSubMode, appLanguage]);
   useEffect(() => () => onTopBarDetail?.([]), [onTopBarDetail]);
   const allCards = useMemo(() => cardsFor(INITIAL_VOCABULARY, CARD_PREFIX), [CARD_PREFIX]);
   const cardByKey = useMemo(() => new Map(allCards.map((c) => [c.key, c])), [allCards]);
