@@ -1,6 +1,8 @@
 import React from 'react';
 import {
   BookOpen,
+  ArrowDownLeft,
+  ArrowRight,
   ChevronDown,
   Zap,
   Headphones,
@@ -53,38 +55,54 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
   // Everything stays open in the Sandbox; in the real app only Vocabulary is open for now.
   const isSandbox = useAuth()?.isSandbox ?? false;
 
+  // A phone keeps two columns in this order. A bigger screen shows the order to study in:
+  // Basic (Vocabulary → Grammar), Passive (Listening → Reading), Active (Writing → Speaking),
+  // each tile in its own place (sm:col/row) on a grid of label | tile | arrow | tile.
   const learningAreas = [
     {
       id: 'vocab' as DuolingoTab,
+      place: 'sm:col-start-2 sm:row-start-1',
       label: t.vocab,
       icon: <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
     },
     {
       id: 'grammar' as DuolingoTab,
+      place: 'sm:col-start-4 sm:row-start-1',
       label: t.grammar,
       icon: <Zap className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
     },
-    // Row 2: Reading | Writing. Row 3: Listening | Speaking.
+    // Phone rows: Reading | Writing, then Listening | Speaking.
     {
       id: 'reading' as DuolingoTab,
+      place: 'sm:col-start-4 sm:row-start-3',
       label: t.reading,
       icon: <BookMarked className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
     },
     {
       id: 'writing' as DuolingoTab,
+      place: 'sm:col-start-2 sm:row-start-5',
       label: t.writing,
       icon: <FileEdit className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
     },
     {
       id: 'listening' as DuolingoTab,
+      place: 'sm:col-start-2 sm:row-start-3',
       label: t.listening,
       icon: <Headphones className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
     },
     {
       id: 'speaking' as DuolingoTab,
+      place: 'sm:col-start-4 sm:row-start-5',
       label: t.speaking,
       icon: <Mic className="w-8 h-8 sm:w-10 sm:h-10 text-current" />,
     },
+  ];
+
+  const en = appLanguage === 'en';
+  const stages = [
+    { row: 'sm:row-start-1', label: en ? 'Basic' : 'Grundlagen' },
+    { row: 'sm:row-start-3', label: en ? 'Passive' : 'Passiv' },
+    { row: 'sm:row-start-5', label: en ? 'Active' : 'Aktiv' },
   ];
 
   return (
@@ -134,7 +152,25 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col justify-center pt-3 sm:pt-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 w-full max-w-4xl mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-[auto_1fr_auto_1fr] gap-2.5 sm:gap-x-3 sm:gap-y-1 w-full max-w-4xl mx-auto">
+        {/* Bigger screens: each row's name, an arrow inside the row, and one on to the next row */}
+        {stages.map((stage, i) => (
+          <React.Fragment key={stage.label}>
+            <span
+              className={`hidden sm:flex sm:col-start-1 ${stage.row} items-center justify-end w-16 text-[10px] font-black uppercase tracking-wider text-zinc-400`}
+            >
+              {stage.label}
+            </span>
+            <span className={`hidden sm:flex sm:col-start-3 ${stage.row} items-center justify-center text-zinc-400`}>
+              <ArrowRight className="w-5 h-5" />
+            </span>
+            {i < stages.length - 1 && (
+              <span className={`hidden sm:flex sm:col-start-3 ${i === 0 ? 'sm:row-start-2' : 'sm:row-start-4'} items-center justify-center text-zinc-400`}>
+                <ArrowDownLeft className="w-5 h-5" />
+              </span>
+            )}
+          </React.Fragment>
+        ))}
         {learningAreas.map((area) => (
           <button
             key={area.id}
@@ -147,7 +183,7 @@ export const HomeGuideView: React.FC<HomeGuideViewProps> = ({
               playSound('tap');
               onSelectArea(area.id);
             }}
-            className={`w-full relative bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5 group min-h-[105px] sm:min-h-[130px] ${
+            className={`${area.place} w-full relative bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 border-2 border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5 group min-h-[105px] sm:min-h-[112px] ${
               isTabLocked(area.id, isSandbox)
                 ? 'opacity-40 grayscale cursor-not-allowed'
                 : 'hover:border-zinc-950 dark:hover:border-zinc-100 hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 active:scale-[0.98]'
