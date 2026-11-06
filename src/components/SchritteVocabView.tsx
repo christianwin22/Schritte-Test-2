@@ -78,6 +78,7 @@ import {
   unlockDrillsAfterPractice,
   drillCardId,
   drillReviewPool,
+  byCompletionTime,
   reviewCard,
   isDrillable,
   DrillSkill,
@@ -628,7 +629,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       const dueKeys = new Set(globalDueWords.map((c) => c.key));
       const ahead = queue.slice(index).filter((c) => dueKeys.has(c.key));
       const aheadKeys = new Set(ahead.map((c) => c.key));
-      const added = shuffled(globalDueWords.filter((c) => !aheadKeys.has(c.key)));
+      const added = byCompletionTime(globalDueWords.filter((c) => !aheadKeys.has(c.key)), fsrsRecords);
       const left = [...ahead, ...added];
       if (left.length === 0) return null;
       return { queue: [...queue.slice(0, index), ...left], index, score: saved.score ?? 0, initial: index + left.length };
@@ -1140,7 +1141,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   const buildFreshPracticeRun = () => {
     if (flashcardSubMode === 'review') {
-      const freshQueue = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
+      const freshQueue = byCompletionTime(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords, fsrsRecords);
       setPracticeQueue(freshQueue);
       setSessionInitialCount(freshQueue.length);
       setInitialMistakeWordIds([]);
@@ -1596,7 +1597,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       setFlashcardIndex(0);
 
       if (flashcardSubMode === 'review') {
-        const q = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
+        const q = byCompletionTime(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords, fsrsRecords);
         setPracticeQueue(q);
         setSessionInitialCount(q.length);
         setInitialMistakeWordIds([]);
@@ -1659,7 +1660,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           setSessionInitialCount(saved.initial);
           setResumedSession(true);
         } else {
-          const q = shuffled(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords);
+          const q = byCompletionTime(globalDueWords.length > 0 ? globalDueWords : globalUnlockedWords, fsrsRecords);
           setPracticeQueue(q);
           setSessionInitialCount(q.length);
         }

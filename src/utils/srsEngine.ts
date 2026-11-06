@@ -145,15 +145,33 @@ export function saveAllFSRSRecords(records: Record<string, FSRSCardRecord>): voi
   }
 }
 
+/** Midnight that starts tomorrow, on this phone's clock. */
+export function startOfTomorrow(now: Date = new Date()): number {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+}
+
 /**
- * Check if a card record is currently due for Review
- * Rule: isUnlocked === true AND status === 'review' AND nextReviewDate <= CurrentTimestamp
+ * Check if a card record is currently due for Review.
+ * A card is due from the start of the day it is scheduled for, not the exact
+ * minute: a word finished at 11:30 pm is waiting from midnight.
  */
-export function isCardDueForReview(record?: FSRSCardRecord | null): boolean {
+export function isCardDueForReview(record?: FSRSCardRecord | null, now: Date = new Date()): boolean {
   if (!record) return false;
   if (!record.isUnlocked || record.status !== 'review') return false;
   if (!record.nextReviewDate) return false;
-  return new Date(record.nextReviewDate).getTime() <= Date.now();
+  return new Date(record.nextReviewDate).getTime() < startOfTomorrow(now);
+}
+
+/** Review order: the card finished earliest comes first, the latest one last. */
+export function byCompletionTime<T extends { key: string }>(
+  cards: T[],
+  records: Record<string, FSRSCardRecord>
+): T[] {
+  const at = (c: T) => {
+    const t = records[c.key]?.lastReviewedAt;
+    return t ? new Date(t).getTime() : 0;
+  };
+  return [...cards].sort((a, b) => at(a) - at(b));
 }
 
 /**

@@ -100,5 +100,23 @@ st = markLessonReadyForDrills(st, 'A1', 3, INITIAL_VOCABULARY.filter((w) => w.le
 st = markLessonReadyForDrills(st, 'A1', 2, INITIAL_VOCABULARY.filter((w) => w.lektion === 2));
 check('waiting lessons listed in course order', readyLessons(st, 'plural').map((l) => l.lektion).join(',') === '1,2,3');
 
+
+console.log('\nMidnight: yesterday\'s words are due from 12 am, in the order they were finished');
+{
+  const { isCardDueForReview, byCompletionTime } = engine;
+  const rec = (finished: Date, due: Date) => ({
+    wordId: 'x', status: 'review' as const, isUnlocked: true, stability: 1, difficulty: 5, intervalDays: 1,
+    lastReviewedAt: finished.toISOString(), nextReviewDate: due.toISOString(),
+  });
+  const late = rec(new Date(2026, 10, 5, 23, 30), new Date(2026, 10, 6, 23, 30));
+  check('finished 11:30 pm → not due at 11:59 pm', !isCardDueForReview(late, new Date(2026, 10, 5, 23, 59)));
+  check('...but due at 12:00 am', isCardDueForReview(late, new Date(2026, 10, 6, 0, 0)));
+  check('...and at 9 am', isCardDueForReview(late, new Date(2026, 10, 6, 9, 0)));
+  const early = rec(new Date(2026, 10, 5, 8, 0), new Date(2026, 10, 6, 8, 0));
+  const noon = rec(new Date(2026, 10, 5, 12, 0), new Date(2026, 10, 6, 12, 0));
+  const order = byCompletionTime([{ key: 'late' }, { key: 'early' }, { key: 'noon' }], { late, early, noon });
+  check('earliest finished comes first, 11:30 pm last', order.map((c) => c.key).join(',') === 'early,noon,late');
+}
+
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
