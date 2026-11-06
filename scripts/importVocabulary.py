@@ -167,11 +167,27 @@ def blank_out(sentence: str, target: str) -> str:
     return blanked if count else ""
 
 
+PLURAL_BOOK = pathlib.Path(__file__).parent / "data" / "pluralBookSentences.tsv"
+
+
+def plural_book_sentences():
+    """Nouns whose book sentence uses the plural: id → (new singular German, English)."""
+    out = {}
+    if PLURAL_BOOK.exists():
+        for line in PLURAL_BOOK.read_text(encoding="utf-8").splitlines():
+            if not line.strip() or line.startswith("#"):
+                continue
+            word_id, german, english = line.split("\t")
+            out[word_id] = (german.strip(), english.strip())
+    return out
+
+
 def main():
     if not SOURCE.exists():
         sys.exit(f"source not found: {SOURCE}")
 
     words, seen_ids, skipped = [], set(), 0
+    plural_book = plural_book_sentences()
     for row in read_rows():
         display = cell(row, "german word (singular)")
         english, plural_english = plural_meaning(cell(row, "english meaning"))
@@ -207,6 +223,13 @@ def main():
             sentence_english = cell(row, "app example english")
         else:
             sentence_english = cell(row, "singular example english")
+
+        # The book sentence uses the plural: it goes on the plural card, and the
+        # singular card gets a sentence of its own.
+        book_plural = None
+        if word_id in plural_book and cell(row, "example sentence"):
+            book_plural = (cell(row, "example sentence"), cell(row, "app example english"))
+            sentence, sentence_english = plural_book[word_id]
 
         entry = {
             "id": word_id,
@@ -253,6 +276,9 @@ def main():
                 entry["nounDetails"]["pluralOnly"] = True
             singular_example = cell(row, "singular example")
             plural_example = cell(row, "plural example")
+            plural_example_english = cell(row, "plural example english")
+            if book_plural:
+                plural_example, plural_example_english = book_plural
             if singular_example:
                 entry["articleSentence"] = singular_example
                 if cell(row, "singular example english"):
@@ -283,7 +309,7 @@ def main():
                     entry["accusativeSentenceBlank"] = blanked
             if plural_example:
                 entry["pluralSentence"] = plural_example
-                english = cell(row, "plural example english")
+                english = plural_example_english
                 if english:
                     entry["pluralSentenceEnglish"] = english
                 bare = re.sub(r"^die\s+", "", plural_variants[0] if plural_variants else "", flags=re.I).strip()

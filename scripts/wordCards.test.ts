@@ -84,5 +84,17 @@ const finished = firstPracticeDone(INITIAL_VOCABULARY, '', { A1_L7: { practiceCo
 const l7 = cardsFor(INITIAL_VOCABULARY.filter((w) => w.level === 'A1' && w.lektion === 7));
 check('a finished lesson is done both ways', l7.every((c) => finished.de[c.key] && finished.en[c.key]));
 
+
+console.log('\nLesson 12 ideas (2026-11-05)');
+check('die (Bank-)Überweisung shows one "die"', germanShown(card('a12_l12_uberweisung')) === 'die (Bank-)Überweisung');
+check('die (Kaffee-)Maschine shows one "die"', germanShown(card('a12_l12_maschine')) === 'die (Kaffee-)Maschine');
+check('no card ever shows an article twice or glued on', !cardsFor(INITIAL_VOCABULARY).some((c) => /^(der|die|das) (der|die|das)\S/.test(germanShown(c)) || /\b(der|die|das)(?=[A-ZÄÖÜ])/.test(germanShown(c))));
+check('zumachen: "to close" and "to shut"', checkCardEnglish('to close', card('a12_l12_zumachen')) && checkCardEnglish('to shut', card('a12_l12_zumachen')));
+check('anmachen: "to turn on" and "to switch on"', checkCardEnglish('to turn on', card('a12_l12_anmachen')) && checkCardEnglish('to switch on', card('a12_l12_anmachen')));
+check('Zeugnis: "transcript" and "report"', checkCardEnglish('transcript', card('a12_l12_zeugnis')) && checkCardEnglish('report', card('a12_l12_zeugnis')));
+check('die Hilfen: "helps" is right', checkCardEnglish('helps', card('a12_l12_hilfe', true)));
+check('die Reinigungen: "dry cleaners"', checkCardEnglish('dry cleaners', card('a12_l12_reinigung', true)));
+check('Übersetzung: book sentence on the plural card', card('a12_l12_ubersetzung', true).word.pluralSentence?.includes('Übersetzungen in vielen Sprachen') === true);
+
 console.log(failures ? `\n${failures} FAILED` : '\nALL PASS');
 if (failures) process.exit(1);

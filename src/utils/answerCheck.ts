@@ -150,6 +150,10 @@ function optionsFor(sense: string[], keepTo = false): string[] {
   const all = [...shown, ...shown.flatMap((part) => part.split(/[,;/]/)), ...extras]
     .map((part) => normalizeEnglish(part, keepTo))
     .filter(Boolean);
+  // "to close, shut": the "to" belongs to "shut" as well, so "to shut" is right too
+  if (keepTo && all.some((o) => o.startsWith('to '))) {
+    all.push(...all.filter((o) => !o.startsWith('to ')).map((o) => `to ${o}`));
+  }
   return [...new Set(all)];
 }
 

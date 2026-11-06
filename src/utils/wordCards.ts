@@ -91,7 +91,7 @@ export function germanShown(card: WordCard): string {
   if (card.plural) return germanOf(card);
   const written = (word.display || word.lemma)
     .replace(/·/g, '')
-    .replace(/\s+\([^)]*\)/g, '') // notes after a space: "(Pl.)", "(die Uni)"
+    .replace(/\s+\([^)]*\)(?![\p{L}])/gu, '') // notes after a space: "(Pl.)", "(die Uni)" — not "(Bank-)Überweisung"
     .trim();
   if (!word.nounDetails?.gender) return written || word.lemma;
   const noun = written.replace(/^(?:(?:der|die|das)\s*\/\s*)*(?:der|die|das)\s+/i, '').trim();
