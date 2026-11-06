@@ -169,3 +169,19 @@ b7db95c4-d6b3-4c13-b951-11fbaabc83e6	done	c0e7a23	Gleis: track, platform (no cha
 57db6e2c-54dc-4a2e-a5a2-e363a326eb6c	done	c0e7a23	Fahrplan: itinerary first
 8b89fc56-8f74-4b79-a2aa-a2ba2bb30625	done	c9e2f52	top bar: part only, dark (Chris explained in chat)
 71fda25c-7bf8-4a66-95ef-e40d424e7a31	done	a598a06	home big screen: Basic / Passive / Active rows with arrows; Listening before Reading
+b3b79b3c-d6b3-4c13-b951-11fbaabc83e6	done	2f4e3c1	answered: plural card takes the plural word, or the singular + P
+c6c4958a-906f-40a8-be89-1865c97a144c	done	2f4e3c1	no extra black die (Bank-)Überweisung; test guards every word
+eab26c41-a803-40e9-81cb-a1d4e71a9e99	done	2f4e3c1	no extra black die (Kaffee-)Maschine
+fe0ea070-e7ec-43e7-a44c-67769c31abeb	done	2f4e3c1	Lager: storeroom only
+5bc45273-3b90-41ac-8b7d-1865fe42ce62	done	2f4e3c1	answered: helps already right on die Hilfen; now tested
+3c13f8c8-99a6-483d-a26d-8a4183d02aa9	done	2f4e3c1	Zeugnis: report only (then + transcript)
+fed9e3be-048b-45f5-b32b-428310f8f49a	done	2f4e3c1	Zeugnis: no certificate
+affc635d-5d9d-4e98-a842-9e081ae4e113	done	2f4e3c1	Mitarbeiter: employee only
+bee11df5-984e-4256-b1d9-86c680e05777	done	2f4e3c1	Reinigung: replaced by 405ddb16
+2f15a230-12bb-49ec-94c4-48f250bfa5e6	done	2f4e3c1	putzen: to scrub
+390a4650-92ce-417d-acce-5ea1399acc18	done	2f4e3c1	vorbeibringen: to drop off
+a2ff6347-84f9-4a61-a9ff-7985b9ecee57	done	2f4e3c1	verbs: to close and to shut both right
+85c0f105-2378-4e33-b7aa-157f878488b5	done	2f4e3c1	Zeugnis: report, transcript
+be583dcb-7db0-4de4-a654-c911be3cafa0	done	2f4e3c1	anmachen: to switch on, turn on
+90c5f3ef-5323-46a7-9cf5-f20b040f8921	done	2f4e3c1	book plural sentence on plural card, new singular sentence (183 nouns, all lessons)
+405ddb16-2b86-4ded-a998-44f6f09aa0e8	done	2f4e3c1	Reinigung: cleaning / dry cleaner, plural dry cleaners, no apostrophe
