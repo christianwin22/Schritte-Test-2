@@ -97,7 +97,6 @@ export interface FlashcardHotkeys {
   prev: string;
   flip: string;
   singularAudio: string;
-  pluralAudio: string;
   exampleAudio: string;
   practiceCheck: string;
   practiceAudio: string;
@@ -108,7 +107,6 @@ const DEFAULT_HOTKEYS: FlashcardHotkeys = {
   prev: 'ArrowLeft',
   flip: ' ',
   singularAudio: 'ArrowDown',
-  pluralAudio: 'ArrowUp',
   exampleAudio: 'Meta',
   practiceCheck: 'Enter',
   practiceAudio: ' ',
@@ -1506,8 +1504,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       ? [...germanWordLines(card), ...germanSentenceLines(card)]
       : [];
   };
-  // Only the English word showing: nothing German to hear, so Learn's Audio button steps aside.
-  const learnSilent = learnAudioLines().length === 0;
   useEffect(() => {
     if (!learnAudioKey) return;
     const lines = learnAudioLines();
@@ -1724,13 +1720,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           e.preventDefault();
           playSound('tap');
           if (currentLearnCard) speakGerman(germanOf(currentLearnCard));
-        } else if (matchesKey(hotkeys.pluralAudio)) {
-          e.preventDefault();
-          const pluralStr = currentFlashcard ? pluralOf(currentFlashcard) : null;
-          if (pluralStr) {
-            playSound('tap');
-            speakGerman(pluralStr);
-          }
         } else if (
           matchesKey(hotkeys.exampleAudio) ||
           (hotkeys.exampleAudio === 'Meta' && (e.key === 'Meta' || e.key === 'Control' || e.metaKey || e.ctrlKey))
@@ -2462,16 +2451,32 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         );
 
         const pluralChip = (
-          <span className="inline-block text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-200/70 dark:bg-zinc-700/60 px-2 py-0.5 rounded-md">
+          <span className="inline-block mt-2 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-200/70 dark:bg-zinc-700/60 px-2 py-0.5 rounded-md">
             Plural
           </span>
+        );
+
+        /** A small speaker on the card. Tapping it plays the German and does not turn the card. */
+        const listenButton = (german: string, title: string) => (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              playSound('tap');
+              speakGerman(german);
+            }}
+            title={title}
+            className="p-1.5 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
+          >
+            <Volume2 className="w-4 h-4" />
+          </button>
         );
 
         /**
          * "der Student" / "die Studenten": the article in its gender's colour, the
          * noun in black. The plural "die" belongs to no gender: orange, as in the book.
          */
-        const germanWord = (card: WordCard, size = 'text-3xl sm:text-4xl', showPlural = true) => {
+        const germanWord = (card: WordCard, size = 'text-3xl sm:text-4xl', showPlural = true, withAudio = false) => {
           const gender = card.word.nounDetails?.gender;
           const articleTone = asksPlural(card) || card.word.nounDetails?.pluralOnly ? pluralText() : genderText(gender);
           const text = germanShown(card);
@@ -2479,6 +2484,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           const article = gender ? text.match(/^(der|die|das)\s+/i)?.[1] : undefined;
           return (
             <div className="flex flex-col items-center gap-1.5">
+              <div className="flex items-center justify-center gap-2">
               <h3 className={`${size} tracking-tight leading-tight`}>
                 {article ? (
                   <>
@@ -2492,6 +2498,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     question — it would give away singular or plural. */}
                 {tag && showPlural && <span className="ml-1.5 text-[0.45em] font-bold text-zinc-400 dark:text-zinc-500 align-middle">({tag})</span>}
               </h3>
+              {withAudio && listenButton(germanOf(card), en ? 'Listen to word' : 'Wort anhören')}
+              </div>
               {card.plural && showPlural && pluralChip}
             </div>
           );
@@ -2546,20 +2554,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 <p className={`${exampleSize(example.german)} font-bold text-zinc-900 dark:text-zinc-100 leading-snug`}>
                   <SentenceWithWord sentence={example.german} word={shownWord} />
                 </p>
-                {withAudio && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    playSound('tap');
-                    speakGerman(example.german);
-                  }}
-                  title={en ? 'Listen to sentence' : 'Satz anhören'}
-                  className="p-1.5 rounded-lg bg-zinc-200/80 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 cursor-pointer active:scale-95 transition-all shrink-0"
-                >
-                  <Volume2 className="w-4 h-4" />
-                </button>
-                )}
+                {withAudio && listenButton(example.german, en ? 'Listen to sentence' : 'Satz anhören')}
               </div>
               {example.english && (
                 <p className={`${example.german.length > 110 ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'} font-medium text-zinc-500 dark:text-zinc-400`}>{example.english}</p>
@@ -2919,58 +2914,30 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         {cardFace(
                           // DE → EN shows German first; EN → DE shows English first. Turned over, the other.
                           (learnDirection === 'DE_TO_EN') !== isCardFlipped
-                            ? germanWord(currentLearnCard, isCardFlipped ? 'text-2xl sm:text-3xl' : undefined)
+                            ? germanWord(currentLearnCard, isCardFlipped ? 'text-2xl sm:text-3xl' : undefined, true, true)
                             : englishWord(currentLearnCard),
                           currentLearnCard,
-                          isCardFlipped,
-                          false
+                          isCardFlipped
                         )}
                       </div>
                     )}
 
-                    {/* Prev, Audio, Next. Audio plays what the card shows in German — the
-                        word, and once turned over its sentence. With only English
-                        showing there is nothing to hear, so the arrows grow into its room. */}
-                    <div className="flex items-center mt-3 shrink-0">
+                    {/* Prev and Next. The speakers are on the card, beside the German. */}
+                    <div className="flex items-center gap-2 mt-3 shrink-0">
                       <button
                         type="button"
                         onClick={() => goToCard(1)}
-                        style={{ flexGrow: learnSilent ? 1 : 0.6, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
-                        className="p-3 mr-2 basis-0 min-w-11 flex justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95"
+                        style={{ touchAction: 'manipulation' }}
+                        className="p-3 flex-1 basis-0 min-w-11 flex justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer active:scale-95"
                         title="Previous"
                       >
                         <ArrowLeft className="w-4 h-4" />
                       </button>
-                      <div
-                        inert={learnSilent}
-                        aria-hidden={learnSilent}
-                        style={{
-                          flexGrow: learnSilent ? 0 : 1,
-                          opacity: learnSilent ? 0 : 1,
-                          transition: 'flex-grow 180ms ease-out, opacity 150ms ease-out',
-                        }}
-                        className="basis-0 min-w-0 overflow-hidden"
-                      >
-                        <div className="flex items-center mr-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              playSound('tap');
-                              const lines = learnAudioLines();
-                              if (lines.length) speakGermanSequence(lines);
-                            }}
-                            className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-black text-xs border border-zinc-200 dark:border-zinc-700 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
-                          >
-                            <Volume2 className="w-4 h-4" />
-                            <span>{en ? 'Audio' : 'Aussprache'}</span>
-                          </button>
-                        </div>
-                      </div>
                       <button
                         type="button"
                         onClick={() => goToCard(-1)}
-                        style={{ flexGrow: learnSilent ? 1 : 0.6, transition: 'flex-grow 180ms ease-out', touchAction: 'manipulation' }}
-                        className="p-3 basis-0 min-w-11 flex justify-center bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent cursor-pointer active:scale-95"
+                        style={{ touchAction: 'manipulation' }}
+                        className="p-3 flex-1 basis-0 min-w-11 flex justify-center bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent cursor-pointer active:scale-95"
                         title="Next"
                       >
                         <ArrowRight className="w-4 h-4" />
@@ -3334,7 +3301,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     { id: 'next' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Next Card' : 'Nächste Karte', icon: ArrowRight },
                     { id: 'prev' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Previous Card' : 'Vorherige Karte', icon: ArrowLeft },
                     { id: 'singularAudio' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Singular Audio' : 'Singular Audio' },
-                    { id: 'pluralAudio' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Plural Audio' : 'Plural Audio' },
                     { id: 'exampleAudio' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Example Sentence Audio' : 'Beispielsatz Audio' },
                   ]
                 : [
