@@ -53,6 +53,7 @@ import {
   NumberChoice,
   numberTag,
   asksPlural,
+  typedNumber,
   cardMeaningLines,
   splitMeaningNote,
   germanShown,
@@ -413,6 +414,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // DE → EN: the two little switches beside the answer box (M / F and S / P).
   const [genderPick, setGenderPick] = useState<GenderChoice>('M');
   const [numberPick, setNumberPick] = useState<NumberChoice>('S');
+  // Left alone, the S / P button doesn't count: the typing says singular or plural.
+  const [numberTouched, setNumberTouched] = useState(false);
   const [practiceTypeInput, setPracticeTypeInput] = useState('');
   // Words with two numbered meanings are asked for both (DE → EN only).
   const [practiceTypeInput2, setPracticeTypeInput2] = useState('');
@@ -970,7 +973,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       : checkCardEnglish(inputVal, card);
     const want = wantedMarks(card);
     const marks = [want.gender, want.number].filter((m): m is GenderChoice | NumberChoice => !!m);
-    const userMarks = [want.gender ? genderPick : null, want.number ? numberPick : null].filter(
+    // S / P: tapped, it must be right. Not tapped, the typing decides ("exits" is
+    // the plural); and when the typing can't tell ("information"), it is fine.
+    const typed = [inputVal, secondVal].map((v) => typedNumber(v, card)).find((n) => n !== null) ?? null;
+    const numberMark = numberTouched ? numberPick : typed ?? want.number;
+    const userMarks = [want.gender ? genderPick : null, want.number ? numberMark : null].filter(
       (m): m is GenderChoice | NumberChoice => !!m
     );
     const marksRight = marks.every((m, i) => userMarks[i] === m);
@@ -1085,6 +1092,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setPracticeTypeInput2('');
     setGenderPick('M');
     setNumberPick('S');
+    setNumberTouched(false);
     activeRecognitionRef.current?.stop();
     setIsListening(false);
   };
@@ -1787,6 +1795,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     practiceTypeInput2,
     genderPick,
     numberPick,
+    numberTouched,
     currentPracticeCard,
   ]);
 
@@ -2881,7 +2890,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         onClick={() => handleSubModeChange('practice')}
                         className="w-full sm:flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent shadow-xs cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-1.5"
                       >
-                        <span>{en ? 'Go to Practice' : 'Zu den Übungen'}</span>
+                        <span>
+                          {en ? 'Practice' : 'Üben'} {learnDirection === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
+                        </span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
@@ -3021,24 +3032,51 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   })()}
 
                   <div className="w-full flex items-center gap-2.5 pt-1">
-                    {!speakOnly && (
-                      <button
-                        type="button"
-                        onClick={() => handleSubModeChange('learn')}
-                        className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-xs cursor-pointer active:scale-95 transition-all"
-                      >
-                        {en ? 'Back to Learn' : 'Zurück zum Lernen'}
-                      </button>
+                    {/* The lesson's path: Learn DE → EN, Practice DE → EN, Learn EN → DE, Practice EN → DE */}
+                    {!speakOnly && flashcardSubMode === 'practice' && practiceDirection === 'DE_TO_EN' ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={restartPracticeSession}
+                          className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          {en ? 'Practice Again' : 'Erneut üben'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSubModeChange('learn');
+                            setLearnDirection('EN_TO_DE');
+                            setFlashcardIndex(0);
+                          }}
+                          className="flex-1 py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <span>{en ? 'Learn EN → DE' : 'Lernen EN → DE'}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {!speakOnly && (
+                          <button
+                            type="button"
+                            onClick={() => handleSubModeChange('learn')}
+                            className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-black text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-xs cursor-pointer active:scale-95 transition-all"
+                          >
+                            {en ? 'Back to Learn' : 'Zurück zum Lernen'}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={restartPracticeSession}
+                          className="flex-1 py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          {flashcardSubMode === 'review'
+                            ? en ? 'Review Again' : 'Erneut wiederholen'
+                            : en ? 'Practice Again' : 'Erneut üben'}
+                        </button>
+                      </>
                     )}
-                    <button
-                      type="button"
-                      onClick={restartPracticeSession}
-                      className="flex-1 py-3 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 font-black text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
-                    >
-                      {flashcardSubMode === 'review'
-                        ? en ? 'Review Again' : 'Erneut wiederholen'
-                        : en ? 'Practice Again' : 'Erneut üben'}
-                    </button>
                   </div>
                 </div>
               ) : (
@@ -3159,7 +3197,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           {want.number &&
                             answerSwitch(
                               numberPick,
-                              () => setNumberPick((n) => (n === 'S' ? 'P' : 'S')),
+                              () => {
+                                setNumberTouched(true);
+                                setNumberPick((n) => (n === 'S' ? 'P' : 'S'));
+                              },
                               markTone(numberPick),
                               en ? 'Singular or plural — tap to change' : 'Singular oder Plural — tippen zum Wechseln'
                             )}
@@ -3303,7 +3344,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     { id: 'flip' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Flip Card' : 'Karte umdrehen' },
                     { id: 'next' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Next Card' : 'Nächste Karte', icon: ArrowRight },
                     { id: 'prev' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Previous Card' : 'Vorherige Karte', icon: ArrowLeft },
-                    { id: 'singularAudio' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Singular Audio' : 'Singular Audio' },
+                    { id: 'singularAudio' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Word Audio' : 'Wort Audio' },
                     { id: 'exampleAudio' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Example Sentence Audio' : 'Beispielsatz Audio' },
                   ]
                 : [

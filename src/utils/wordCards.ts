@@ -252,6 +252,29 @@ function listedForPlural(input: string, card: WordCard): string | null {
   return null;
 }
 
+/**
+ * Did the typing already say singular or plural? "exits" → P, "exit" → S, and
+ * null when it can't tell ("information" is both) or matches nothing. Used when
+ * the S / P button was left alone: the typing decides.
+ */
+export function typedNumber(input: string, card: WordCard): 'S' | 'P' | null {
+  const user = normalizeEnglish(input);
+  if (!user) return null;
+  let found: 'S' | 'P' | null = null;
+  for (const sense of englishOptions(card.word)) {
+    for (const option of sense) {
+      const plurals = pluralPhrases(option);
+      // A plural card with its own plural meaning ("purchases") lists it already plural.
+      const asSingular = option === user && !(card.plural && card.word.pluralTranslation);
+      const asPlural = plurals.includes(user) || (option === user && !asSingular);
+      if (asSingular && asPlural) return null;
+      if (asSingular) found = found === 'P' ? null : 'S';
+      else if (asPlural) found = found === 'S' ? null : 'P';
+    }
+  }
+  return found;
+}
+
 // --- Checking ----------------------------------------------------------------
 
 /** EN → DE: the plural card wants the plural ("die Studenten"), article and all. */
