@@ -13,7 +13,7 @@ const store = new Map<string, string>();
 const { INITIAL_VOCABULARY } = await import('../src/data/vocabulary');
 const cards = await import('../src/utils/wordCards');
 const { firstPracticeDone } = await import('../src/utils/practiceProgress');
-const { cardsFor, germanOf, exampleOf, pluralOf, checkCardEnglish, asListedEnglish, cardMeaningLines, numberTag, germanShown, asksPlural } = cards;
+const { cardsFor, typedNumber, germanOf, exampleOf, pluralOf, checkCardEnglish, asListedEnglish, cardMeaningLines, numberTag, germanShown, asksPlural } = cards;
 const { checkEnglishPair } = await import('../src/utils/answerCheck');
 
 let failures = 0;
@@ -114,6 +114,31 @@ console.log('\nPlural sound, every lesson (2026-11-08)');
   check('no plural card plays the singular sentence', badSentence.length === 0);
   if (badSentence.length) console.log('    ', badSentence.slice(0, 10).map((c) => c.key).join(', '));
   check('die Röcke: says "die Röcke"', germanOf(plurals.find((c) => c.word.lemma === 'Rock')!) === 'die Röcke');
+}
+
+console.log('\nIdeas of 2026-11-12');
+{
+  const ausgaenge = card('a12_l13_ausgang', true);
+  check('die Ausgänge: "exits" says plural', typedNumber('exits', ausgaenge) === 'P');
+  check('die Ausgänge: "exit" says singular', typedNumber('exit', ausgaenge) === 'S');
+  check('der Ausgang: "exit" says singular', typedNumber('exit', card('a12_l13_ausgang')) === 'S');
+  check('"information" can\'t tell', typedNumber('information', card('a12_l8_information', true)) === null);
+  check('Steward: its own sentence, about him', word('a12_l13_steward').exampleSentences?.[0]?.german === 'Der Steward erklärt die Notausgänge.');
+  check('Stewardess: the book sentence', word('a12_l13_stewardess').exampleSentences?.[0]?.german === 'Ich bin Stewardess von Beruf.');
+  const drogerie = card('a12_l13_drogerie');
+  check('Drogerie: "drugstore" and "pharmacy"', checkCardEnglish('drugstore', drogerie) && checkCardEnglish('pharmacy', drogerie));
+  check('Drogerie: sentence says drugstore', /drugstore/.test(word('a12_l13_drogerie').exampleSentences?.[0]?.english ?? ''));
+  check('Uhr: "watch" right in box 1', checkEnglishPair(['watch', "o'clock"], word('a12_l13_uhr')).every(Boolean));
+  // No male word keeps the book's sentence about the woman
+  const female = INITIAL_VOCABULARY.filter((w) => /\(female\)/.test(w.translation ?? ''));
+  const bad = INITIAL_VOCABULARY.filter((w) => {
+    if (!/\(male\)/.test(w.translation ?? '')) return false;
+    const sentence = w.exampleSentences?.[0]?.german ?? '';
+    if (new RegExp(`\\b${w.lemma}\\b`).test(sentence)) return false; // names him too (Präsidentin/Präsident)
+    return female.some((f) => f.lemma.startsWith(w.lemma.slice(0, 3)) && f.lemma !== w.lemma && new RegExp(`\\b${f.lemma}\\b`).test(sentence));
+  });
+  check('no male word uses a sentence about the woman', bad.length === 0);
+  if (bad.length) console.log('    ', bad.map((w) => w.id).join(', '));
 }
 
 console.log(failures ? `\n${failures} FAILED` : '\nALL PASS');
