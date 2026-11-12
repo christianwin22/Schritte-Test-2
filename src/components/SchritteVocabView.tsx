@@ -1775,6 +1775,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     sessionStarted,
     hotkeys,
     currentFlashcard,
+    // The singular and plural cards share one word, so the card itself must be
+    // here too, or the hotkey keeps saying the card before (der Rock on die Röcke).
+    currentLearnCard,
     filteredWords.length,
     practiceQueue.length,
     practiceFeedback,

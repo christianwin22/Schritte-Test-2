@@ -13,7 +13,7 @@ const store = new Map<string, string>();
 const { INITIAL_VOCABULARY } = await import('../src/data/vocabulary');
 const cards = await import('../src/utils/wordCards');
 const { firstPracticeDone } = await import('../src/utils/practiceProgress');
-const { cardsFor, checkCardEnglish, asListedEnglish, cardMeaningLines, numberTag, germanShown, asksPlural } = cards;
+const { cardsFor, germanOf, exampleOf, pluralOf, checkCardEnglish, asListedEnglish, cardMeaningLines, numberTag, germanShown, asksPlural } = cards;
 const { checkEnglishPair } = await import('../src/utils/answerCheck');
 
 let failures = 0;
@@ -95,6 +95,26 @@ check('Zeugnis: "transcript" and "report"', checkCardEnglish('transcript', card(
 check('die Hilfen: "helps" is right', checkCardEnglish('helps', card('a12_l12_hilfe', true)));
 check('die Reinigungen: "dry cleaners"', checkCardEnglish('dry cleaners', card('a12_l12_reinigung', true)));
 check('Übersetzung: book sentence on the plural card', card('a12_l12_ubersetzung', true).word.pluralSentence?.includes('Übersetzungen in vielen Sprachen') === true);
+
+console.log('\nPlural sound, every lesson (2026-11-08)');
+{
+  const all = cardsFor(INITIAL_VOCABULARY);
+  const plurals = all.filter((c) => c.plural);
+  const badWord = plurals.filter((c) => germanOf(c) !== pluralOf(c.word));
+  const badSentence = plurals.filter((c) => {
+    const ex = exampleOf(c);
+    const singular = c.word.exampleSentences?.[0]?.german;
+    if (!ex || !singular || ex.german !== singular.replace(/\{\{blank\}\}/g, c.word.lemma)) return false;
+    // Same sentence is fine when it is already plural: "3 Euro", "Die Möbel sind ..."
+    const pl = (pluralOf(c.word) ?? '').replace(/^die /, '');
+    return !ex.german.includes(pl);
+  });
+  check(`all ${plurals.length} plural cards say the plural word`, badWord.length === 0);
+  if (badWord.length) console.log('    ', badWord.slice(0, 10).map((c) => c.key).join(', '));
+  check('no plural card plays the singular sentence', badSentence.length === 0);
+  if (badSentence.length) console.log('    ', badSentence.slice(0, 10).map((c) => c.key).join(', '));
+  check('die Röcke: says "die Röcke"', germanOf(plurals.find((c) => c.word.lemma === 'Rock')!) === 'die Röcke');
+}
 
 console.log(failures ? `\n${failures} FAILED` : '\nALL PASS');
 if (failures) process.exit(1);
