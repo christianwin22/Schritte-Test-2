@@ -54,6 +54,7 @@ import {
   numberTag,
   asksPlural,
   typedNumber,
+  pluralOnSingular,
   cardMeaningLines,
   splitMeaningNote,
   germanShown,
@@ -414,6 +415,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // DE → EN: the two little switches beside the answer box (M / F and S / P).
   const [genderPick, setGenderPick] = useState<GenderChoice>('M');
   const [numberPick, setNumberPick] = useState<NumberChoice>('S');
+  // Round end: the Progress and Mistakes boxes fold up and open again. Both open at first.
+  const [progressOpen, setProgressOpen] = useState(true);
+  const [mistakesOpen, setMistakesOpen] = useState(true);
   // Left alone, the S / P button doesn't count: the typing says singular or plural.
   const [numberTouched, setNumberTouched] = useState(false);
   const [practiceTypeInput, setPracticeTypeInput] = useState('');
@@ -981,7 +985,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       (m): m is GenderChoice | NumberChoice => !!m
     );
     const marksRight = marks.every((m, i) => userMarks[i] === m);
-    return { isCorrect: textRight && marksRight, expectedDisplay, marks, userMarks };
+    // A singular card never takes a plural ("jackets" for die Jacke), even with S tapped.
+    const pluralTyped = want.number === 'S' && [inputVal, secondVal].some((v) => pluralOnSingular(v, card));
+    return { isCorrect: textRight && marksRight && !pluralTyped, expectedDisplay, marks, userMarks };
   };
 
   /** One answer into the review schedule, on that card's own key. */
@@ -2635,7 +2641,27 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           ) : null;
 
         /** Learn, Practice and Review: three lines, each with its stops. */
-        const renderLessonProgress = () => {
+        /** A box title that folds the box up or opens it: name left, count and arrow right. */
+        const foldHeader = (title: string, open: boolean, toggle: () => void, count?: number) => (
+          <button
+            type="button"
+            onClick={() => {
+              playSound('tap');
+              toggle();
+            }}
+            aria-expanded={open}
+            className="w-full flex items-center justify-between px-1 cursor-pointer"
+          >
+            <span className="text-xs font-black text-zinc-700 dark:text-zinc-300">{title}</span>
+            <span className="flex items-center gap-1.5">
+              {count !== undefined && <span className="text-[11px] font-bold text-zinc-400">{count}</span>}
+              <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </span>
+          </button>
+        );
+
+        // compact: the round-end version, one slim row per line, so the Mistakes box gets the room.
+        const renderLessonProgress = (compact = false) => {
           if (typeof selectedLektion !== 'number') return null;
           const stops = lessonStops(selectedLevel, selectedLektion);
           // Review: where this lesson's cards sit in the schedule — not yet in it, then each gap in days.
@@ -2657,38 +2683,45 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               count,
             })),
           ];
+          const dot = compact ? 'w-4 h-4 text-[9px]' : 'w-6 h-6 text-[10px]';
           const line = (title: string, stations: { label: string; done: boolean; count?: number }[]) => (
-            <div className="space-y-1.5">
-              <p className="text-xs font-black text-zinc-700 dark:text-zinc-300 text-left">{title}</p>
-              <div className="flex items-start">
+            <div className={compact ? 'flex items-start gap-2' : 'space-y-1.5'}>
+              <p
+                className={`font-black text-zinc-700 dark:text-zinc-300 text-left ${
+                  compact ? 'text-[11px] w-16 shrink-0 leading-4' : 'text-xs'
+                }`}
+              >
+                {title}
+              </p>
+              <div className={`flex items-start ${compact ? 'flex-1 min-w-0' : ''}`}>
                 {stations.map((st, i) => (
                   <React.Fragment key={i}>
                     {i > 0 && (
                       <div
-                        className={`flex-1 h-1 mt-[11px] rounded-full ${
+                        className={`flex-1 h-1 ${compact ? 'mt-1.5' : 'mt-[11px]'} rounded-full ${
                           st.done ? 'bg-zinc-950 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-700'
                         }`}
                       />
                     )}
-                    <div className="flex flex-col items-center gap-1 min-w-[44px]">
+                    <div className={`flex flex-col items-center ${compact ? 'gap-0.5 min-w-[40px]' : 'gap-1 min-w-[44px]'}`}>
                       <span
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-black ${
+                        className={`${dot} rounded-full border-2 flex items-center justify-center font-black ${
                           st.done
                             ? 'bg-zinc-950 border-zinc-950 text-white dark:bg-white dark:border-white dark:text-zinc-950'
                             : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-600 text-zinc-400'
                         }`}
                       >
-                        {st.count !== undefined ? st.count : st.done ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : ''}
+                        {st.count !== undefined ? st.count : st.done ? <Check className={`${compact ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} stroke-[3]`} /> : ''}
                       </span>
-                      <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{st.label}</span>
+                      <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} font-bold text-zinc-500 dark:text-zinc-400 whitespace-nowrap`}>{st.label}</span>
                     </div>
                   </React.Fragment>
                 ))}
               </div>
             </div>
           );
-          return (
-            <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl p-3 sm:p-3.5 border border-zinc-200 dark:border-zinc-700 space-y-3">
+          const lines = (
+            <>
               {!speakOnly &&
                 line(en ? 'Learn' : 'Lernen', [
                   { label: 'DE → EN', done: stops.learnDe },
@@ -2699,6 +2732,18 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 { label: 'EN → DE', done: stops.practiceEn },
               ])}
               {line(en ? 'Review' : 'Wiederholen', reviewStations)}
+            </>
+          );
+          if (!compact)
+            return (
+              <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl p-3 sm:p-3.5 border border-zinc-200 dark:border-zinc-700 space-y-3">
+                {lines}
+              </div>
+            );
+          return (
+            <div className="w-full shrink-0 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 px-2.5 sm:px-3 py-2 space-y-2">
+              {foldHeader(en ? 'Progress' : 'Fortschritt', progressOpen, () => setProgressOpen((o) => !o))}
+              {progressOpen && <div className="space-y-2 px-1 pb-0.5">{lines}</div>}
             </div>
           );
         };
@@ -2961,7 +3006,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 )
               ) : isPracticeComplete ? (
                 /* PRACTICE / REVIEW COMPLETE */
-                <div className="flex-1 min-h-0 flex flex-col justify-between items-center text-center p-1.5 sm:p-3 animate-fadeIn w-full gap-2.5 sm:gap-3">
+                <div className="flex-1 min-h-0 flex flex-col justify-start items-center text-center p-1.5 sm:p-3 animate-fadeIn w-full gap-2.5 sm:gap-3">
                   <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight pt-1">
                     {flashcardSubMode === 'review' ? (en ? 'Review' : 'Wiederholen') : `${selectedLevel} • ${lessonName}`}
                   </h3>
@@ -2986,15 +3031,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           {stat(en ? 'Incorrect' : 'Falsch', initialMistakesCount, 'text-red-600 dark:text-red-400')}
                         </div>
 
-                        {flashcardSubMode === 'practice' && renderLessonProgress()}
+                        {flashcardSubMode === 'practice' && renderLessonProgress(true)}
 
                         {sortedMistakes.length > 0 && (
-                          <div className="w-full flex-1 min-h-0 flex flex-col bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-2.5 sm:p-3 gap-2">
-                            <div className="flex items-center justify-between px-1">
-                              <span className="text-xs font-black text-zinc-700 dark:text-zinc-300">{en ? 'Mistakes' : 'Fehler'}</span>
-                              <span className="text-[11px] font-bold text-zinc-400">{sortedMistakes.length}</span>
-                            </div>
-                            <div className="flex-1 overflow-y-auto max-h-40 sm:max-h-52 space-y-1.5 pr-0.5 custom-scrollbar">
+                          <div
+                            className={`w-full flex flex-col bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 px-2.5 sm:px-3 py-2 gap-2 ${
+                              mistakesOpen ? 'flex-1 min-h-0' : 'shrink-0'
+                            }`}
+                          >
+                            {foldHeader(en ? 'Mistakes' : 'Fehler', mistakesOpen, () => setMistakesOpen((o) => !o), sortedMistakes.length)}
+                            {mistakesOpen && (
+                            <div className="flex-1 min-h-[7.5rem] overflow-y-auto space-y-1.5 pr-0.5 custom-scrollbar">
                               {sortedMistakes.map((card) => (
                                 <div
                                   key={card.key}
@@ -3025,13 +3072,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                 </div>
                               ))}
                             </div>
+                            )}
                           </div>
                         )}
                       </>
                     );
                   })()}
 
-                  <div className="w-full flex items-center gap-2.5 pt-1">
+                  <div className="w-full flex items-center gap-2.5 pt-1 mt-auto">
                     {/* The lesson's path: Learn DE → EN, Practice DE → EN, Learn EN → DE, Practice EN → DE */}
                     {!speakOnly && flashcardSubMode === 'practice' && practiceDirection === 'DE_TO_EN' ? (
                       <>

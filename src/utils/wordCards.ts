@@ -277,6 +277,21 @@ export function typedNumber(input: string, card: WordCard): 'S' | 'P' | null {
 
 // --- Checking ----------------------------------------------------------------
 
+/**
+ * A singular card with an English plural typed ("jackets", "jacketes" for die Jacke):
+ * wrong, whatever the S / P button says. Words the same in both ("information") are fine.
+ */
+export function pluralOnSingular(input: string, card: WordCard): boolean {
+  if (card.plural || !hasNumberSwitch(card)) return false;
+  const user = normalizeEnglish(input);
+  if (!user) return false;
+  const options = englishOptions(card.word).flat();
+  if (options.includes(user)) return false;
+  return options.some(
+    (option) => pluralPhrases(option).includes(user) || user === `${option}s` || user === `${option}es`
+  );
+}
+
 /** EN → DE: the plural card wants the plural ("die Studenten"), article and all. */
 export function checkCardGerman(input: string, card: WordCard) {
   if (!card.plural) return checkGerman(input, card.word);
