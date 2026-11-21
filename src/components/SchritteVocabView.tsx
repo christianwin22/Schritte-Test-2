@@ -53,6 +53,7 @@ import {
   NumberChoice,
   numberTag,
   asksPlural,
+  englishSameInBoth,
   typedNumber,
   pluralOnSingular,
   cardMeaningLines,
@@ -2473,6 +2474,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             Plural
           </span>
         );
+        const singularChip = (
+          <span className="inline-block mt-2 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-200/70 dark:bg-zinc-700/60 px-2 py-0.5 rounded-md">
+            Singular
+          </span>
+        );
 
         /** A small speaker on the card. Tapping it plays the German and does not turn the card. */
         const listenButton = (german: string, title: string) => (
@@ -2552,7 +2558,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   {meaningNote(lines[0].note)}
                 </div>
               )}
-              {card.plural && showPlural && pluralChip}
+              {/* "trousers" is one pair or many: when the English can't tell, the
+                  card says which — even on a question, where it gives nothing away. */}
+              {card.plural
+                ? (showPlural || englishSameInBoth(card)) && pluralChip
+                : englishSameInBoth(card) && singularChip}
             </div>
           );
         };

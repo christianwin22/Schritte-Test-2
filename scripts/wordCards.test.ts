@@ -13,7 +13,7 @@ const store = new Map<string, string>();
 const { INITIAL_VOCABULARY } = await import('../src/data/vocabulary');
 const cards = await import('../src/utils/wordCards');
 const { firstPracticeDone } = await import('../src/utils/practiceProgress');
-const { cardsFor, typedNumber, pluralOnSingular, germanOf, exampleOf, pluralOf, checkCardEnglish, asListedEnglish, cardMeaningLines, numberTag, germanShown, asksPlural } = cards;
+const { cardsFor, typedNumber, pluralOnSingular, germanOf, exampleOf, pluralOf, checkCardEnglish, asListedEnglish, cardMeaningLines, numberTag, germanShown, asksPlural, englishSameInBoth } = cards;
 const { checkEnglishPair } = await import('../src/utils/answerCheck');
 
 let failures = 0;
@@ -135,6 +135,10 @@ console.log('\nIdeas of 2026-11-12');
   check('Drogerie: "drugstore" and "pharmacy"', checkCardEnglish('drugstore', drogerie) && checkCardEnglish('pharmacy', drogerie));
   check('Drogerie: sentence says drugstore', /drugstore/.test(word('a12_l13_drogerie').exampleSentences?.[0]?.english ?? ''));
   check('Uhr: "watch" right in box 1', checkEnglishPair(['watch', "o'clock"], word('a12_l13_uhr')).every(Boolean));
+  const hose = card('a12_l13_hose');
+  check('die Hose: "trousers" both ways, card says Singular', englishSameInBoth(hose) && englishSameInBoth(card('a12_l13_hose', true)));
+  check('die Jacke: "jacket"/"jackets" tells by itself', !englishSameInBoth(jacke));
+  check('am liebsten: "like most" answers', ['the most like', 'like the most', 'like most', 'most of all'].every((t) => checkCardEnglish(t, card('a12_l13_am_liebsten'))));
   // No male word keeps the book's sentence about the woman
   const female = INITIAL_VOCABULARY.filter((w) => /\(female\)/.test(w.translation ?? ''));
   const bad = INITIAL_VOCABULARY.filter((w) => {

@@ -234,6 +234,16 @@ export function cardMeaningLines(card: WordCard): string[] {
   return card.plural && !card.word.pluralTranslation ? lines.map(pluralEnglish) : lines;
 }
 
+/**
+ * Does the English read the same for one and for many? die Hose and die Hosen are
+ * both "trousers", so an English-side card must say Singular or Plural itself.
+ */
+export function englishSameInBoth(card: WordCard): boolean {
+  if (!pluralOf(card.word) || card.word.pluralTranslation) return false;
+  const lines = meaningLines(card.word);
+  return lines.map(pluralEnglish).join('|').toLowerCase() === lines.join('|').toLowerCase();
+}
+
 /** "ticket (travel)" → { main: "ticket", note: "(travel)" }: the note goes on its own, smaller line. */
 export function splitMeaningNote(line: string): { main: string; note: string } {
   const m = line.match(/^(.*\S)\s+(\([^()]*\))\s*$/);
