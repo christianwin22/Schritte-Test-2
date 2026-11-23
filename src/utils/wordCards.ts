@@ -157,7 +157,21 @@ const IRREGULAR: Record<string, string> = {
   man: 'men', woman: 'women', child: 'children', person: 'people', foot: 'feet', tooth: 'teeth',
   mouse: 'mice', wife: 'wives', knife: 'knives', life: 'lives', leaf: 'leaves', half: 'halves',
   shelf: 'shelves', thief: 'thieves', goose: 'geese',
+  // end in s but are one thing: one bus, two buses
+  bus: 'buses', gas: 'gases', virus: 'viruses', metropolis: 'metropolises', campus: 'campuses', bonus: 'bonuses',
 };
+// -ing words that are an activity, not a thing you count: the training → the training.
+// Every other -ing noun counts like any word: stocking → stockings, meeting → meetings.
+const SAME_ING = new Set([
+  'training', 'planning', 'shopping', 'cleaning', 'jogging', 'swimming', 'clothing', 'camping', 'parking',
+  'cooking', 'washing', 'housing', 'heating', 'marketing', 'sightseeing', 'advertising', 'accounting',
+  'banking', 'nursing', 'hiking', 'dancing', 'reading', 'writing', 'spelling', 'singing', 'sailing',
+  'skiing', 'fishing', 'hearing', 'boxing', 'cycling', 'running', 'walking', 'riding', 'surfing',
+  'climbing', 'bowling', 'ironing', 'tidying', 'learning', 'teaching', 'counselling', 'counseling',
+  'networking', 'programming', 'engineering', 'sewing', 'knitting', 'gardening', 'baking', 'smoking',
+  'snowboarding', 'skating', 'acting', 'modelling', 'printing', 'packaging', 'catering', 'recycling',
+  'lighting', 'flooring', 'spending', 'funding', 'listening', 'understanding',
+]);
 // The same in the plural: the information → the information.
 const SAME = new Set([
   'information', 'furniture', 'equipment', 'money', 'news', 'luggage', 'baggage', 'advice', 'homework',
@@ -171,7 +185,7 @@ function pluralWords(word: string): string[] {
   if (!w || SAME.has(w)) return [w];
   if (IRREGULAR[w]) return [IRREGULAR[w]];
   if (/(man)$/.test(w) && !/(human|german|roman)$/.test(w)) return [w.replace(/man$/, 'men')];
-  if (/ing$/.test(w)) return [w, `${w}s`]; // shopping, cleaning — usually the same
+  if (/ing$/.test(w)) return SAME_ING.has(w) ? [w, `${w}s`] : [`${w}s`, w]; // shopping stays; stocking → stockings
   if (/(ss|sh|ch|x|z)$/.test(w)) return [`${w}es`];
   if (/s$/.test(w)) return [w, `${w}es`]; // studies, glasses — already plural, or bus → buses
   if (/[^aeiou]y$/.test(w)) return [w.replace(/y$/, 'ies')];
@@ -222,7 +236,7 @@ export function pluralEnglish(text: string): string {
       const words = front.split(' ');
       const last = words.pop() ?? '';
       // already plural ("studies", "glasses"): leave it
-      const plural = /[^s]s$|ies$/i.test(last) ? last : pluralWords(last)[0];
+      const plural = !IRREGULAR[last.toLowerCase()] && /[^s]s$|ies$/i.test(last) ? last : pluralWords(last)[0];
       return `${lead}${[...words, plural].join(' ')}${tail}${note}`;
     })
     .join(',');

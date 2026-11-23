@@ -139,6 +139,13 @@ console.log('\nIdeas of 2026-11-12');
   check('die Hose: "trousers" both ways, card says Singular', englishSameInBoth(hose) && englishSameInBoth(card('a12_l13_hose', true)));
   check('die Jacke: "jacket"/"jackets" tells by itself', !englishSameInBoth(jacke));
   check('am liebsten: "like most" answers', ['the most like', 'like the most', 'like most', 'most of all'].every((t) => checkCardEnglish(t, card('a12_l13_am_liebsten'))));
+  // Ideas of 2026-11-22
+  const strumpf = card('a12_l13_strumpf', true);
+  check('der Strumpf: plural card says "stockings", no chip', cardMeaningLines(strumpf).join() === 'stockings' && !englishSameInBoth(strumpf));
+  check('meeting/bus get real plurals', !englishSameInBoth(card('a21_l4_besprechung')) && !englishSameInBoth(card('a11_l7_bus')) && cardMeaningLines(card('a11_l7_bus', true)).join() === 'buses');
+  check('training and trousers keep the chip', englishSameInBoth(card('a11_l7_training')) && englishSameInBoth(hose));
+  check('am liebsten: shows "like best", takes "most liked"', cardMeaningLines(card('a12_l13_am_liebsten'))[0].startsWith('like best') && checkCardEnglish('most liked', card('a12_l13_am_liebsten')));
+  check('wunderschön: "wonderful" is right', checkCardEnglish('wonderful', card('a12_l13_wunderschoen')));
   // No male word keeps the book's sentence about the woman
   const female = INITIAL_VOCABULARY.filter((w) => /\(female\)/.test(w.translation ?? ''));
   const bad = INITIAL_VOCABULARY.filter((w) => {
