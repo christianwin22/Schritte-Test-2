@@ -2,7 +2,7 @@
 Ideas of 2026-11-22:
 - am liebsten: the meaning shown now starts with "like best", so EN -> DE hints at "like".
   "most liked" is a right answer too.
-- wunderschön: "wonderful" is a right answer too.
+- wunderschön: "wonderful" was added, then taken out on 2026-11-23 (wunderbar is "wonderful").
 Word ids do not move. Run scripts/importVocabulary.py afterwards.
 """
 import pathlib
@@ -16,7 +16,6 @@ CHANGES = {
         "most of all, by preference [the most like, like the most, like most, like best]",
         "like best, most of all, by preference [the most like, like the most, like most, most liked]",
     ),
-    "wunderschön": ("gorgeous, beautiful", "gorgeous, beautiful [wonderful]"),
 }
 
 

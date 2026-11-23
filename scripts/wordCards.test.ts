@@ -145,7 +145,7 @@ console.log('\nIdeas of 2026-11-12');
   check('meeting/bus get real plurals', !englishSameInBoth(card('a21_l4_besprechung')) && !englishSameInBoth(card('a11_l7_bus')) && cardMeaningLines(card('a11_l7_bus', true)).join() === 'buses');
   check('training and trousers keep the chip', englishSameInBoth(card('a11_l7_training')) && englishSameInBoth(hose));
   check('am liebsten: shows "like best", takes "most liked"', cardMeaningLines(card('a12_l13_am_liebsten'))[0].startsWith('like best') && checkCardEnglish('most liked', card('a12_l13_am_liebsten')));
-  check('wunderschön: "wonderful" is right', checkCardEnglish('wonderful', card('a12_l13_wunderschoen')));
+  check('wunderschön: "wonderful" is not right (that is wunderbar)', !checkCardEnglish('wonderful', card('a12_l13_wunderschoen')) && checkCardEnglish('gorgeous', card('a12_l13_wunderschoen')));
   // No male word keeps the book's sentence about the woman
   const female = INITIAL_VOCABULARY.filter((w) => /\(female\)/.test(w.translation ?? ''));
   const bad = INITIAL_VOCABULARY.filter((w) => {
