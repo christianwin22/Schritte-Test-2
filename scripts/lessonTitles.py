@@ -69,6 +69,9 @@ ENGLISH = {
     "B1_14": "old and new home [old and new homeland, old home and new home]",
 }
 
+# no title card where the title is just a word of the lesson (dropTitleRepeats.py, 2026-11-24)
+SKIP = {"A1_6", "A1_14"}
+
 # Chris's answers of 2026-10-11: (German word, old English) → new English
 FIXES = {
     ("mieten", "to rent, to hire"): "to rent, to hire (you pay; to borrow for free = leihen)",
@@ -111,7 +114,7 @@ def main():
             if cells and re.match(r"^:?-+$", cells[0]) and key:
                 out.append(line)
                 # first row under this lesson's header: the title goes here, once
-                if key in book and f"| {book[key]} | - |" not in "\n".join(lines):
+                if key in book and key not in SKIP and f"| {book[key]} | - |" not in "\n".join(lines):
                     de, en = sentence(key, book[key], ENGLISH[key])
                     row = {h: "-" for h in header}
                     row.update({

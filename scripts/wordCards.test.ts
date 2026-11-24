@@ -61,6 +61,17 @@ check('shown "die Uni(versität)"', germanShown(card('a12_l8_universitaet')) ===
 check('shown "(an)bieten"', germanShown(card('a12_l8_anbieten')) === '(an)bieten');
 check('shown "die Kenntnisse"', germanShown(card('a12_l8_kenntnisse')) === 'die Kenntnisse');
 check('Lesson 8 starts with its title, then die Geschichte (book order)', INITIAL_VOCABULARY.find((w) => w.lektion === 8 && w.volume === 'A1.2')?.id === 'a12_l8_title');
+{
+  // a title that is just a word of its own lesson (Feste = die Feste) has no title card
+  const bare = (s?: string) => (s ?? '').trim().toLowerCase().replace(/^(der|die|das)\s+/, '');
+  const repeats = INITIAL_VOCABULARY.filter((t) => t.wordType === 'Title' && INITIAL_VOCABULARY.some((w) =>
+    w.wordType !== 'Title' && w.volume === t.volume && w.lektion === t.lektion &&
+    [w.display, w.lemma, w.nounDetails?.plural].some((f) => bare(f) === bare(t.display))));
+  check('no title card repeats a word of its lesson', repeats.length === 0);
+  if (repeats.length) console.log('    ', repeats.map((w) => w.id).join(', '));
+  check('A1 L14 starts without a Feste card', !INITIAL_VOCABULARY.some((w) => w.id === 'a12_l14_title') && INITIAL_VOCABULARY.some((w) => w.id === 'a12_l14_fest'));
+  check('A1 L6 has no Freizeit title card, die Freizeit stays', !INITIAL_VOCABULARY.some((w) => w.id === 'a11_l6_title') && INITIAL_VOCABULARY.some((w) => w.id === 'a11_l6_freizeit'));
+}
 check('...die Geschichte next', INITIAL_VOCABULARY.find((w) => w.lektion === 8 && w.volume === 'A1.2' && w.wordType !== 'Title')?.id === 'a12_l8_geschichte');
 
 console.log('3. What Practice still waits for');
