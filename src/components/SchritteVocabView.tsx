@@ -2306,8 +2306,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     { mode: 'learn', dir: 'EN_TO_DE' },
     { mode: 'practice', dir: 'EN_TO_DE' },
   ];
+  // One colour per level, as on Chris's Schritte Duo path: A1 blue, A2 orange, B1 teal.
+  const LEVEL_COLORS: Record<string, { hex: string; border: string }> = {
+    A1: { hex: '#1CB0F6', border: '#1899D6' },
+    A2: { hex: '#FF9600', border: '#CC7A00' },
+    B1: { hex: '#00CD9C', border: '#00A47D' },
+  };
+
   const renderRoadmap = () => {
     const en = appLanguage === 'en';
+    const color = LEVEL_COLORS[selectedLevel] ?? LEVEL_COLORS.A1;
     const lessons = [...new Set(INITIAL_VOCABULARY.filter((w) => w.level === selectedLevel).map((w) => w.lektion ?? 0))].sort(
       (a, b) => a - b
     );
@@ -2320,41 +2328,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         break;
       }
     }
-    const levelButton = (lvl: CEFRLevel, tall = false) => (
-      <button
-        key={lvl}
-        type="button"
-        onClick={() => {
-          playSound('tap');
-          setSelectedLevel(lvl);
-        }}
-        className={`${tall ? 'w-full px-4 py-3 rounded-2xl text-sm text-left' : 'px-3 py-1.5 rounded-lg text-xs'} font-black cursor-pointer transition-all ${
-          selectedLevel === lvl
-            ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
-        }`}
-      >
-        {lvl}
-      </button>
-    );
-    const reviewButton = (tall = false) => (
-      <button
-        type="button"
-        onClick={() => handleSubModeChange('review')}
-        className={`flex items-center justify-between gap-2 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black cursor-pointer active:scale-95 transition-all shadow-xs ${
-          tall ? 'w-full px-4 py-3 rounded-2xl text-sm' : 'px-3.5 py-2 rounded-xl text-xs'
-        }`}
-      >
-        {en ? 'Review' : 'Wiederholen'}
-        <span
-          className={`px-1.5 rounded-full text-[10px] leading-4 font-black ${
-            globalDueCount > 0 ? 'bg-rose-500 text-white' : 'bg-zinc-600 text-zinc-200 dark:bg-zinc-300 dark:text-zinc-600'
-          }`}
-        >
-          {globalDueCount}
-        </span>
-      </button>
-    );
     const stepName = (i: number) =>
       `${ROADMAP_STEPS[i].mode === 'learn' ? (en ? 'Learn' : 'Lernen') : en ? 'Practice' : 'Üben'} ${
         ROADMAP_STEPS[i].dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'
@@ -2366,107 +2339,135 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       (n, l) => n + ROADMAP_STEPS.filter((st) => stepState(selectedLevel, l, st.mode, st.dir) === 'done').length,
       0
     );
-    // The path: every lesson, top to bottom, with its four steps
-    const path = (
-          <div className="h-full overflow-y-auto -mx-1 px-1 pb-4">
-            {lessons.map((l, li) => {
-              const states = ROADMAP_STEPS.map((st) => stepState(selectedLevel, l, st.mode, st.dir));
-              const allDone = states.every((x) => x === 'done');
-              const isNext = next?.lektion === l;
-              return (
-                <React.Fragment key={l}>
-                  {li > 0 && (
-                    <div className="flex justify-center">
-                      <div className={`w-1 h-5 rounded-full ${allDone || isNext ? 'bg-zinc-950 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-700'}`} />
-                    </div>
-                  )}
-                  <div
-                    ref={isNext ? roadmapNextRef : undefined}
-                    className={`rounded-3xl p-4 border-2 bg-white dark:bg-zinc-900 ${
-                      isNext ? 'border-zinc-950 dark:border-white shadow-md' : 'border-zinc-200 dark:border-zinc-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 shrink-0">
-                        {selectedLevel} · {l === 0 ? 'Intro' : `L${l}`}
-                      </span>
-                      <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">
-                        {BOOK_LESSON_TITLES[`${selectedLevel}_${l}`] ?? ''}
-                      </span>
-                      {allDone && (
-                        <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {(['DE_TO_EN', 'EN_TO_DE'] as Direction[]).map((dir, half) => (
-                        <div key={dir} className="rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 px-2 pt-2 pb-2.5">
-                          <p className="text-[11px] font-black text-zinc-500 dark:text-zinc-400 text-center mb-2">
-                            {dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
-                          </p>
-                          <div className="flex items-start justify-around">
-                            {[0, 1].map((j) => {
-                              const i = half * 2 + j;
-                              const st = ROADMAP_STEPS[i];
-                              const state = states[i];
-                              const here = isNext && next?.step === i;
-                              const Icon = st.mode === 'learn' ? BookOpen : Keyboard;
-                              return (
-                                <button
-                                  key={i}
-                                  type="button"
-                                  onClick={() => openStep(selectedLevel, l, st.mode, st.dir)}
-                                  className="flex flex-col items-center gap-1 cursor-pointer group"
-                                >
-                                  <span
-                                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-[3px] transition-all group-active:scale-95 ${
-                                      state === 'done'
-                                        ? 'bg-zinc-950 border-zinc-950 text-white dark:bg-white dark:border-white dark:text-zinc-950'
-                                        : state === 'started'
-                                          ? 'bg-white border-zinc-950 text-zinc-950 dark:bg-zinc-900 dark:border-white dark:text-white'
-                                          : here
-                                            ? 'bg-white border-emerald-500 text-emerald-600 dark:bg-zinc-900 animate-pulse'
-                                            : 'bg-white border-zinc-200 text-zinc-400 dark:bg-zinc-900 dark:border-zinc-700'
-                                    }`}
-                                  >
-                                    {state === 'done' ? <Check className="w-6 h-6 stroke-[3]" /> : <Icon className="w-5 h-5 sm:w-6 sm:h-6" />}
-                                  </span>
-                                  <span
-                                    className={`text-[11px] font-black ${
-                                      state === 'done' || state === 'started' || here ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'
-                                    }`}
-                                  >
-                                    {st.mode === 'learn' ? (en ? 'Learn' : 'Lernen') : en ? 'Practice' : 'Üben'}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </React.Fragment>
-              );
-            })}
-          </div>
+
+    const levelPills = (
+      <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+        {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
+          <button
+            key={lvl}
+            type="button"
+            onClick={() => {
+              playSound('tap');
+              setSelectedLevel(lvl);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all ${
+              selectedLevel === lvl
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+            }`}
+          >
+            {lvl}
+          </button>
+        ))}
+      </div>
+    );
+    const reviewButton = (
+      <button
+        type="button"
+        onClick={() => handleSubModeChange('review')}
+        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-black cursor-pointer active:scale-95 transition-all shadow-xs"
+      >
+        {en ? 'Review' : 'Wiederholen'}
+        <span
+          className={`px-1.5 rounded-full text-[10px] leading-4 font-black ${
+            globalDueCount > 0 ? 'bg-rose-500 text-white' : 'bg-zinc-600 text-zinc-200 dark:bg-zinc-300 dark:text-zinc-600'
+          }`}
+        >
+          {globalDueCount}
+        </span>
+      </button>
     );
 
-    // Desktop (Chris, 2026-11-27, like Duolingo on a computer): three columns of
-    // the same width — level and Review on the left, the path scrolling in the
-    // middle, the next step and how far you are on the right.
+    // The path, Duolingo style: a snake of round buttons, the lesson's name on a
+    // ruled line that stays at the top while its steps scroll by.
+    let nodeIndex = 0;
+    const path = (
+      <div className="h-full overflow-y-auto px-4 pb-10">
+        <div className="flex items-center gap-3 pt-3 mb-1">
+          <div className="h-[2px] flex-1 rounded-full" style={{ backgroundColor: color.hex }} />
+          <h2 className="text-lg font-black uppercase tracking-wide" style={{ color: color.hex }}>
+            {selectedLevel}
+          </h2>
+          <div className="h-[2px] flex-1 rounded-full" style={{ backgroundColor: color.hex }} />
+        </div>
+        {lessons.map((l) => {
+          const states = ROADMAP_STEPS.map((st) => stepState(selectedLevel, l, st.mode, st.dir));
+          const title = BOOK_LESSON_TITLES[`${selectedLevel}_${l}`] ?? '';
+          return (
+            <div key={l} className="mb-2">
+              <div className="sticky top-0 z-20 -mx-4 flex items-center gap-3 bg-[#f8f9fa] dark:bg-[#2b303a] px-4 pb-2 pt-2">
+                <div className="h-[2px] flex-1 rounded-full" style={{ backgroundColor: `${color.hex}40` }} />
+                <p className="text-center text-xs font-black tracking-wide" style={{ color: color.hex }}>
+                  {l === 0 ? 'Intro' : `L${l}`}
+                  {title ? ` · ${title}` : ''}
+                </p>
+                <div className="h-[2px] flex-1 rounded-full" style={{ backgroundColor: `${color.hex}40` }} />
+              </div>
+              <div className="relative flex flex-col items-center pb-4">
+                {ROADMAP_STEPS.map((st, i) => {
+                  const state = states[i];
+                  const here = next?.lektion === l && next.step === i;
+                  // the same snake rhythm as the Schritte Duo path
+                  const cycle = nodeIndex++ % 8;
+                  const indent = cycle <= 2 ? cycle : cycle <= 6 ? 4 - cycle : cycle - 8;
+                  const done = state === 'done';
+                  const Icon = done ? Check : st.mode === 'learn' ? BookOpen : Keyboard;
+                  const ref = here ? roadmapNextRef : undefined;
+                  return (
+                    <div
+                      key={i}
+                      ref={ref}
+                      className="relative"
+                      style={{ right: `${indent * 40}px`, marginTop: i === 0 ? (here ? 52 : 26) : here ? 46 : 20 }}
+                    >
+                      {here && (
+                        <div
+                          className="absolute -top-9 left-1/2 z-10 -translate-x-1/2 animate-bounce whitespace-nowrap rounded-xl border-2 bg-white dark:bg-zinc-800 px-3 py-1.5 text-xs font-black uppercase tracking-wide"
+                          style={{ color: color.hex, borderColor: `${color.hex}60` }}
+                        >
+                          {stepName(i)}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        title={stepName(i)}
+                        aria-label={stepName(i)}
+                        onClick={() => openStep(selectedLevel, l, st.mode, st.dir)}
+                        className={`w-[70px] h-[70px] rounded-full border-2 border-b-[8px] flex flex-col items-center justify-center gap-0.5 cursor-pointer transition active:translate-y-[3px] active:border-b-2 ${
+                          done || state === 'started' || here ? '' : 'bg-zinc-200 border-zinc-300 text-zinc-400 dark:bg-zinc-700 dark:border-zinc-600'
+                        }`}
+                        style={
+                          done
+                            ? { backgroundColor: color.hex, borderColor: color.border, color: '#fff' }
+                            : state === 'started' || here
+                              ? { backgroundColor: '#fff', borderColor: color.border, color: color.hex }
+                              : undefined
+                        }
+                      >
+                        <Icon className={`w-7 h-7 ${done ? 'stroke-[4]' : 'stroke-[2.5]'}`} />
+                        <span className="text-[9px] font-black leading-none">{st.dir === 'DE_TO_EN' ? 'DE→EN' : 'EN→DE'}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+
+    // Desktop: two columns like Duolingo — the path in the middle, and on the
+    // right the level and Review at the top, then the next step and progress.
     if (wideDesktop) {
       return (
-        <div className="max-w-6xl mx-auto w-full h-full grid grid-cols-3 gap-6 pb-14">
-          <div className="flex flex-col gap-2">
-            <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400 px-1">{en ? 'Level' : 'Niveau'}</p>
-            {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => levelButton(lvl, true))}
-            <div className="h-2" />
-            {reviewButton(true)}
-          </div>
+        <div className="max-w-5xl mx-auto w-full h-full grid grid-cols-[minmax(0,1fr)_340px] gap-8 pb-14">
           <div className="min-h-0">{path}</div>
           <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              {levelPills}
+              {reviewButton}
+            </div>
             {next && (
               <div className="rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
                 <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
@@ -2476,7 +2477,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 <button
                   type="button"
                   onClick={() => openStep(selectedLevel, next!.lektion, ROADMAP_STEPS[next!.step].mode, ROADMAP_STEPS[next!.step].dir)}
-                  className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm cursor-pointer active:scale-[0.98] transition-all"
+                  className="w-full py-3 rounded-2xl text-white font-black text-sm cursor-pointer border-b-4 active:translate-y-[2px] active:border-b-2 transition-all"
+                  style={{ backgroundColor: color.hex, borderColor: color.border }}
                 >
                   {en ? 'Continue' : 'Weiter'}
                 </button>
@@ -2497,8 +2499,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               </div>
               <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                 <div
-                  className="h-full bg-emerald-500 rounded-full"
-                  style={{ width: `${lessons.length ? (stepsDone / (lessons.length * 4)) * 100 : 0}%` }}
+                  className="h-full rounded-full"
+                  style={{ width: `${lessons.length ? (stepsDone / (lessons.length * 4)) * 100 : 0}%`, backgroundColor: color.hex }}
                 />
               </div>
             </div>
@@ -2510,11 +2512,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     return (
       <div className="max-w-xl mx-auto w-full h-full flex flex-col sm:pb-14">
         {/* Top: the level, and Review at the right */}
-        <div className="w-full flex items-center justify-between gap-2 mb-3 shrink-0">
-          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
-            {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => levelButton(lvl))}
-          </div>
-          {reviewButton()}
+        <div className="w-full flex items-center justify-between gap-2 mb-1 shrink-0">
+          {levelPills}
+          {reviewButton}
         </div>
         <div className="flex-1 min-h-0">{path}</div>
       </div>
