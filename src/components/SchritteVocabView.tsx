@@ -2981,9 +2981,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           return (
                             <div
                               key={group.key}
-                              className={`border-l-4 ${late > 0 ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-transparent'} ${
-                                picked && late === 0 ? 'bg-zinc-100 dark:bg-zinc-800' : ''
-                              }`}
+                              className={late > 0 ? 'bg-red-50 dark:bg-red-950/30' : picked ? 'bg-zinc-100 dark:bg-zinc-800' : ''}
                             >
                               <button
                                 type="button"
@@ -3005,14 +3003,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                 </span>
                                 <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 w-14 shrink-0">{group.label}</span>
                                 <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
+                                {/* All late: "81 late" in red says it all. Some late: that, then the total due. */}
                                 {late > 0 && (
-                                  <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-red-600 text-white text-[10px] font-black uppercase tracking-wide">
+                                  <span className="shrink-0 text-sm font-black text-red-600 dark:text-red-400">
                                     {en ? `${late} late` : `${late} überfällig`}
                                   </span>
                                 )}
-                                <span className={`text-sm font-black ${late > 0 ? 'text-red-600 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-400'}`}>
-                                  {group.cards.length}
-                                </span>
+                                {late < group.cards.length && (
+                                  <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{group.cards.length}</span>
+                                )}
                               </button>
                               {picked && (
                                 <div className="pl-12 pr-4 pb-3 space-y-1">
@@ -3044,12 +3043,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                         <span>
                                           {dayName(d.day)}
                                           {behind > 0 && (
-                                            <span className="ml-2 px-1 rounded bg-red-600 text-white text-[10px] font-black">
+                                            <span className="ml-2 font-black">
                                               {en ? `${behind} ${behind === 1 ? 'day' : 'days'} late` : `${behind} ${behind === 1 ? 'Tag' : 'Tage'} zu spät`}
                                             </span>
                                           )}
                                           {behind === 0 && (
-                                            <span className="ml-2 px-1 rounded bg-amber-500 text-white text-[10px] font-black">{en ? 'due' : 'fällig'}</span>
+                                            <span className="ml-2 font-black">{en ? 'due' : 'fällig'}</span>
                                           )}
                                         </span>
                                         <span>{d.count}</span>
