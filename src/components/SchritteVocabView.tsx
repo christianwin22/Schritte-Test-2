@@ -632,18 +632,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const dueReviewCount = globalDueCount;
 
   /**
-   * When each lesson's words come up in Review: "A1_14" → [Today 81, Fri 28 Nov 12, …].
-   * A card already due counts as today.
+   * When each lesson's words come up in Review: "A1_14" → [Mon 23 Nov 5, Today 81, Fri 28 Nov 12, …].
+   * Each card on the day it was really due, so a late one shows how late it is.
    */
   const reviewDaysByLesson = useMemo(() => {
     const out = new Map<string, { day: number; count: number }[]>();
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     for (const card of globalUnlockedWords) {
       const next = fsrsRecords[card.key]?.nextReviewDate;
       if (!next) continue;
       const d = new Date(next);
-      const day = Math.max(today, new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime());
+      const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
       const key = `${card.word.level}_${card.word.lektion}`;
       const days = out.get(key) ?? [];
       const row = days.find((r) => r.day === day);
@@ -2973,12 +2971,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
                           const dayName = (day: number) => {
                             const diff = Math.round((day - today) / 86400000);
-                            if (diff <= 0) return en ? 'Today' : 'Heute';
+                            if (diff === 0) return en ? 'Today' : 'Heute';
                             if (diff === 1) return en ? 'Tomorrow' : 'Morgen';
                             return new Date(day).toLocaleDateString(en ? 'en-GB' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
                           };
+                          // Cards whose day has already passed: the lesson goes red until they are done.
+                          const late = days.filter((d) => d.day < today).reduce((n, d) => n + d.count, 0);
+                          const shownDays = [...days.filter((d) => d.day <= today), ...days.filter((d) => d.day > today).slice(0, 4)];
                           return (
-                            <div key={group.key} className={picked ? 'bg-zinc-100 dark:bg-zinc-800' : ''}>
+                            <div
+                              key={group.key}
+                              className={`border-l-4 ${late > 0 ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-transparent'} ${
+                                picked && late === 0 ? 'bg-zinc-100 dark:bg-zinc-800' : ''
+                              }`}
+                            >
                               <button
                                 type="button"
                                 aria-pressed={picked}
@@ -2999,7 +3005,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                 </span>
                                 <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 w-14 shrink-0">{group.label}</span>
                                 <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
-                                <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{group.cards.length}</span>
+                                {late > 0 && (
+                                  <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-red-600 text-white text-[10px] font-black uppercase tracking-wide">
+                                    {en ? `${late} late` : `${late} überfällig`}
+                                  </span>
+                                )}
+                                <span className={`text-sm font-black ${late > 0 ? 'text-red-600 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                                  {group.cards.length}
+                                </span>
                               </button>
                               {picked && (
                                 <div className="pl-12 pr-4 pb-3 space-y-1">
@@ -3015,12 +3028,34 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                       </div>
                                     ))}
                                   {!speakOnly && days.length > 0 && <div className="h-px bg-zinc-200 dark:bg-zinc-700 my-1.5" />}
-                                  {days.slice(0, 6).map((d) => (
-                                    <div key={d.day} className="flex items-center justify-between text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                                      <span>{dayName(d.day)}</span>
-                                      <span>{d.count}</span>
-                                    </div>
-                                  ))}
+                                  {shownDays.map((d) => {
+                                    const behind = Math.round((today - d.day) / 86400000);
+                                    return (
+                                      <div
+                                        key={d.day}
+                                        className={`flex items-center justify-between text-xs font-bold ${
+                                          behind > 0
+                                            ? 'text-red-600 dark:text-red-400'
+                                            : behind === 0
+                                              ? 'text-amber-600 dark:text-amber-400'
+                                              : 'text-zinc-500 dark:text-zinc-400'
+                                        }`}
+                                      >
+                                        <span>
+                                          {dayName(d.day)}
+                                          {behind > 0 && (
+                                            <span className="ml-2 px-1 rounded bg-red-600 text-white text-[10px] font-black">
+                                              {en ? `${behind} ${behind === 1 ? 'day' : 'days'} late` : `${behind} ${behind === 1 ? 'Tag' : 'Tage'} zu spät`}
+                                            </span>
+                                          )}
+                                          {behind === 0 && (
+                                            <span className="ml-2 px-1 rounded bg-amber-500 text-white text-[10px] font-black">{en ? 'due' : 'fällig'}</span>
+                                          )}
+                                        </span>
+                                        <span>{d.count}</span>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
