@@ -2545,6 +2545,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   const done = state === 'done';
                   const Icon = done ? Check : st.mode === 'learn' ? BookOpen : Keyboard;
                   const open = roadmapPopup?.lektion === l && roadmapPopup.step === i;
+                  // DE → EN steps are dark, EN → DE steps light: their boxes and done buttons differ
+                  const deFirst = st.dir === 'DE_TO_EN';
                   const words = open ? wordsLeft(l, i) : null;
                   return (
                     <div
@@ -2568,8 +2570,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           setRoadmapPopup(open ? null : { lektion: l, step: i });
                         }}
                         className={`relative w-[70px] h-[70px] rounded-full border-2 border-b-[8px] flex flex-col items-center justify-center gap-0.5 cursor-pointer transition active:translate-y-[3px] active:border-b-2 ${
-                          done
+                          // Done: DE → EN black, EN → DE mid-grey, so the two directions read apart
+                          done && deFirst
                             ? 'bg-zinc-800 border-zinc-950 text-white dark:bg-zinc-100 dark:border-white dark:text-zinc-900'
+                            : done
+                            ? 'bg-zinc-500 border-zinc-600 text-white dark:bg-zinc-400 dark:border-zinc-300 dark:text-zinc-900'
                             : state === 'started' || here
                               ? 'bg-white border-zinc-900 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-100 dark:text-zinc-100'
                               : 'bg-zinc-200 border-zinc-300 text-zinc-400 dark:bg-zinc-700 dark:border-zinc-600'
@@ -2584,9 +2589,19 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           className="absolute top-full mt-4 z-40 w-72 max-w-[calc(100vw-2rem)]"
                           style={{ left: '50%', transform: `translateX(calc(-50% + ${indent * 40}px))` }}
                         >
-                        <div className="relative rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 p-4 shadow-xl animate-fadeIn">
+                        <div
+                          className={`relative rounded-2xl p-4 shadow-xl animate-fadeIn ${
+                            deFirst
+                              ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                              : 'bg-white text-zinc-900 border-2 border-zinc-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-100'
+                          }`}
+                        >
                           <div
-                            className="absolute -top-2 w-4 h-4 rotate-45 bg-zinc-900 dark:bg-zinc-100"
+                            className={`absolute w-4 h-4 rotate-45 ${
+                              deFirst
+                                ? '-top-2 bg-zinc-900 dark:bg-zinc-100'
+                                : '-top-[10px] bg-white border-l-2 border-t-2 border-zinc-900 dark:bg-zinc-800 dark:border-zinc-100'
+                            }`}
                             style={{ left: `calc(50% - ${indent * 40}px - 8px)` }}
                           />
                           <p className="text-[11px] font-black uppercase tracking-wider opacity-60">
@@ -2597,15 +2612,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           <div className="mt-2 mb-3 space-y-1.5">
                             <div className="flex items-center justify-between text-sm font-black">
                               <span>
-                                {en ? 'Done' : 'Geschafft'} {words.total - words.left} / {words.total}
+                                {words.total - words.left} / {words.total}
                               </span>
                               <span className="opacity-80">
                                 {words.left === 0 ? (en ? 'All done' : 'Alles fertig') : en ? `${words.left} to go` : `noch ${words.left}`}
                               </span>
                             </div>
-                            <div className="h-2.5 rounded-full bg-white/20 dark:bg-black/15 overflow-hidden">
+                            <div className={`h-2.5 rounded-full overflow-hidden ${deFirst ? 'bg-white/20 dark:bg-black/15' : 'bg-zinc-200 dark:bg-zinc-600'}`}>
                               <div
-                                className="h-full rounded-full bg-white dark:bg-zinc-900"
+                                className={`h-full rounded-full ${deFirst ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-900 dark:bg-white'}`}
                                 style={{ width: `${words.total ? ((words.total - words.left) / words.total) * 100 : 0}%` }}
                               />
                             </div>
@@ -2616,7 +2631,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                               setRoadmapPopup(null);
                               openStep(selectedLevel, l, st.mode, st.dir);
                             }}
-                            className="w-full py-3 rounded-xl bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white border-b-4 border-zinc-300 dark:border-black font-black text-sm uppercase tracking-wide cursor-pointer active:translate-y-[2px] active:border-b-2 transition-all"
+                            className={`w-full py-3 rounded-xl border-b-4 font-black text-sm uppercase tracking-wide cursor-pointer active:translate-y-[2px] active:border-b-2 transition-all ${
+                              deFirst
+                                ? 'bg-white text-zinc-900 border-zinc-300 dark:bg-zinc-900 dark:text-white dark:border-black'
+                                : 'bg-zinc-900 text-white border-black dark:bg-white dark:text-zinc-900 dark:border-zinc-300'
+                            }`}
                           >
                             {words.left === 0
                               ? en
