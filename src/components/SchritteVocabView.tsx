@@ -410,6 +410,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const [practiceScore, setPracticeScore] = useState(0);
   // A Practice or Review you walked out of, picked up where you left it.
   const [resumedSession, setResumedSession] = useState(false);
+  // Review's Start page: lessons tapped to review only those ("A1_14"). None = every lesson.
+  const [reviewPicked, setReviewPicked] = useState<string[]>([]);
+  // The Review running now is only the picked lessons: leaving it shows every lesson again.
+  const [reviewPickedRun, setReviewPickedRun] = useState(false);
   const [isPracticeComplete, setIsPracticeComplete] = useState(false);
   // Practice goes the way the direction button says. Review is always DE → EN:
   // a card reaches Review from either direction's Practice, and is asked one way there.
@@ -585,6 +589,30 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   // Due review words count (globally driven)
   const dueReviewCount = globalDueCount;
+
+  /**
+   * When each lesson's words come up in Review: "A1_14" → [Today 81, Fri 28 Nov 12, …].
+   * A card already due counts as today.
+   */
+  const reviewDaysByLesson = useMemo(() => {
+    const out = new Map<string, { day: number; count: number }[]>();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    for (const card of globalUnlockedWords) {
+      const next = fsrsRecords[card.key]?.nextReviewDate;
+      if (!next) continue;
+      const d = new Date(next);
+      const day = Math.max(today, new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime());
+      const key = `${card.word.level}_${card.word.lektion}`;
+      const days = out.get(key) ?? [];
+      const row = days.find((r) => r.day === day);
+      if (row) row.count++;
+      else days.push({ day, count: 1 });
+      out.set(key, days);
+    }
+    for (const days of out.values()) days.sort((a, b) => a.day - b.day);
+    return out;
+  }, [globalUnlockedWords, fsrsRecords]);
 
   // Keep the saved session in step with where you actually are.
   useEffect(() => {
@@ -1425,6 +1453,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         setRoundNumber((r) => r + 1);
       }
     }
+    if (flashcardSubMode === 'review' && reviewPickedRun) {
+      // Back to every lesson that is due; what you answered is already scheduled.
+      setReviewPickedRun(false);
+      setPracticeQueue([]);
+      setPracticeQueueIndex(0);
+      setPracticeScore(0);
+      setResumedSession(false);
+      setSessionStarted(false);
+      return;
+    }
     setResumedSession(true);
     setSessionStarted(false);
   };
@@ -1469,6 +1507,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
     clearAnswer();
     if (flashcardSubMode === 'review') clearReviewSession();
+    setReviewPickedRun(false);
     buildFreshPracticeRun();
     setResumedSession(false);
   };
@@ -2789,20 +2828,33 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         const want = wantedMarks(currentPracticeCard);
         const canResume = flashcardSubMode !== 'learn' && resumedSession && (practiceQueueIndex > 0 || roundNumber > 1);
         const canResumeLearn = flashcardSubMode === 'learn' && flashcardIndex > 0 && !isLearnComplete;
+        const reviewWaiting = canResume ? activeQueue.slice(practiceQueueIndex) : practiceQueue;
+        const reviewPicking = flashcardSubMode === 'review' && reviewPicked.length > 0;
 
         const startButton = (
           <button
             type="button"
             onClick={() => {
               playSound('tap');
+              if (reviewPicking) {
+                // Only the tapped lessons, mixed up. The rest stay due and join the next Review.
+                const picked = shuffled(reviewWaiting.filter((c) => reviewPicked.includes(`${c.word.level}_${c.word.lektion}`)));
+                setPracticeQueue(picked);
+                setPracticeQueueIndex(0);
+                setPracticeScore(0);
+                setSessionInitialCount(picked.length);
+                setResumedSession(false);
+                setReviewPicked([]);
+                setReviewPickedRun(true);
+              }
               setSessionStarted(true);
             }}
             className="w-full max-w-xs py-3.5 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black text-sm rounded-2xl shadow-xs cursor-pointer active:scale-[0.98] transition-all"
           >
-            {canResume || canResumeLearn ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
+            {(canResume || canResumeLearn) && !reviewPicking ? (en ? 'Resume' : 'Weiter') : en ? 'Start' : 'Starten'}
           </button>
         );
-        const startOverButton = (canResume || canResumeLearn) && (
+        const startOverButton = (canResume || canResumeLearn) && !reviewPicking && (
           <button
             type="button"
             onClick={() => {
@@ -2816,7 +2868,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         );
 
         // Review's Start page: the cards still waiting, grouped by lesson in course order.
-        const reviewWaiting = canResume ? activeQueue.slice(practiceQueueIndex) : practiceQueue;
         const reviewByLesson = (() => {
           const groups = new Map<string, { key: string; label: string; title: string; order: number; cards: WordCard[] }>();
           for (const card of reviewWaiting) {
@@ -2881,16 +2932,61 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                        the buttons stay put however many thousand words there are. */
                     <>
                       <p className="text-sm font-semibold text-zinc-400 dark:text-zinc-500 shrink-0">
-                        {reviewWaiting.length} {en ? (canResume ? 'cards left' : 'cards due') : canResume ? 'Karten offen' : 'Karten fällig'}
+                        {reviewPicking
+                          ? reviewByLesson.filter((g) => reviewPicked.includes(g.key)).reduce((n, g) => n + g.cards.length, 0)
+                          : reviewWaiting.length}{' '}
+                        {en ? (canResume && !reviewPicking ? 'cards left' : 'cards due') : canResume && !reviewPicking ? 'Karten offen' : 'Karten fällig'}
                       </p>
+                      {/* Tap a lesson to review only it (and see when its words come up); tap again to let it go. */}
                       <div className="flex-1 min-h-0 w-full max-w-md overflow-y-auto rounded-2xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-200 dark:divide-zinc-700 text-left">
-                        {reviewByLesson.map((group) => (
-                          <div key={group.key} className="flex items-center gap-3 px-4 py-3">
-                            <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 w-14 shrink-0">{group.label}</span>
-                            <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
-                            <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{group.cards.length}</span>
-                          </div>
-                        ))}
+                        {reviewByLesson.map((group) => {
+                          const picked = reviewPicked.includes(group.key);
+                          const days = reviewDaysByLesson.get(group.key) ?? [];
+                          const now = new Date();
+                          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                          const dayName = (day: number) => {
+                            const diff = Math.round((day - today) / 86400000);
+                            if (diff <= 0) return en ? 'Today' : 'Heute';
+                            if (diff === 1) return en ? 'Tomorrow' : 'Morgen';
+                            return new Date(day).toLocaleDateString(en ? 'en-GB' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
+                          };
+                          return (
+                            <div key={group.key} className={picked ? 'bg-zinc-100 dark:bg-zinc-800' : ''}>
+                              <button
+                                type="button"
+                                aria-pressed={picked}
+                                onClick={() => {
+                                  playSound('tap');
+                                  setReviewPicked((list) => (picked ? list.filter((k) => k !== group.key) : [...list, group.key]));
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer"
+                              >
+                                <span
+                                  className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                                    picked
+                                      ? 'bg-zinc-950 border-zinc-950 text-white dark:bg-white dark:border-white dark:text-zinc-950'
+                                      : 'border-zinc-300 dark:border-zinc-600'
+                                  }`}
+                                >
+                                  {picked && <Check className="w-3 h-3 stroke-[3]" />}
+                                </span>
+                                <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 w-14 shrink-0">{group.label}</span>
+                                <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
+                                <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{group.cards.length}</span>
+                              </button>
+                              {picked && days.length > 0 && (
+                                <div className="pl-12 pr-4 pb-3 space-y-1">
+                                  {days.slice(0, 6).map((d) => (
+                                    <div key={d.day} className="flex items-center justify-between text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                                      <span>{dayName(d.day)}</span>
+                                      <span>{d.count}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                       <div className="w-full max-w-xs flex flex-col gap-2 shrink-0">
                         {startButton}
