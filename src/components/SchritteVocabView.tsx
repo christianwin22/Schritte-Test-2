@@ -2469,32 +2469,32 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
     // The course map: small A1 / A2 / B1 between the title and ✕; each lesson
     // fills in black like the box at the top. Tap one to jump there.
+    // The course map: A1 / A2 / B1 beside the ✕ pick the level shown; each lesson
+    // fills in black like the box at the top. Tap one to jump there.
     const courseMap = roadmapMapOpen && (
       <div className="fixed inset-0 z-[100] flex flex-col sm:items-center sm:justify-center">
         <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close" onClick={() => setRoadmapMapOpen(false)} />
         <div className="relative mt-auto sm:mt-0 w-full sm:max-w-md max-h-[85vh] overflow-y-auto overscroll-contain rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 px-5 pb-8">
-          <div className="sticky top-0 z-20 -mx-5 bg-white dark:bg-zinc-900 px-5 flex h-[60px] items-center gap-3">
-            <h2 className="text-xl font-black text-zinc-800 dark:text-zinc-100 shrink-0">{en ? 'Course map' : 'Kursübersicht'}</h2>
-            <div className="flex-1 flex justify-center">
-              <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg">
-                {LEVELS.map((lvl) => (
-                  <button
-                    key={lvl}
-                    type="button"
-                    onClick={() => {
-                      playSound('tap');
-                      setRoadmapMapLevel(lvl);
-                    }}
-                    className={`px-2.5 py-1 rounded-md text-xs font-black cursor-pointer transition-all ${
-                      roadmapMapLevel === lvl
-                        ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
-                    }`}
-                  >
-                    {lvl}
-                  </button>
-                ))}
-              </div>
+          <div className="sticky top-0 z-20 -mx-5 bg-white dark:bg-zinc-900 px-5 flex h-[60px] items-center gap-2">
+            <h2 className="flex-1 min-w-0 truncate text-xl font-black text-zinc-800 dark:text-zinc-100">{en ? 'Course map' : 'Kursübersicht'}</h2>
+            <div className="shrink-0 flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg">
+              {LEVELS.map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => {
+                    playSound('tap');
+                    setRoadmapMapLevel(lvl);
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-xs font-black cursor-pointer transition-all ${
+                    roadmapMapLevel === lvl
+                      ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
             </div>
             <button
               type="button"
@@ -2637,17 +2637,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                               }`}
                               style={{ left: `calc(50% - ${indent * 40}px - 8px)` }}
                             />
-                            <p className="text-[11px] font-black uppercase tracking-wider opacity-70">
-                              {level} · {l === 0 ? 'Intro' : `L${l}`} · {en ? 'Step' : 'Schritt'} {i + 1}/4
+                            {/* Top, centred: the direction. Then Learn / Practice and the words done so far. */}
+                            <p className="text-center text-base font-black tracking-wide">
+                              {st.dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
                             </p>
-                            <p className="text-lg font-black mt-0.5">{stepName(i)}</p>
                             <div className="mt-2 mb-3 space-y-1.5">
                               <div className="flex items-center justify-between text-sm font-black">
+                                <span>{st.mode === 'learn' ? (en ? 'Learn' : 'Lernen') : en ? 'Practice' : 'Üben'}</span>
                                 <span>
                                   {words.total - words.left} / {words.total}
-                                </span>
-                                <span className="opacity-80">
-                                  {words.left === 0 ? (en ? 'All done' : 'Alles fertig') : en ? `${words.left} to go` : `noch ${words.left}`}
                                 </span>
                               </div>
                               <div className={`h-2.5 rounded-full overflow-hidden ${deFirst ? 'bg-white/25 dark:bg-black/15' : 'bg-zinc-200 dark:bg-zinc-600'}`}>
@@ -3428,19 +3426,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {flashcardSubMode !== 'review' && renderFilterBanner()}
                   </>
                 )
-              : flashcardSubMode === 'review' &&
-                !sessionStarted && (
-                  <div className="w-full flex items-center mb-2.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleSubModeChange('learn')}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 text-xs font-black text-zinc-700 dark:text-zinc-300 cursor-pointer active:scale-95"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      {en ? 'Lessons' : 'Lektionen'}
-                    </button>
-                  </div>
-                )}
+              : null /* Words' Review page: the top bar's back arrow returns to the path */}
 
             {/* One column: the card alone, its picture inside it above the sentence */}
             <div className="flex-1 min-h-0 flex gap-5">
