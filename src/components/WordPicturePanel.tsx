@@ -140,3 +140,35 @@ export const WordPicturePanel: React.FC<Props> = ({ wordId, cardKey, reveal, app
     </aside>
   );
 };
+
+/**
+ * The picture inside the card, above the example sentence (Chris, 2026-11-27:
+ * one column, picture and sentence together). The sentence's own picture when
+ * there is one, else the word's; nothing at all when neither exists. On every
+ * device; it shrinks while a screen keyboard is up.
+ */
+export const CardPicture: React.FC<{ wordId: string; cardKey: string }> = ({ wordId, cardKey }) => {
+  const [manifest, setManifest] = useState<Record<string, string> | null>(null);
+  const [sentences, setSentences] = useState<Record<string, string> | null>(null);
+  const [failed, setFailed] = useState<string[]>([]);
+  useEffect(() => {
+    loadManifest().then(setManifest).catch(() => setManifest({}));
+    loadSentenceManifest().then(setSentences).catch(() => setSentences({}));
+  }, []);
+  const options = [sentences?.[cardKey], manifest?.[wordId]]
+    .filter((k): k is string => !!k)
+    .map((k) => `/word-pictures/${k}.webp`)
+    .filter((src) => !failed.includes(src));
+  const src = options[0];
+  if (!src) return null;
+  return (
+    <img
+      key={src}
+      src={src}
+      alt=""
+      draggable={false}
+      onError={() => setFailed((f) => [...f, src])}
+      className="w-36 h-36 sm:w-44 sm:h-44 kb:w-20 kb:h-20 rounded-2xl object-cover shrink-0 select-none animate-fadeIn"
+    />
+  );
+};

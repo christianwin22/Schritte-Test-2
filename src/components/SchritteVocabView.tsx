@@ -18,7 +18,7 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import { LeaveSessionModal } from './LeaveSessionModal';
-import { WordPicturePanel, useIsDesktop } from './WordPicturePanel';
+import { CardPicture, useIsDesktop } from './WordPicturePanel';
 import { BOOK_LESSON_TITLES } from '../data/bookLessonTitles';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import {
@@ -3060,6 +3060,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           const shownWord = card.plural ? { ...card.word, lemma: (pluralOf(card.word) ?? card.word.lemma).replace(/^die\s+/i, '') } : card.word;
           return (
             <div className="flex-1 w-full flex flex-col items-center justify-center gap-1.5 px-1">
+              {/* The picture sits above its sentence, inside the card */}
+              <CardPicture wordId={card.word.id} cardKey={`${card.plural ? 'wpl:' : ''}${card.word.id}`} />
               <div className="flex items-center justify-center gap-2">
                 <p className={`${exampleSize(example.german)} font-bold text-zinc-900 dark:text-zinc-100 leading-snug`}>
                   <SentenceWithWord sentence={example.german} word={shownWord} />
@@ -3309,7 +3311,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           // sm:pb-14 keeps the hotkey button (bottom right) clear of the card
-          <div className={`${wideDesktop ? 'max-w-6xl' : 'max-w-xl'} mx-auto w-full h-full flex flex-col justify-between sm:pb-14`}>
+          <div className={`${wideDesktop ? 'max-w-2xl' : 'max-w-xl'} mx-auto w-full h-full flex flex-col justify-between sm:pb-14`}>
             <LeaveSessionModal
               isOpen={leavePromptOpen}
               onStay={() => setLeavePromptOpen(false)}
@@ -3341,7 +3343,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   </div>
                 )}
 
-            {/* Desktop: the card, and the picture in its own column beside it */}
+            {/* One column: the card alone, its picture inside it above the sentence */}
             <div className="flex-1 min-h-0 flex gap-5">
             <div className="flex-1 min-w-0 min-h-0 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
               {/* Learn, Practice and Review all wait on a Start page, so their audio never starts on its own */}
@@ -3963,30 +3965,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                 </div>
               )}
             </div>
-              <WordPicturePanel
-                wordId={
-                  !sessionStarted
-                    ? null
-                    : flashcardSubMode === 'learn'
-                      ? isLearnComplete
-                        ? null
-                        : (currentLearnCard?.word.id ?? null)
-                      : isPracticeComplete
-                        ? null
-                        : (currentPracticeCard?.word.id ?? null)
-                }
-                cardKey={
-                  !sessionStarted
-                    ? null
-                    : flashcardSubMode === 'learn'
-                      ? (currentLearnCard ? `${currentLearnCard.plural ? 'wpl:' : ''}${currentLearnCard.word.id}` : null)
-                      : currentPracticeCard
-                        ? `${currentPracticeCard.plural ? 'wpl:' : ''}${currentPracticeCard.word.id}`
-                        : null
-                }
-                reveal={flashcardSubMode === 'learn' || practiceDirection === 'EN_TO_DE' || practiceFeedback !== null}
-                appLanguage={appLanguage}
-              />
+
             </div>
           </div>
         );
