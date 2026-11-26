@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Image as ImageIcon, PanelRightClose } from 'lucide-react';
 
 /**
- * Desktop only: a picture of the current word in the empty space right of the card.
- * Folds into a small tab at the right edge, and remembers that on this device.
+ * Desktop only: a picture of the current word, beside the card. On desktop the
+ * Words page uses the full width (Chris, 2026-11-27), so the picture takes its
+ * own column right of the card. Folds into a small tab, and remembers that on this device.
  * iPad and iPhone never show it (it needs a mouse and a wide window), so their
  * layout is untouched. Pictures live in public/word-pictures (made by
  * scripts/wordPictures.py); src/data/wordPictures.json says which word shows which.
@@ -13,7 +13,7 @@ import { Image as ImageIcon, PanelRightClose } from 'lucide-react';
 const DESKTOP_QUERY = '(min-width: 1200px) and (hover: hover) and (pointer: fine)';
 const OPEN_KEY = 'dm_picture_panel_open';
 
-function useIsDesktop(): boolean {
+export function useIsDesktop(): boolean {
   const [desktop, setDesktop] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches
   );
@@ -74,27 +74,21 @@ export const WordPicturePanel: React.FC<Props> = ({ wordId, reveal, appLanguage 
   const src = key ? `/word-pictures/${key}.webp` : null;
   const hasPicture = !!src && failed !== src;
 
-  // Rendered on <body>: a parent with a transform would otherwise trap a fixed box.
   if (!open) {
-    return createPortal(
+    return (
       <button
         type="button"
         onClick={() => toggle(true)}
         title={en ? 'Show picture' : 'Bild zeigen'}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-1 px-2 py-3 rounded-l-2xl bg-white dark:bg-zinc-900 border-2 border-r-0 border-zinc-200 dark:border-zinc-800 shadow-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+        className="self-center shrink-0 flex flex-col items-center gap-1 px-2 py-3 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
       >
         <ImageIcon className="w-5 h-5" />
-      </button>,
-      document.body
+      </button>
     );
   }
 
-  return createPortal(
-    <aside
-      // Right of the card (max-w-xl = 36rem wide, centred), up to the window edge.
-      style={{ left: 'calc(50% + 18rem + 1.5rem)', width: 'min(24rem, calc(50% - 18rem - 3rem))' }}
-      className="fixed top-1/2 -translate-y-1/2 z-30 bg-white dark:bg-zinc-900 rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 shadow-sm p-3 animate-fadeIn"
-    >
+  return (
+    <aside className="self-center shrink-0 w-80 bg-white dark:bg-zinc-900 rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 shadow-sm p-3 animate-fadeIn">
       <div className="flex items-center justify-between mb-2 px-1">
         <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
           {en ? 'Picture' : 'Bild'}
@@ -126,7 +120,6 @@ export const WordPicturePanel: React.FC<Props> = ({ wordId, reveal, appLanguage 
           <ImageIcon className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
         )}
       </div>
-    </aside>,
-    document.body
+    </aside>
   );
 };

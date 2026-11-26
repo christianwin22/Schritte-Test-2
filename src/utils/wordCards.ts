@@ -17,6 +17,18 @@ export interface WordCard {
   plural: boolean;
   /** Its key in the review records. */
   key: string;
+  /** Review only: the way this card is asked. Left out = DE → EN. */
+  dir?: 'DE_TO_EN' | 'EN_TO_DE';
+}
+
+/**
+ * Review asks every word both ways (Chris, 2026-11-27). The DE → EN review of a
+ * card keeps the card's own key, as before; its EN → DE review has a key of its own.
+ */
+export const EN_DE_PREFIX = 'ende:';
+
+export function enDeCard(card: WordCard): WordCard {
+  return { ...card, key: `${EN_DE_PREFIX}${card.key}`, dir: 'EN_TO_DE' };
 }
 
 export function cardKey(wordId: string, plural: boolean, prefix = ''): string {

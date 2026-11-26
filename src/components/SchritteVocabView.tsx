@@ -17,7 +17,7 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import { LeaveSessionModal } from './LeaveSessionModal';
-import { WordPicturePanel } from './WordPicturePanel';
+import { WordPicturePanel, useIsDesktop } from './WordPicturePanel';
 import { BOOK_LESSON_TITLES } from '../data/bookLessonTitles';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import {
@@ -60,6 +60,7 @@ import {
   cardMeaningLines,
   splitMeaningNote,
   germanShown,
+  enDeCard,
 } from '../utils/wordCards';
 import {
   PracticeDone,
@@ -243,6 +244,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const t = getTranslation(appLanguage);
   // Speaking keeps everything apart from Words: its cards, its sessions, its progress.
   const CARD_PREFIX = speakOnly ? 'speak:' : '';
+  // Desktop (wide window, mouse): Words uses the full width, with the picture beside the card.
+  const wideDesktop = useIsDesktop();
   /** Where a half-finished Review / Practice waits. Synced with the rest of the progress. */
   const REVIEW_SESSION_KEY = speakOnly ? 'schritte_speak_review_session_v1' : 'schritte_review_session_v1';
   const PRACTICE_SESSION_KEY = speakOnly ? 'schritte_speak_practice_session_v1' : 'schritte_practice_session_v1';
@@ -415,9 +418,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // The Review running now is only the picked lessons: leaving it shows every lesson again.
   const [reviewPickedRun, setReviewPickedRun] = useState(false);
   const [isPracticeComplete, setIsPracticeComplete] = useState(false);
-  // Practice goes the way the direction button says. Review is always DE → EN:
-  // a card reaches Review from either direction's Practice, and is asked one way there.
-  const practiceDirection: Direction = flashcardSubMode === 'review' ? 'DE_TO_EN' : learnDirection;
+  // Practice goes the way the direction button says. Review asks each card the
+  // way it was practised: a word done both ways comes up once each way.
+  const practiceDirection: Direction =
+    flashcardSubMode === 'review'
+      ? practiceQueue[practiceQueueIndex % (practiceQueue.length || 1)]?.dir ?? 'DE_TO_EN'
+      : learnDirection;
   // DE → EN: the two little switches beside the answer box (M / F and S / P).
   const [genderPick, setGenderPick] = useState<GenderChoice>('M');
   const [numberPick, setNumberPick] = useState<NumberChoice>('S');
@@ -530,7 +536,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   }, [onTopBarDetail, flashcardSubMode, appLanguage, sessionStarted]);
   useEffect(() => () => onTopBarDetail?.([]), [onTopBarDetail]);
   const allCards = useMemo(() => cardsFor(INITIAL_VOCABULARY, CARD_PREFIX), [CARD_PREFIX]);
-  const cardByKey = useMemo(() => new Map(allCards.map((c) => [c.key, c])), [allCards]);
+  // Review's cards: each word's DE → EN card, and (not in Speaking) its EN → DE one.
+  const allReviewCards = useMemo(() => (speakOnly ? allCards : [...allCards, ...allCards.map(enDeCard)]), [allCards, speakOnly]);
+  const cardByKey = useMemo(() => new Map(allReviewCards.map((c) => [c.key, c])), [allReviewCards]);
 
   // --- What is still waiting to be practised, per direction -------------------
   const [practiceDone, setPracticeDone] = useState<PracticeDone>(() => {
@@ -557,6 +565,39 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   };
 
   /** A list's cards not yet answered right in this direction's Practice. */
+  /**
+   * Words practised EN → DE before Review asked both ways have no EN → DE review
+   * yet: give them one, on the same day as their DE → EN review (or tomorrow).
+   */
+  useEffect(() => {
+    if (speakOnly) return;
+    const done = practiceDone.en;
+    const missing = allCards.filter((c) => done[c.key] && !fsrsRecords[enDeCard(c).key]?.isUnlocked);
+    if (missing.length === 0) return;
+    setFsrsRecords((prev) => {
+      const next = { ...prev };
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      for (const card of missing) {
+        const key = enDeCard(card).key;
+        if (next[key]?.isUnlocked) continue;
+        const de = prev[card.key];
+        next[key] = {
+          wordId: key,
+          status: 'review',
+          isUnlocked: true,
+          stability: 1.0,
+          difficulty: 5.0,
+          intervalDays: 1,
+          lastReviewedAt: new Date().toISOString(),
+          nextReviewDate: de?.isUnlocked && de.nextReviewDate ? de.nextReviewDate : tomorrow,
+          repetitionCount: 1,
+        };
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [practiceDone, allCards, speakOnly]);
+
   const pendingIn = (cards: WordCard[], dir: Direction) => {
     const done = practiceDone[dirOf(dir)];
     return cards.filter((c) => !done[c.key]);
@@ -578,14 +619,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   // Global due cards across all lessons in the app (decoupled from lesson selector!)
   const globalDueWords = useMemo(() => {
-    return allCards.filter((c) => isCardDueForReview(fsrsRecords[c.key]));
-  }, [allCards, fsrsRecords]);
+    return allReviewCards.filter((c) => isCardDueForReview(fsrsRecords[c.key]));
+  }, [allReviewCards, fsrsRecords]);
 
   const globalDueCount = globalDueWords.length;
 
   const globalUnlockedWords = useMemo(() => {
-    return allCards.filter((c) => fsrsRecords[c.key]?.isUnlocked && fsrsRecords[c.key]?.status === 'review');
-  }, [allCards, fsrsRecords]);
+    return allReviewCards.filter((c) => fsrsRecords[c.key]?.isUnlocked && fsrsRecords[c.key]?.status === 'review');
+  }, [allReviewCards, fsrsRecords]);
 
   // Due review words count (globally driven)
   const dueReviewCount = globalDueCount;
@@ -1032,7 +1073,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       onCorrectAnswer?.(15, 5);
       if (flashcardSubMode === 'practice') {
         // Into Review the moment it is right — due a day from now, whenever the rest gets done.
-        setFsrsRecords((prev) => unlockWordsAfterPractice([card.key], prev));
+        const reviewKey = practiceDirection === 'EN_TO_DE' && !speakOnly ? enDeCard(card).key : card.key;
+        setFsrsRecords((prev) => unlockWordsAfterPractice([reviewKey], prev));
         markPracticeDone(card, practiceDirection);
       }
     } else {
@@ -2888,24 +2930,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         })();
 
         return (
-          <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
-            {/* Desktop only: the word's picture beside the card. In Practice and Review
-                DE → EN it waits for the answer, since it would give the meaning away. */}
-            <WordPicturePanel
-              wordId={
-                !sessionStarted
-                  ? null
-                  : flashcardSubMode === 'learn'
-                    ? isLearnComplete
-                      ? null
-                      : (currentLearnCard?.word.id ?? null)
-                    : isPracticeComplete
-                      ? null
-                      : (currentPracticeCard?.word.id ?? null)
-              }
-              reveal={flashcardSubMode === 'learn' || practiceDirection === 'EN_TO_DE' || practiceFeedback !== null}
-              appLanguage={appLanguage}
-            />
+          <div className={`${wideDesktop ? 'max-w-6xl' : 'max-w-xl'} mx-auto w-full h-full flex flex-col justify-between`}>
             <LeaveSessionModal
               isOpen={leavePromptOpen}
               onStay={() => setLeavePromptOpen(false)}
@@ -2923,7 +2948,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
               </>
             )}
 
-            <div className="flex-1 min-h-0 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
+            {/* Desktop: the card, and the picture in its own column beside it */}
+            <div className="flex-1 min-h-0 flex gap-5">
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-5 border-2 border-zinc-200 dark:border-zinc-800 shadow-sm text-center">
               {/* Learn, Practice and Review all wait on a Start page, so their audio never starts on its own */}
               {!sessionStarted && !(flashcardSubMode === 'review' && practiceQueue.length === 0) ? (
                 <div className="flex-1 min-h-0 flex flex-col items-center gap-4 pt-1 pb-2">
@@ -2974,8 +3001,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                 <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
                                 <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{group.cards.length}</span>
                               </button>
-                              {picked && days.length > 0 && (
+                              {picked && (
                                 <div className="pl-12 pr-4 pb-3 space-y-1">
+                                  {/* Due now, each way; together they make the number on the row */}
+                                  {!speakOnly &&
+                                    ([
+                                      ['DE → EN', group.cards.filter((c) => c.dir !== 'EN_TO_DE').length],
+                                      ['EN → DE', group.cards.filter((c) => c.dir === 'EN_TO_DE').length],
+                                    ] as const).map(([label, n]) => (
+                                      <div key={label} className="flex items-center justify-between text-xs font-black text-zinc-700 dark:text-zinc-300">
+                                        <span>{label}</span>
+                                        <span>{n}</span>
+                                      </div>
+                                    ))}
+                                  {!speakOnly && days.length > 0 && <div className="h-px bg-zinc-200 dark:bg-zinc-700 my-1.5" />}
                                   {days.slice(0, 6).map((d) => (
                                     <div key={d.day} className="flex items-center justify-between text-xs font-bold text-zinc-500 dark:text-zinc-400">
                                       <span>{dayName(d.day)}</span>
@@ -3484,6 +3523,22 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   )}
                 </div>
               )}
+            </div>
+              <WordPicturePanel
+                wordId={
+                  !sessionStarted
+                    ? null
+                    : flashcardSubMode === 'learn'
+                      ? isLearnComplete
+                        ? null
+                        : (currentLearnCard?.word.id ?? null)
+                      : isPracticeComplete
+                        ? null
+                        : (currentPracticeCard?.word.id ?? null)
+                }
+                reveal={flashcardSubMode === 'learn' || practiceDirection === 'EN_TO_DE' || practiceFeedback !== null}
+                appLanguage={appLanguage}
+              />
             </div>
           </div>
         );

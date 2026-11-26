@@ -205,9 +205,9 @@ export default function App() {
   // Everything due in Vocabulary: Flashcard reviews plus Plural and Weak Nouns reviews.
   const globalDueCount = useMemo(() => {
     const flashcards = INITIAL_VOCABULARY.filter((w) => isCardDueForReview(fsrsRecords[w.id])).length;
-    // Words' plural cards ("wpl:") and the Plural drill
+    // Words' plural cards ("wpl:"), every card's EN → DE review ("ende:") and the Plural drill
     const drills = Object.keys(fsrsRecords).filter(
-      (id) => /^(plural|wpl):/.test(id) && isCardDueForReview(fsrsRecords[id])
+      (id) => /^(plural|wpl|ende):/.test(id) && isCardDueForReview(fsrsRecords[id])
     ).length;
     return flashcards + drills;
   }, [fsrsRecords]);
