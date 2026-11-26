@@ -34,15 +34,26 @@ function loadManifest() {
   return manifestPromise;
 }
 
+// Pictures of the example sentences (scripts/sentencePicturePrompts.py), by card key.
+let sentencePromise: Promise<Record<string, string>> | null = null;
+function loadSentenceManifest() {
+  sentencePromise ??= import('../data/sentencePictures.json').then(
+    (m) => (m.default ?? m) as Record<string, string>
+  );
+  return sentencePromise;
+}
+
 interface Props {
   /** The word on screen, or null when there is none (Start page, round end). */
   wordId: string | null;
+  /** That card's key ("wpl:<id>" for a plural card): its sentence picture comes first. */
+  cardKey?: string | null;
   /** False while the picture would give the answer away. */
   reveal: boolean;
   appLanguage: string;
 }
 
-export const WordPicturePanel: React.FC<Props> = ({ wordId, reveal, appLanguage }) => {
+export const WordPicturePanel: React.FC<Props> = ({ wordId, cardKey, reveal, appLanguage }) => {
   const desktop = useIsDesktop();
   const en = appLanguage === 'en';
   const [open, setOpen] = useState(() => {
@@ -53,10 +64,13 @@ export const WordPicturePanel: React.FC<Props> = ({ wordId, reveal, appLanguage 
     }
   });
   const [manifest, setManifest] = useState<Record<string, string> | null>(null);
+  const [sentences, setSentences] = useState<Record<string, string> | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
-    if (desktop) loadManifest().then(setManifest).catch(() => setManifest({}));
+    if (!desktop) return;
+    loadManifest().then(setManifest).catch(() => setManifest({}));
+    loadSentenceManifest().then(setSentences).catch(() => setSentences({}));
   }, [desktop]);
 
   if (!desktop || !wordId) return null;
@@ -70,8 +84,11 @@ export const WordPicturePanel: React.FC<Props> = ({ wordId, reveal, appLanguage 
     }
   };
 
-  const key = manifest?.[wordId];
-  const src = key ? `/word-pictures/${key}.webp` : null;
+  // The sentence's picture when there is one, else the word's.
+  const sentenceKey = cardKey ? sentences?.[cardKey] : undefined;
+  const wordKey = manifest?.[wordId];
+  const sentenceSrc = sentenceKey ? `/word-pictures/${sentenceKey}.webp` : null;
+  const src = sentenceSrc && failed !== sentenceSrc ? sentenceSrc : wordKey ? `/word-pictures/${wordKey}.webp` : null;
   const hasPicture = !!src && failed !== src;
 
   if (!open) {

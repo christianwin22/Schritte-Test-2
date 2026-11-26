@@ -36,9 +36,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="")
     ap.add_argument("--redo", action="store_true")
+    # scripts/data/sentencePicturePrompts.tsv for the example-sentence pictures
+    ap.add_argument("--prompts", default=str(PROMPTS))
     args = ap.parse_args()
 
-    rows = [l.rstrip("\n").split("\t", 1) for l in PROMPTS.read_text().splitlines() if l]
+    rows = [l.rstrip("\n").split("\t", 1) for l in Path(args.prompts).read_text().splitlines() if l]
     only = set(filter(None, args.only.split(",")))
     if only:
         rows = [r for r in rows if r[0] in only]

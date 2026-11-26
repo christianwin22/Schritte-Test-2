@@ -3536,6 +3536,15 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         ? null
                         : (currentPracticeCard?.word.id ?? null)
                 }
+                cardKey={
+                  !sessionStarted
+                    ? null
+                    : flashcardSubMode === 'learn'
+                      ? (currentLearnCard ? `${currentLearnCard.plural ? 'wpl:' : ''}${currentLearnCard.word.id}` : null)
+                      : currentPracticeCard
+                        ? `${currentPracticeCard.plural ? 'wpl:' : ''}${currentPracticeCard.word.id}`
+                        : null
+                }
                 reveal={flashcardSubMode === 'learn' || practiceDirection === 'EN_TO_DE' || practiceFeedback !== null}
                 appLanguage={appLanguage}
               />
