@@ -2964,7 +2964,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       </p>
                       {/* Tap a lesson to review only it (and see when its words come up); tap again to let it go. */}
                       <div className="flex-1 min-h-0 w-full max-w-md overflow-y-auto rounded-2xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-200 dark:divide-zinc-700 text-left">
-                        {reviewByLesson.map((group) => {
+                        {reviewByLesson.map((group, gi) => {
                           const picked = reviewPicked.includes(group.key);
                           const days = reviewDaysByLesson.get(group.key) ?? [];
                           const now = new Date();
@@ -2976,12 +2976,22 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             return new Date(day).toLocaleDateString(en ? 'en-GB' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
                           };
                           // Cards whose day has already passed: the lesson goes red until they are done.
-                          const late = days.filter((d) => d.day < today).reduce((n, d) => n + d.count, 0);
+                          const lateIn = (key?: string) =>
+                            (key ? reviewDaysByLesson.get(key) ?? [] : []).filter((d) => d.day < today).reduce((n, d) => n + d.count, 0);
+                          const late = lateIn(group.key);
+                          // One red line above and below a late lesson (shared with its neighbour), none at the sides
+                          const lineAbove = late > 0 || lateIn(reviewByLesson[gi - 1]?.key) > 0;
+                          const lastRow = gi === reviewByLesson.length - 1;
                           const shownDays = [...days.filter((d) => d.day <= today), ...days.filter((d) => d.day > today).slice(0, 4)];
                           return (
                             <div
                               key={group.key}
-                              className={late > 0 ? 'bg-red-50 dark:bg-red-950/30' : picked ? 'bg-zinc-100 dark:bg-zinc-800' : ''}
+                              className={[
+                                late > 0 ? 'bg-red-50 dark:bg-red-950/30' : picked ? 'bg-zinc-100 dark:bg-zinc-800' : '',
+                                lineAbove ? 'border-t border-t-red-500' : '',
+                                late > 0 && lastRow ? 'border-b border-b-red-500' : '',
+                                gi === 0 && late === 0 ? 'border-t-0' : '',
+                              ].join(' ')}
                             >
                               <button
                                 type="button"
@@ -3005,7 +3015,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                 <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">{group.title}</span>
                                 {/* All late: "81 late" in red says it all. Some late: that, then the total due. */}
                                 {late > 0 && (
-                                  <span className="shrink-0 text-sm font-black text-red-600 dark:text-red-400">
+                                  <span className="shrink-0 px-2 py-0.5 rounded-md bg-red-600 text-white text-xs font-black uppercase tracking-wide">
                                     {en ? `${late} late` : `${late} überfällig`}
                                   </span>
                                 )}
