@@ -661,9 +661,9 @@ glueckwunsch-84fc52	people congratulating a woman with flowers
 blume-9400f0	a yellow flower
 karneval-f84952	a carnival parade with costumes and masks
 veranstaltung-0d71a4	an event with a stage and an audience
-jahreszeit-251f3f	four trees showing the four seasons
+jahreszeit-bcc7ab	four trees showing the four seasons
 umfrage-a40669	a survey form with tick boxes
-karte-20350d	a greetings card with flowers
+karte-633b95	a greetings card with flowers
 geschenk-5eacfa	a wrapped present with a bow
 nachtisch-b0a3dc	a dessert, a bowl of chocolate pudding
 laptop-b16cc8	a laptop
@@ -776,7 +776,7 @@ schuessel-e8fcaa	a bowl
 pfanne-367470	a frying pan
 spuelmaschine-6ec4c6	a dishwasher
 appetit-74959f	a hungry man looking at delicious food
-boden-323b4a	a wooden floor
+boden-323b4a	a room with a shiny wooden floor and a rug
 diaet-03efe2	a woman on a diet with a salad and a measuring tape
 frucht-fa7f1d	fruits, an apple, a pear and grapes
 vorspeise-1bce33	a small starter, a bowl of soup
@@ -1239,7 +1239,7 @@ ausdruck-94e103	a speech bubble with a phrase
 wiederholung-e85861	a circular arrow, repetition
 aussprache-5a6e3f	a mouth speaking with sound waves
 spiegel-af47b5	a mirror
-trennung-229dd0	a line separating two halves
+trennung-229dd0	a sad couple sitting back to back on a bench, breaking up
 autor-e046f4	a male author writing a book
 autorin-a6dddd	a female author writing a book
 dialekt-12b961	two people speaking in different speech bubbles, dialect
@@ -1486,7 +1486,6 @@ notieren-35a30f	a hand writing a note on a small notepad
 vergleichen-b32e94	a woman comparing a red apple and a green apple in her hands
 schreiben-75073e	a hand writing with a pen on paper
 variieren-a6e399	three different coloured versions of the same cup side by side
-erzaehlen-f5fa50	a grandmother telling a story to children
 arbeiten-ce3446	two students working together at a desk
 zeichnen-44f624	a child drawing a house with crayons
 verbinden-650cce	two dots on paper connected by a pencil line
@@ -1600,7 +1599,7 @@ glauben-c07a3b	a woman thinking with her hand on her chin
 besonder-b3bcd0	a golden star shining
 dunkelblau-a3bab4	a dark blue chair
 hellblau-47ede1	a light blue wall
-braunrot-011dea	a reddish brown carpet
+braunrot-011dea	a reddish brown leather armchair
 violett-ed9ac8	a purple lamp
 rosa-79ead2	a pink sofa
 dunkelgruen-c54f23	a dark green cupboard
@@ -1694,7 +1693,7 @@ das-tennis-59ac39	a tennis racket and a tennis ball
 tennis-spielen-31d5b8	a man playing tennis
 singen-74e79c	a woman singing into a microphone
 senkrecht-7145cf	a vertical line
-waagerecht-82f41a	a horizontal line
+waagerecht-82f41a	a long horizontal wooden shelf on a wall with a spirit level on it
 wollen-feed20	a child reaching for a toy he wants
 gestern-08b4a9	a calendar page with yesterday crossed out
 frueher-030463	an old faded photo from the past
@@ -1798,7 +1797,6 @@ vorbeikommen-cc9566	a friend stopping by at the front door
 dringend-1221d9	an urgent red warning light and a clock
 rechts-24e397	an arrow pointing right
 geradeaus-842826	an arrow pointing straight ahead
-links-63c017	an arrow pointing left
 selbst-329252	a woman fixing her bike by herself
 zumachen-5b3ddc	a hand closing a door
 schnell-2a442d	a fast racing car speeding
@@ -1862,15 +1860,16 @@ moegen-eec6c9	a girl hugging a cat she likes
 anprobieren-953d26	a woman trying on a jacket in a changing room
 schenken-19274c	a man giving a present to a woman
 traurig-e5a5a0	a sad girl crying
+erzaehlen-57fad7	a grandmother telling a story to children
 feiern-802de3	people celebrating with drinks and confetti
 wuenschen-7eb5ea	a girl blowing out birthday candles making a wish
 gratulieren-b91719	a man shaking hands to congratulate a graduate
 enden-acccb9	the end of a road with a stop sign
-erste-9bb5e8	a number one gold medal
-zweite-de6599	a number two silver medal
-dritte-509375	a number three bronze medal
+erste-9bb5e8	a runner crossing the finish line first, arms raised, other runners far behind
+zweite-de6599	a winners podium, a happy athlete standing on the second highest step holding a silver medal
+dritte-509375	a winners podium, an athlete standing on the lowest third step holding a bronze medal
 mitmachen-590db4	people joining in a group dance
-lieb-997702	a child hugging a grandpa lovingly
+lieb-763467	a child hugging a grandpa lovingly
 lieb-haben-8d0c81	a child hugging a grandpa lovingly
 schmutzig-88aa2b	a blouse with dirty stains
 waschen-c32b6c	a washing machine washing clothes
@@ -1890,7 +1889,7 @@ heilig-6fb10d	a Christmas Eve nativity scene with a star
 anzuenden-da4424	a hand lighting a candle with a match
 zurueckkommen-13a79c	a man coming back home through the door
 auspacken-7ca2c1	a child unwrapping a present
-vorlesen-33665e	a grandfather reading aloud to a child
+vorlesen-169410	a grandfather reading aloud to a child
 stellen-f101a2	a man putting shoes outside a front door
 ziehen-d95d76	a man carrying boxes into a moving van
 gluecklich-4eeef5	a very happy man smiling with his arms up
@@ -1981,7 +1980,7 @@ online-4cce2f	a laptop connected to the internet
 schwierig-23a1a5	a man struggling with a hard puzzle
 freundlich-d032b2	a friendly smiling waiter
 klug-9e4cb1	a clever girl with glasses and books
-kompliziert-f14f38	a tangled ball of string, complicated
+kompliziert-f14f38	a confused man looking at a very complicated machine with many wires
 ausschalten-fcf132	a hand switching off a computer
 spuelen-fd8b51	a man washing up dishes in the sink
 verbringen-561146	a family spending time together at the beach

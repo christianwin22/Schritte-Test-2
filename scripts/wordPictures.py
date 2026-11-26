@@ -27,8 +27,9 @@ MADE = ROOT / "scripts/data/wordPicturesMade.tsv"  # key, prompt it was drawn fr
 
 STYLE = ", simple flat cartoon illustration, clean lines, soft colors, plain white background"
 NEGATIVE = "text, letters, words, watermark, signature, blurry"
-SEEDS: dict[str, int] = {}  # key -> seed, for re-rolling single pictures
+SEEDS: dict[str, int] = {"boden-323b4a": 11, "braunrot-011dea": 11, "kompliziert-f14f38": 11}  # key -> seed, for re-rolling single pictures
 SIZE = 384
+HANDMADE = {"erste-9bb5e8", "zweite-de6599", "dritte-509375"}  # scripts/wordPicturesOrdinals.py
 
 
 def main() -> None:
@@ -43,6 +44,7 @@ def main() -> None:
         rows = [r for r in rows if r[0] in only]
     OUT.mkdir(parents=True, exist_ok=True)
     made = dict(l.split("\t", 1) for l in MADE.read_text().splitlines() if "\t" in l) if MADE.exists() else {}
+    rows = [r for r in rows if r[0] not in HANDMADE]
     todo = [r for r in rows if args.redo or made.get(r[0]) != r[1] or not (OUT / f"{r[0]}.webp").exists()]
     print(f"{len(rows) - len(todo)} done, {len(todo)} to make", flush=True)
     if not todo:
