@@ -141,5 +141,27 @@ for (const w of INITIAL_VOCABULARY) {
 }
 check(`0 false accepts across ${INITIAL_VOCABULARY.length * junk.length * 2} tries (${falseAccepts})`, falseAccepts === 0);
 
+console.log('Nov 26: British or American spelling, and one "to" for a list');
+const wid = (id: string): WordEntry => INITIAL_VOCABULARY.find((x) => x.id === id)!;
+const usUk = INITIAL_VOCABULARY.filter((w) => /neighbour|colour|favourite|centre/i.test(w.translation));
+for (const w of usUk.slice(0, 4)) {
+  const meaning = w.translation.replace(/<br>.*/, '').split(',')[0].replace(/\([^)]*\)|\[[^\]]*\]/g, '').trim();
+  const us = meaning.replace(/our/g, 'or').replace(/centre/g, 'center');
+  check(`"${us}" answers ${w.display} (${meaning})`, checkEnglish(us, w));
+}
+const nachbar = INITIAL_VOCABULARY.find((w) => w.display === 'der Nachbar')!;
+check('"neighbor" answers der Nachbar (neighbour)', checkEnglish('neighbor', nachbar));
+check('"neighbour" still does too', checkEnglish('neighbour', nachbar));
+const werden = wid('a12_l14_werden');
+check('"to turn, become" answers werden', checkEnglish('to turn, become', werden));
+check('"to become, to turn" answers werden', checkEnglish('to become, to turn', werden));
+check('"turn, become" still needs its "to"', !checkEnglish('turn, become', werden));
+check('lieb asks for dear and kind', checkEnglishPair(['kind', 'dear'], wid('a12_l14_lieb')).every(Boolean));
+check('vorher: earlier is its 2nd meaning', checkEnglishPair(['before', 'earlier'], wid('a12_l14_vorher')).every(Boolean));
+check('vorlesen: "to read out loud"', checkEnglish('to read out loud', wid('a12_l14_vorlesen')));
+check('erzählen: "to narrate"', checkEnglish('to narrate', wid('a12_l14_erzaehlen')));
+check('Jahreszeit: "season"', checkEnglish('season', wid('a12_l14_jahreszeit')));
+check('Karte: "greeting card" and "card"', checkEnglish('greeting card', wid('a12_l14_karte')) && checkEnglish('card', wid('a12_l14_karte')));
+
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nALL PASS');
 process.exit(failures ? 1 : 0);

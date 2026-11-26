@@ -109,6 +109,43 @@ export function checkGerman(input: string, word: WordEntry): GermanResult {
 
 /* ----------------------------------------------------------------- English */
 
+/**
+ * British and American spellings are both right (Chris, 2026-11-26): colour =
+ * color, centre = center, organise = organize, travelled = traveled. Both the
+ * answer and the typed text go through this, so either spelling meets the other.
+ */
+const SPELLINGS: Record<string, string> = {
+  grey: 'gray', programme: 'program', programmes: 'programs', mum: 'mom', mummy: 'mommy',
+  aeroplane: 'airplane', aeroplanes: 'airplanes', pyjamas: 'pajamas', jewellery: 'jewelry',
+  defence: 'defense', offence: 'offense', licence: 'license', practise: 'practice',
+  practised: 'practiced', practising: 'practicing', catalogue: 'catalog', dialogue: 'dialog',
+  cheque: 'check', cheques: 'checks', tyre: 'tire', tyres: 'tires', cosy: 'cozy',
+  ageing: 'aging', judgement: 'judgment', moustache: 'mustache', sceptical: 'skeptical',
+  storey: 'story', storeys: 'stories', plough: 'plow', mould: 'mold', aluminium: 'aluminum',
+  kerb: 'curb', enrol: 'enroll', fulfil: 'fulfill', skilful: 'skillful', manoeuvre: 'maneuver',
+  doughnut: 'donut', doughnuts: 'donuts', axe: 'ax', draught: 'draft', analogue: 'analog',
+};
+const DOUBLE_L = /^(travel|cancel|label|model|level|fuel|signal|dial|marvel|quarrel|jewel|channel|tunnel|total|counsel|equal|rival|shovel|snorkel|pedal)l(ed|er|ers|ing)$/;
+// colour, favourite, neighbourhood, behaviour, but not four, hour, your, tour
+const OUR = /^(col|flav|hum|lab|neighb|hon|harb|behavi|fav|rum|od|vap|arm|rig|vig|sav|parl|clam|endeav|tum)our/;
+// centre, theatre, metre, litre, but not genre, acre, ogre
+const TRE = /^(cen|thea|me|li|fib|kilome|centime|millime|lus|spec)tre(s|d)?$/;
+
+function americanWord(word: string): string {
+  if (SPELLINGS[word]) return SPELLINGS[word];
+  return word
+    .replace(DOUBLE_L, '$1$2')
+    .replace(OUR, '$1or')
+    .replace(TRE, '$1ter$2')
+    // organise, realisation: both sides change alike, so "exercise" is harmless
+    .replace(/([a-z]{3,})is(e|ed|es|ing|ation|ations|er|ers)$/, '$1iz$2')
+    .replace(/([a-z]{2,})ys(e|ed|es|ing)$/, '$1yz$2'); // analyse
+}
+
+function americanSpelling(text: string): string {
+  return text.replace(/[a-z]+/g, americanWord);
+}
+
 /** keepTo: a verb's "to" stays, so "listen" no longer answers "to listen". */
 export function normalizeEnglish(text: string, keepTo = false): string {
   let t = text.toLowerCase();
@@ -118,7 +155,7 @@ export function normalizeEnglish(text: string, keepTo = false): string {
   t = t.replace(PUNCTUATION, ' ');
   t = squash(t);
   t = t.replace(keepTo ? /^(a|an|the)\s+/ : /^(to|a|an|the)\s+/, '');  // "to hear" → "hear"
-  return squash(t);
+  return americanSpelling(squash(t));
 }
 
 /** Verbs keep their "to". */
@@ -171,7 +208,11 @@ export function answersSense(input: string, options: string[], keepTo = false): 
   if (!user) return false;
   if (options.includes(user)) return true;
   const pieces = input.split(/[,;/]/).map((p) => normalizeEnglish(p, keepTo)).filter(Boolean);
-  return pieces.length > 1 && pieces.every((p) => options.includes(p));
+  // "to turn, become": the first "to" carries over to the rest
+  const carried = keepTo && pieces[0]?.startsWith('to ')
+    ? pieces.map((p) => (p.startsWith('to ') ? p : `to ${p}`))
+    : pieces;
+  return pieces.length > 1 && carried.every((p) => options.includes(p));
 }
 
 /** Does this answer any one of the word's meanings? */

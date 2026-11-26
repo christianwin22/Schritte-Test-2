@@ -1756,6 +1756,30 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           return;
         }
 
+        // Learn's audio keys work here too (Chris, 2026-11-26): ↓ says the word,
+        // ⌘ the example. Before an EN → DE answer they would give it away, and in
+        // the typing box ⌘ is left alone so ⌘V / ⌘A still work.
+        const germanShowing = !!practiceFeedback || practiceDirection === 'DE_TO_EN';
+        if (germanShowing && currentPracticeCard && hotkeys.singularAudio !== hotkeys.practiceAudio && matchesKey(hotkeys.singularAudio)) {
+          e.preventDefault();
+          playSound('tap');
+          speakGerman(germanOf(currentPracticeCard));
+          return;
+        }
+        if (
+          germanShowing && currentPracticeCard && (!isInput || practiceFeedback) &&
+          (matchesKey(hotkeys.exampleAudio) ||
+            (hotkeys.exampleAudio === 'Meta' && (e.key === 'Meta' || e.key === 'Control')))
+        ) {
+          const example = exampleOf(currentPracticeCard);
+          if (example) {
+            e.preventDefault();
+            playSound('tap');
+            speakGerman(example.german);
+          }
+          return;
+        }
+
         if (practiceFeedback) {
           if (matchesKey(hotkeys.practiceCheck) || e.key === 'Enter') {
             e.preventDefault();
@@ -1805,6 +1829,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     numberPick,
     numberTouched,
     currentPracticeCard,
+    practiceDirection,
   ]);
 
   // Hotkey recording listener when user clicks to change a hotkey in modal
