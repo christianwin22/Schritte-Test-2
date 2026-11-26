@@ -2623,24 +2623,26 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           style={{ left: '50%', transform: `translateX(calc(-50% + ${indent * 40}px))` }}
                         >
                           <div
-                            className={`relative rounded-2xl p-4 shadow-xl animate-fadeIn ${
-                              deFirst
-                                ? 'bg-zinc-600 text-white dark:bg-zinc-300 dark:text-zinc-900'
-                                : 'bg-white text-zinc-900 border-2 border-zinc-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-100'
-                            }`}
+                            // Every step box is the same white box; only its title says which way
+                            className="relative rounded-2xl p-4 shadow-xl animate-fadeIn bg-white text-zinc-900 border-2 border-zinc-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-100"
                           >
                             <div
-                              className={`absolute w-4 h-4 rotate-45 ${
-                                deFirst
-                                  ? '-top-2 bg-zinc-600 dark:bg-zinc-300'
-                                  : '-top-[10px] bg-white border-l-2 border-t-2 border-zinc-900 dark:bg-zinc-800 dark:border-zinc-100'
-                              }`}
+                              className="absolute w-4 h-4 rotate-45 -top-[10px] bg-white border-l-2 border-t-2 border-zinc-900 dark:bg-zinc-800 dark:border-zinc-100"
                               style={{ left: `calc(50% - ${indent * 40}px - 8px)` }}
                             />
                             {/* Top, centred: the direction. Then Learn / Practice and the words done so far. */}
-                            <p className="text-center text-base font-black tracking-wide">
-                              {st.dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
-                            </p>
+                            {/* The one difference: DE → EN is a black pill, EN → DE an outlined one */}
+                            <div className="flex justify-center">
+                              <span
+                                className={`px-3 py-1 rounded-full text-sm font-black tracking-wide border-2 ${
+                                  deFirst
+                                    ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900 dark:border-white'
+                                    : 'bg-white text-zinc-900 border-zinc-900 dark:bg-zinc-800 dark:text-white dark:border-white'
+                                }`}
+                              >
+                                {st.dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
+                              </span>
+                            </div>
                             <div className="mt-2 mb-3 space-y-1.5">
                               <div className="flex items-center justify-between text-sm font-black">
                                 <span>{st.mode === 'learn' ? (en ? 'Learn' : 'Lernen') : en ? 'Practice' : 'Üben'}</span>
@@ -2648,9 +2650,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                   {words.total - words.left} / {words.total}
                                 </span>
                               </div>
-                              <div className={`h-2.5 rounded-full overflow-hidden ${deFirst ? 'bg-white/25 dark:bg-black/15' : 'bg-zinc-200 dark:bg-zinc-600'}`}>
+                              <div className="h-2.5 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-600">
                                 <div
-                                  className={`h-full rounded-full ${deFirst ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-900 dark:bg-white'}`}
+                                  className="h-full rounded-full bg-zinc-900 dark:bg-white"
                                   style={{ width: `${words.total ? ((words.total - words.left) / words.total) * 100 : 0}%` }}
                                 />
                               </div>
@@ -2661,11 +2663,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                                 setRoadmapPopup(null);
                                 openStep(level, l, st.mode, st.dir);
                               }}
-                              className={`w-full py-3 rounded-xl border-b-4 font-black text-sm uppercase tracking-wide cursor-pointer active:translate-y-[2px] active:border-b-2 transition-all ${
-                                deFirst
-                                  ? 'bg-white text-zinc-900 border-zinc-400 dark:bg-zinc-900 dark:text-white dark:border-black'
-                                  : 'bg-zinc-900 text-white border-black dark:bg-white dark:text-zinc-900 dark:border-zinc-300'
-                              }`}
+                              className="w-full py-3 rounded-xl border-b-4 font-black text-sm uppercase tracking-wide cursor-pointer active:translate-y-[2px] active:border-b-2 transition-all bg-zinc-900 text-white border-black dark:bg-white dark:text-zinc-900 dark:border-zinc-300"
                             >
                               {words.left === 0
                                 ? en
