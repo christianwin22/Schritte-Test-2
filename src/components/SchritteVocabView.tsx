@@ -17,6 +17,30 @@ import {
   RotateCcw,
   ArrowRightLeft,
 } from 'lucide-react';
+import {
+  Star as StepStar,
+  Dumbbell as StepDumbbell,
+  Headphones as StepHeadphones,
+  Trophy as StepTrophy,
+  Gem as StepGem,
+  Sparkles as StepSparkles,
+  Zap as StepZap,
+  Rocket as StepRocket,
+  Heart as StepHeart,
+  Flame as StepFlame,
+  Mountain as StepMountain,
+  Music as StepMusic,
+  Puzzle as StepPuzzle,
+  Lightbulb as StepLightbulb,
+  Feather as StepFeather,
+  Compass as StepCompass,
+  Crown as StepCrown,
+  Leaf as StepLeaf,
+  Sun as StepSun,
+  Anchor as StepAnchor,
+  Target as StepTarget,
+  Medal as StepMedal,
+} from 'lucide-react';
 import { LeaveSessionModal } from './LeaveSessionModal';
 import { CardPicture, useIsDesktop } from './WordPicturePanel';
 import { BOOK_LESSON_TITLES } from '../data/bookLessonTitles';
@@ -2186,11 +2210,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   };
   const roadmapNextRef = useRef<HTMLDivElement | null>(null);
   // The roadmap's top box: which lesson is under it, and the course map sheet.
-  const [roadmapActive, setRoadmapActive] = useState<number | null>(null);
+  const [roadmapActive, setRoadmapActive] = useState<string | null>(null); // "A1-9"
   const [roadmapMapOpen, setRoadmapMapOpen] = useState(false);
   const [roadmapMapLevel, setRoadmapMapLevel] = useState<CEFRLevel>('A1');
   // The step whose box is open on the path (Duolingo's pop-up), if any.
-  const [roadmapPopup, setRoadmapPopup] = useState<{ lektion: number; step: number } | null>(null);
+  const [roadmapPopup, setRoadmapPopup] = useState<{ key: string; step: number } | null>(null);
   const showingRoadmap = !speakOnly && activeExerciseMode === 'explorer' && !sessionStarted && flashcardSubMode !== 'review';
   useEffect(() => {
     if (showingRoadmap) roadmapNextRef.current?.scrollIntoView({ block: 'center' });
@@ -2307,6 +2331,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    * its four steps. A step is ticked only when finished; one begun shows a ring.
    * The next step to do is marked, and the path opens scrolled to it.
    */
+  // The path's step icons (Chris, 2026-11-27): any icon, a different one each step, not tied to Learn / Practice.
+  const STEP_ICONS = [StepStar, StepDumbbell, StepHeadphones, StepTrophy, StepGem, StepSparkles, StepZap, StepRocket, StepHeart, StepFlame, StepMountain, StepMusic, StepPuzzle, StepLightbulb, StepFeather, StepCompass, StepCrown, StepLeaf, StepSun, StepAnchor, StepTarget, StepMedal];
   const ROADMAP_STEPS: { mode: 'learn' | 'practice'; dir: Direction }[] = [
     { mode: 'learn', dir: 'DE_TO_EN' },
     { mode: 'practice', dir: 'DE_TO_EN' },
@@ -2315,21 +2341,23 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   ];
   const renderRoadmap = () => {
     const en = appLanguage === 'en';
+    const LEVELS: CEFRLevel[] = ['A1', 'A2', 'B1'];
     const lessonsOf = (level: string) =>
       [...new Set(INITIAL_VOCABULARY.filter((w) => w.level === level).map((w) => w.lektion ?? 0))].sort((a, b) => a - b);
-    const lessons = lessonsOf(selectedLevel);
+    // The whole course, A1 to the last B1 lesson, in one path (Chris, 2026-11-27)
+    const all = LEVELS.flatMap((level) => lessonsOf(level).map((l) => ({ level, l, key: `${level}-${l}` })));
     const doneIn = (level: string, l: number) =>
       ROADMAP_STEPS.filter((st) => stepState(level, l, st.mode, st.dir) === 'done').length;
-    const lessonName = (l: number) => {
-      const title = BOOK_LESSON_TITLES[`${selectedLevel}_${l}`] ?? '';
+    const lessonName = (level: string, l: number) => {
+      const title = BOOK_LESSON_TITLES[`${level}_${l}`] ?? '';
       return `${l === 0 ? 'Intro' : `L${l}`}${title ? ` · ${title}` : ''}`;
     };
     // The first step not yet done, in course order
-    let next: { lektion: number; step: number } | null = null;
-    for (const l of lessons) {
-      const i = ROADMAP_STEPS.findIndex((st) => stepState(selectedLevel, l, st.mode, st.dir) !== 'done');
+    let next: { key: string; step: number } | null = null;
+    for (const x of all) {
+      const i = ROADMAP_STEPS.findIndex((st) => stepState(x.level, x.l, st.mode, st.dir) !== 'done');
       if (i !== -1) {
-        next = { lektion: l, step: i };
+        next = { key: x.key, step: i };
         break;
       }
     }
@@ -2338,30 +2366,63 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         ROADMAP_STEPS[i].dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'
       }`;
     /** How many of the lesson's words this step still has to go through. */
-    const wordsLeft = (l: number, i: number) => {
+    const wordsLeft = (level: string, l: number, i: number) => {
       const st = ROADMAP_STEPS[i];
-      const total = cardsPerLesson.get(getLessonKey(selectedLevel, l)) ?? 0;
-      const state = stepState(selectedLevel, l, st.mode, st.dir);
+      const total = cardsPerLesson.get(getLessonKey(level, l)) ?? 0;
+      const state = stepState(level, l, st.mode, st.dir);
       if (state === 'done') return { total, left: 0 };
       if (st.mode === 'learn') {
         const cards = cardsFor(
-          INITIAL_VOCABULARY.filter((w) => w.level === selectedLevel && (w.lektion ?? 0) === l),
+          INITIAL_VOCABULARY.filter((w) => w.level === level && (w.lektion ?? 0) === l),
           CARD_PREFIX
         );
-        const place = loadLearnPlace(selectedLevel, l, st.dir);
+        const place = loadLearnPlace(level, l, st.dir);
         const index = typeof place === 'string' ? cards.findIndex((c) => c.key === place) : place ?? 0;
         return { total, left: index > 0 ? total - index : total };
       }
-      const waiting = pendingByLesson.get(getLessonKey(selectedLevel, l));
+      const waiting = pendingByLesson.get(getLessonKey(level, l));
       return { total, left: waiting ? (st.dir === 'DE_TO_EN' ? waiting.de : waiting.en) : total };
     };
 
-    // The box at the top of the path (from Chris's Schritte Duo): the lesson now
-    // under it, filling up as its four steps get done. Tapping it opens the course
-    // map; the button beside it is Review.
-    const shown = lessons.includes(roadmapActive ?? -1) ? (roadmapActive as number) : next?.lektion ?? lessons[0] ?? 0;
-    const shownDone = doneIn(selectedLevel, shown);
-    const headerBox = (
+    /** A bar that fills in black as steps get done, its words white where the fill has reached. */
+    const fillBar = (done: number, label: React.ReactNode, count: React.ReactNode, big: boolean) => (
+      <>
+        <div
+          className="absolute inset-y-0 left-0 bg-zinc-900 dark:bg-zinc-100 transition-all duration-500"
+          style={{ width: `${(done / 4) * 100}%` }}
+        />
+        {[false, true].map((onFill) => (
+          <div
+            key={String(onFill)}
+            className={`${onFill ? 'absolute inset-0' : 'relative'} flex items-center justify-between gap-2 ${
+              big ? 'px-3 py-3.5' : 'px-3 py-2.5'
+            } transition-all duration-500`}
+            style={onFill ? { clipPath: `inset(0 ${100 - (done / 4) * 100}% 0 0)` } : undefined}
+            aria-hidden={onFill || undefined}
+          >
+            <span
+              className={`min-w-0 flex-1 truncate font-black ${big ? 'text-[15px]' : 'text-sm'} ${
+                onFill ? 'text-white dark:text-zinc-900' : 'text-zinc-800 dark:text-zinc-100'
+              }`}
+            >
+              {label}
+            </span>
+            <span
+              className={`shrink-0 rounded-lg px-2 py-0.5 text-[13px] font-black ${
+                onFill ? 'bg-white/20 text-white dark:text-zinc-900' : 'bg-black/5 text-zinc-600 dark:bg-white/10 dark:text-zinc-200'
+              }`}
+            >
+              {count}
+            </span>
+          </div>
+        ))}
+      </>
+    );
+
+    // The box at the top: the lesson now under it (tap → course map), and Review beside it.
+    const shownItem = all.find((x) => x.key === roadmapActive) ?? all.find((x) => x.key === next?.key) ?? all[0];
+    const shownDone = shownItem ? doneIn(shownItem.level, shownItem.l) : 0;
+    const headerBox = shownItem && (
       <div className="sticky top-0 z-30 -mx-4 px-4 pt-1 pb-2 bg-[#f8f9fa] dark:bg-[#2b303a]">
         <div className="flex items-stretch gap-2">
           <button
@@ -2370,39 +2431,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             onClick={() => {
               playSound('tap');
               setRoadmapPopup(null);
-              setRoadmapMapLevel(selectedLevel);
+              setRoadmapMapLevel(shownItem.level);
               setRoadmapMapOpen(true);
             }}
             className="relative flex-1 min-w-0 overflow-hidden rounded-2xl bg-zinc-200 dark:bg-zinc-700 text-left cursor-pointer active:scale-[0.99] transition"
           >
-            <div
-              className="absolute inset-y-0 left-0 bg-zinc-900 dark:bg-zinc-100 transition-all duration-500"
-              style={{ width: `${(shownDone / 4) * 100}%` }}
-            />
-            {/* The words twice: dark on the grey, and white where the fill has reached */}
-            {[false, true].map((onFill) => (
-              <div
-                key={String(onFill)}
-                className={`${onFill ? 'absolute inset-0' : 'relative'} flex items-center justify-between gap-2 px-3 py-3.5 transition-all duration-500`}
-                style={onFill ? { clipPath: `inset(0 ${100 - (shownDone / 4) * 100}% 0 0)` } : undefined}
-                aria-hidden={onFill || undefined}
-              >
-                <span
-                  className={`min-w-0 flex-1 truncate text-[15px] font-black ${
-                    onFill ? 'text-white dark:text-zinc-900' : 'text-zinc-800 dark:text-zinc-100'
-                  }`}
-                >
-                  {selectedLevel} · {lessonName(shown)}
-                </span>
-                <span
-                  className={`shrink-0 rounded-lg px-2 py-1 text-[13px] font-black ${
-                    onFill ? 'bg-white/20 text-white dark:text-zinc-900' : 'bg-black/5 text-zinc-600 dark:bg-white/10 dark:text-zinc-200'
-                  }`}
-                >
-                  {shownDone}/4
-                </span>
-              </div>
-            ))}
+            {fillBar(shownDone, `${shownItem.level} · ${lessonName(shownItem.level, shownItem.l)}`, `${shownDone}/4`, true)}
           </button>
           <button
             type="button"
@@ -2425,76 +2459,67 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       </div>
     );
 
-    // The course map: A1, A2 and B1 at the top, the chosen level's lessons below,
-    // each filled as far as it is done. Tap one to jump there.
+    const jumpTo = (key: string) => {
+      setRoadmapMapOpen(false);
+      setRoadmapActive(key);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => document.getElementById(`roadmap-lesson-${key}`)?.scrollIntoView({ block: 'start' }))
+      );
+    };
+
+    // The course map: small A1 / A2 / B1 between the title and ✕; each lesson
+    // fills in black like the box at the top. Tap one to jump there.
     const courseMap = roadmapMapOpen && (
       <div className="fixed inset-0 z-[100] flex flex-col sm:items-center sm:justify-center">
         <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close" onClick={() => setRoadmapMapOpen(false)} />
         <div className="relative mt-auto sm:mt-0 w-full sm:max-w-md max-h-[85vh] overflow-y-auto overscroll-contain rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 px-5 pb-8">
-          <div className="sticky top-0 z-20 -mx-5 bg-white dark:bg-zinc-900 px-5 pb-3">
-            <div className="flex h-[60px] items-center justify-between">
-              <h2 className="text-xl font-black text-zinc-800 dark:text-zinc-100">{en ? 'Course map' : 'Kursübersicht'}</h2>
-              <button
-                type="button"
-                onClick={() => setRoadmapMapOpen(false)}
-                aria-label="Close"
-                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-              >
-                <X className="w-6 h-6" />
-              </button>
+          <div className="sticky top-0 z-20 -mx-5 bg-white dark:bg-zinc-900 px-5 flex h-[60px] items-center gap-3">
+            <h2 className="text-xl font-black text-zinc-800 dark:text-zinc-100 shrink-0">{en ? 'Course map' : 'Kursübersicht'}</h2>
+            <div className="flex-1 flex justify-center">
+              <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg">
+                {LEVELS.map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => {
+                      playSound('tap');
+                      setRoadmapMapLevel(lvl);
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-xs font-black cursor-pointer transition-all ${
+                      roadmapMapLevel === lvl
+                        ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                    }`}
+                  >
+                    {lvl}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-              {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  onClick={() => {
-                    playSound('tap');
-                    setRoadmapMapLevel(lvl);
-                  }}
-                  className={`py-2 rounded-lg text-sm font-black cursor-pointer transition-all ${
-                    roadmapMapLevel === lvl
-                      ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
-                  }`}
-                >
-                  {lvl}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => setRoadmapMapOpen(false)}
+              aria-label="Close"
+              className="shrink-0 rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 pt-1">
             {lessonsOf(roadmapMapLevel).map((l) => {
               const d = doneIn(roadmapMapLevel, l);
-              const title = BOOK_LESSON_TITLES[`${roadmapMapLevel}_${l}`] ?? '';
-              const lvl = roadmapMapLevel;
+              const key = `${roadmapMapLevel}-${l}`;
               return (
                 <button
-                  key={`${lvl}-${l}`}
+                  key={key}
                   type="button"
                   onClick={() => {
                     playSound('tap');
-                    setRoadmapMapOpen(false);
-                    setSelectedLevel(lvl);
-                    setRoadmapActive(l);
-                    requestAnimationFrame(() =>
-                      requestAnimationFrame(() => document.getElementById(`roadmap-lesson-${l}`)?.scrollIntoView({ block: 'start' }))
-                    );
+                    jumpTo(key);
                   }}
-                  className="relative w-full overflow-hidden rounded-xl border-2 border-zinc-200 dark:border-zinc-700 text-left cursor-pointer hover:brightness-95"
+                  className="relative w-full overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-700 text-left cursor-pointer hover:brightness-95"
                 >
-                  <div className="absolute inset-y-0 left-0 bg-zinc-200 dark:bg-zinc-700" style={{ width: `${(d / 4) * 100}%` }} />
-                  <div className="relative flex items-center gap-3 px-3 py-2.5">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 w-12 shrink-0">
-                      {l === 0 ? 'Intro' : `L${l}`}
-                    </span>
-                    <span className="flex-1 min-w-0 truncate text-sm font-black text-zinc-800 dark:text-zinc-100">{title}</span>
-                    {d === 4 ? (
-                      <Check className="w-5 h-5 text-zinc-900 dark:text-zinc-100 stroke-[3]" />
-                    ) : (
-                      <span className="text-xs font-black text-zinc-500">{d}/4</span>
-                    )}
-                  </div>
+                  {fillBar(d, lessonName(roadmapMapLevel, l), d === 4 ? <Check className="w-4 h-4 stroke-[3]" /> : `${d}/4`, false)}
                 </button>
               );
             })}
@@ -2503,7 +2528,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       </div>
     );
 
-    // The path, Duolingo style: a snake of round buttons in black and grey.
+    // The path, Duolingo style: a snake of round buttons, every level one after another.
     // Tapping one opens a box under it (as Duolingo does) with Start.
     let nodeIndex = 0;
     const path = (
@@ -2511,12 +2536,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         className="h-full overflow-y-auto px-4 pb-24"
         onScroll={(e) => {
           // the lesson whose block is under the box at the top
-          const box = e.currentTarget;
-          const top = box.getBoundingClientRect().top + 90;
-          let current: number | null = null;
-          for (const l of lessons) {
-            const el = document.getElementById(`roadmap-lesson-${l}`);
-            if (el && el.getBoundingClientRect().top <= top) current = l;
+          const top = e.currentTarget.getBoundingClientRect().top + 90;
+          let current: string | null = null;
+          for (const x of all) {
+            const el = document.getElementById(`roadmap-lesson-${x.key}`);
+            if (!el) continue;
+            if (el.getBoundingClientRect().top <= top) current = x.key;
+            else break;
           }
           if (current !== null && current !== roadmapActive) setRoadmapActive(current);
         }}
@@ -2526,28 +2552,36 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         {roadmapPopup && (
           <button type="button" aria-label="Close" className="fixed inset-0 z-30 cursor-default" onClick={() => setRoadmapPopup(null)} />
         )}
-        {lessons.map((l) => {
-          const states = ROADMAP_STEPS.map((st) => stepState(selectedLevel, l, st.mode, st.dir));
+        {all.map(({ level, l, key }, ai) => {
+          const states = ROADMAP_STEPS.map((st) => stepState(level, l, st.mode, st.dir));
+          const newLevel = ai === 0 || all[ai - 1].level !== level;
           return (
-            <div key={l} id={`roadmap-lesson-${l}`} className="mb-2 scroll-mt-[76px]">
+            <div key={key} id={`roadmap-lesson-${key}`} className="mb-2 scroll-mt-[76px]">
+              {newLevel && (
+                <div className="flex items-center gap-3 pt-4 pb-1">
+                  <div className="h-[2px] flex-1 rounded-full bg-zinc-400 dark:bg-zinc-500" />
+                  <h2 className="text-lg font-black uppercase tracking-wide text-zinc-700 dark:text-zinc-200">{level}</h2>
+                  <div className="h-[2px] flex-1 rounded-full bg-zinc-400 dark:bg-zinc-500" />
+                </div>
+              )}
               <div className="flex items-center gap-3 pt-3">
                 <div className="h-[2px] flex-1 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-                <p className="text-center text-xs font-black tracking-wide text-zinc-500 dark:text-zinc-400">{lessonName(l)}</p>
+                <p className="text-center text-xs font-black tracking-wide text-zinc-500 dark:text-zinc-400">{lessonName(level, l)}</p>
                 <div className="h-[2px] flex-1 rounded-full bg-zinc-200 dark:bg-zinc-700" />
               </div>
               <div className="relative flex flex-col items-center pb-4">
                 {ROADMAP_STEPS.map((st, i) => {
                   const state = states[i];
-                  const here = next?.lektion === l && next.step === i;
+                  const here = next?.key === key && next.step === i;
                   // the same snake rhythm as the Schritte Duo path
                   const cycle = nodeIndex++ % 8;
                   const indent = cycle <= 2 ? cycle : cycle <= 6 ? 4 - cycle : cycle - 8;
                   const done = state === 'done';
-                  const Icon = done ? Check : st.mode === 'learn' ? BookOpen : Keyboard;
-                  const open = roadmapPopup?.lektion === l && roadmapPopup.step === i;
+                  const Icon = done ? Check : STEP_ICONS[(nodeIndex - 1) % STEP_ICONS.length];
+                  const open = roadmapPopup?.key === key && roadmapPopup.step === i;
                   // DE → EN steps are dark, EN → DE steps light: their boxes and done buttons differ
                   const deFirst = st.dir === 'DE_TO_EN';
-                  const words = open ? wordsLeft(l, i) : null;
+                  const words = open ? wordsLeft(level, l, i) : null;
                   return (
                     <div
                       key={i}
@@ -2567,89 +2601,87 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                         aria-expanded={open}
                         onClick={() => {
                           playSound('tap');
-                          setRoadmapPopup(open ? null : { lektion: l, step: i });
+                          setRoadmapPopup(open ? null : { key, step: i });
                         }}
-                        className={`relative w-[70px] h-[70px] rounded-full border-2 border-b-[8px] flex flex-col items-center justify-center gap-0.5 cursor-pointer transition active:translate-y-[3px] active:border-b-2 ${
+                        className={`relative w-[70px] h-[70px] rounded-full border-2 border-b-[8px] flex items-center justify-center cursor-pointer transition active:translate-y-[3px] active:border-b-2 ${
                           // Done: DE → EN black, EN → DE mid-grey, so the two directions read apart
                           done && deFirst
                             ? 'bg-zinc-800 border-zinc-950 text-white dark:bg-zinc-100 dark:border-white dark:text-zinc-900'
                             : done
-                            ? 'bg-zinc-500 border-zinc-600 text-white dark:bg-zinc-400 dark:border-zinc-300 dark:text-zinc-900'
-                            : state === 'started' || here
-                              ? 'bg-white border-zinc-900 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-100 dark:text-zinc-100'
-                              : 'bg-zinc-200 border-zinc-300 text-zinc-400 dark:bg-zinc-700 dark:border-zinc-600'
+                              ? 'bg-zinc-500 border-zinc-600 text-white dark:bg-zinc-400 dark:border-zinc-300 dark:text-zinc-900'
+                              : state === 'started' || here
+                                ? 'bg-white border-zinc-900 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-100 dark:text-zinc-100'
+                                : 'bg-zinc-200 border-zinc-300 text-zinc-400 dark:bg-zinc-700 dark:border-zinc-600'
                         }`}
                       >
-                        <Icon className={`w-7 h-7 ${done ? 'stroke-[4]' : 'stroke-[2.5]'}`} />
-                        <span className="text-[9px] font-black leading-none">{st.dir === 'DE_TO_EN' ? 'DE→EN' : 'EN→DE'}</span>
+                        <Icon className={`w-8 h-8 ${done ? 'stroke-[4]' : 'stroke-[2.5]'}`} />
                       </button>
-                      {/* The step box: what it is, how many words are left, and Start */}
+                      {/* The step box: what it is, words done and to go, and Start */}
                       {open && words && (
                         <div
                           className="absolute top-full mt-4 z-40 w-72 max-w-[calc(100vw-2rem)]"
                           style={{ left: '50%', transform: `translateX(calc(-50% + ${indent * 40}px))` }}
                         >
-                        <div
-                          className={`relative rounded-2xl p-4 shadow-xl animate-fadeIn ${
-                            deFirst
-                              ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                              : 'bg-white text-zinc-900 border-2 border-zinc-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-100'
-                          }`}
-                        >
                           <div
-                            className={`absolute w-4 h-4 rotate-45 ${
+                            className={`relative rounded-2xl p-4 shadow-xl animate-fadeIn ${
                               deFirst
-                                ? '-top-2 bg-zinc-900 dark:bg-zinc-100'
-                                : '-top-[10px] bg-white border-l-2 border-t-2 border-zinc-900 dark:bg-zinc-800 dark:border-zinc-100'
-                            }`}
-                            style={{ left: `calc(50% - ${indent * 40}px - 8px)` }}
-                          />
-                          <p className="text-[11px] font-black uppercase tracking-wider opacity-60">
-                            {selectedLevel} · {l === 0 ? 'Intro' : `L${l}`} · {en ? 'Step' : 'Schritt'} {i + 1}/4
-                          </p>
-                          <p className="text-lg font-black mt-0.5">{stepName(i)}</p>
-                          {/* How far this step is: words done and words still to do, and a bar that fills */}
-                          <div className="mt-2 mb-3 space-y-1.5">
-                            <div className="flex items-center justify-between text-sm font-black">
-                              <span>
-                                {words.total - words.left} / {words.total}
-                              </span>
-                              <span className="opacity-80">
-                                {words.left === 0 ? (en ? 'All done' : 'Alles fertig') : en ? `${words.left} to go` : `noch ${words.left}`}
-                              </span>
-                            </div>
-                            <div className={`h-2.5 rounded-full overflow-hidden ${deFirst ? 'bg-white/20 dark:bg-black/15' : 'bg-zinc-200 dark:bg-zinc-600'}`}>
-                              <div
-                                className={`h-full rounded-full ${deFirst ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-900 dark:bg-white'}`}
-                                style={{ width: `${words.total ? ((words.total - words.left) / words.total) * 100 : 0}%` }}
-                              />
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRoadmapPopup(null);
-                              openStep(selectedLevel, l, st.mode, st.dir);
-                            }}
-                            className={`w-full py-3 rounded-xl border-b-4 font-black text-sm uppercase tracking-wide cursor-pointer active:translate-y-[2px] active:border-b-2 transition-all ${
-                              deFirst
-                                ? 'bg-white text-zinc-900 border-zinc-300 dark:bg-zinc-900 dark:text-white dark:border-black'
-                                : 'bg-zinc-900 text-white border-black dark:bg-white dark:text-zinc-900 dark:border-zinc-300'
+                                ? 'bg-zinc-600 text-white dark:bg-zinc-300 dark:text-zinc-900'
+                                : 'bg-white text-zinc-900 border-2 border-zinc-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-100'
                             }`}
                           >
-                            {words.left === 0
-                              ? en
-                                ? 'Do again'
-                                : 'Nochmal'
-                              : words.left < words.total
+                            <div
+                              className={`absolute w-4 h-4 rotate-45 ${
+                                deFirst
+                                  ? '-top-2 bg-zinc-600 dark:bg-zinc-300'
+                                  : '-top-[10px] bg-white border-l-2 border-t-2 border-zinc-900 dark:bg-zinc-800 dark:border-zinc-100'
+                              }`}
+                              style={{ left: `calc(50% - ${indent * 40}px - 8px)` }}
+                            />
+                            <p className="text-[11px] font-black uppercase tracking-wider opacity-70">
+                              {level} · {l === 0 ? 'Intro' : `L${l}`} · {en ? 'Step' : 'Schritt'} {i + 1}/4
+                            </p>
+                            <p className="text-lg font-black mt-0.5">{stepName(i)}</p>
+                            <div className="mt-2 mb-3 space-y-1.5">
+                              <div className="flex items-center justify-between text-sm font-black">
+                                <span>
+                                  {words.total - words.left} / {words.total}
+                                </span>
+                                <span className="opacity-80">
+                                  {words.left === 0 ? (en ? 'All done' : 'Alles fertig') : en ? `${words.left} to go` : `noch ${words.left}`}
+                                </span>
+                              </div>
+                              <div className={`h-2.5 rounded-full overflow-hidden ${deFirst ? 'bg-white/25 dark:bg-black/15' : 'bg-zinc-200 dark:bg-zinc-600'}`}>
+                                <div
+                                  className={`h-full rounded-full ${deFirst ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-900 dark:bg-white'}`}
+                                  style={{ width: `${words.total ? ((words.total - words.left) / words.total) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRoadmapPopup(null);
+                                openStep(level, l, st.mode, st.dir);
+                              }}
+                              className={`w-full py-3 rounded-xl border-b-4 font-black text-sm uppercase tracking-wide cursor-pointer active:translate-y-[2px] active:border-b-2 transition-all ${
+                                deFirst
+                                  ? 'bg-white text-zinc-900 border-zinc-400 dark:bg-zinc-900 dark:text-white dark:border-black'
+                                  : 'bg-zinc-900 text-white border-black dark:bg-white dark:text-zinc-900 dark:border-zinc-300'
+                              }`}
+                            >
+                              {words.left === 0
                                 ? en
-                                  ? 'Continue'
-                                  : 'Weiter'
-                                : en
-                                  ? 'Start'
-                                  : 'Starten'}
-                          </button>
-                        </div>
+                                  ? 'Do again'
+                                  : 'Nochmal'
+                                : words.left < words.total
+                                  ? en
+                                    ? 'Continue'
+                                    : 'Weiter'
+                                  : en
+                                    ? 'Start'
+                                    : 'Starten'}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -3452,8 +3484,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                               key={group.key}
                               className={[
                                 late > 0 ? 'bg-red-50 dark:bg-red-950/30' : picked ? 'bg-zinc-100 dark:bg-zinc-800' : '',
-                                lineAbove ? 'border-t border-t-red-500' : '',
-                                late > 0 && lastRow ? 'border-b border-b-red-500' : '',
+                                lineAbove && gi > 0 ? 'border-t border-t-red-500' : '',
+                                // the last lesson closes the list with a line too (red when late)
+                                lastRow ? (late > 0 ? 'border-b border-b-red-500' : 'border-b border-zinc-200 dark:border-zinc-700') : '',
                                 gi === 0 && late === 0 ? 'border-t-0' : '',
                               ].join(' ')}
                             >
