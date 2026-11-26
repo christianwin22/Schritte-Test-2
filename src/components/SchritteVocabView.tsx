@@ -1561,6 +1561,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // The top bar's back arrow and the ✕: inside a session, back to this exercise's
   // Start screen — Words asks Save or End session first when there is a place to keep.
   const handleBackInExercise = (): boolean => {
+    if (activeExerciseMode === 'explorer' && !sessionStarted && !speakOnly && flashcardSubMode === 'review') {
+      handleSubModeChange('learn'); // back to the roadmap
+      return true;
+    }
     if (activeExerciseMode === 'explorer' && sessionStarted) {
       if (wordsSessionHasPlace()) setLeavePromptOpen(true);
       else saveAndLeaveWordsSession();
@@ -1773,6 +1777,42 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     clearAnswer();
     setIsPracticeComplete(false);
     if (flashcardSubMode === 'practice') startPracticeRun(filteredCards, selectedLevel, selectedLektion, dir);
+  };
+
+  /**
+   * The roadmap's steps (Chris, 2026-11-27): each lesson is Learn DE → EN,
+   * Practice DE → EN, Learn EN → DE, Practice EN → DE. Tapping one opens that
+   * lesson, that mode and that direction straight away, at the saved place.
+   */
+  const openStep = (level: CEFRLevel, lektion: number, mode: 'learn' | 'practice', dir: Direction) => {
+    playSound('tap');
+    const cards = cardsFor(
+      INITIAL_VOCABULARY.filter((w) => w.level === level && (w.lektion ?? 0) === lektion),
+      CARD_PREFIX
+    );
+    setSelectedLevel(level);
+    setSelectedLektion(lektion);
+    setLearnDirection(dir);
+    setFlashcardSubMode(mode);
+    setIsPracticeComplete(false);
+    setIsLearnComplete(false);
+    setIsCardFlipped(false);
+    setCurrentRedoBatch([]);
+    setRoundNumber(1);
+    setMistakeCounts({});
+    setMistakeWords([]);
+    setInitialMistakeWordIds([]);
+    setPracticeScore(0);
+    setResumedSession(false);
+    clearAnswer();
+    if (mode === 'practice') {
+      startPracticeRun(cards, level, lektion, dir);
+    } else {
+      const place = loadLearnPlace(level, lektion, dir);
+      const index = typeof place === 'string' ? cards.findIndex((c) => c.key === place) : place ?? 0;
+      setFlashcardIndex(index > 0 && index < cards.length ? index : 0);
+    }
+    setSessionStarted(true);
   };
 
   // Keyboard Hotkey Listener for Flashcards (Learn & Practice)
@@ -2121,6 +2161,34 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // VIEW 1: VOCABULARY AREA HUB (3 Exercises Only - Clean & Centered)
   // Before the menu's early return: a hook must run on every render.
   /** Lessons (level-lektion) that have something for the exercise that is open; the rest are greyed. */
+  const cardsPerLesson = useMemo(() => {
+    const out = new Map<string, number>();
+    for (const c of allCards) {
+      const k = `${c.word.level}_L${c.word.lektion ?? 0}`;
+      out.set(k, (out.get(k) ?? 0) + 1);
+    }
+    return out;
+  }, [allCards]);
+  const stepState = (level: string, lektion: number, mode: 'learn' | 'practice', dir: Direction): 'done' | 'started' | 'todo' => {
+    const stops = lessonStops(level, lektion);
+    const de = dir === 'DE_TO_EN';
+    const done = mode === 'learn' ? (de ? stops.learnDe : stops.learnEn) : de ? stops.practiceDe : stops.practiceEn;
+    if (done) return 'done';
+    if (mode === 'learn') {
+      const place = loadLearnPlace(level, lektion, dir);
+      return place !== null && place !== 0 ? 'started' : 'todo';
+    }
+    const waiting = pendingByLesson.get(getLessonKey(level, lektion));
+    const total = cardsPerLesson.get(getLessonKey(level, lektion)) ?? 0;
+    const left = waiting ? (de ? waiting.de : waiting.en) : total;
+    return left < total ? 'started' : 'todo';
+  };
+  const roadmapNextRef = useRef<HTMLDivElement | null>(null);
+  const showingRoadmap = !speakOnly && activeExerciseMode === 'explorer' && !sessionStarted && flashcardSubMode !== 'review';
+  useEffect(() => {
+    if (showingRoadmap) roadmapNextRef.current?.scrollIntoView({ block: 'center' });
+  }, [showingRoadmap, selectedLevel]);
+
   const lessonsWithItems = useMemo(() => {
     const keys = new Set<string>();
     for (const w of INITIAL_VOCABULARY) {
@@ -2226,6 +2294,232 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       en={appLanguage === 'en'}
     />
   );
+
+  /**
+   * Words' home: every lesson of the level as a path, top to bottom, each with
+   * its four steps. A step is ticked only when finished; one begun shows a ring.
+   * The next step to do is marked, and the path opens scrolled to it.
+   */
+  const ROADMAP_STEPS: { mode: 'learn' | 'practice'; dir: Direction }[] = [
+    { mode: 'learn', dir: 'DE_TO_EN' },
+    { mode: 'practice', dir: 'DE_TO_EN' },
+    { mode: 'learn', dir: 'EN_TO_DE' },
+    { mode: 'practice', dir: 'EN_TO_DE' },
+  ];
+  const renderRoadmap = () => {
+    const en = appLanguage === 'en';
+    const lessons = [...new Set(INITIAL_VOCABULARY.filter((w) => w.level === selectedLevel).map((w) => w.lektion ?? 0))].sort(
+      (a, b) => a - b
+    );
+    // The first step not yet done, in course order
+    let next: { lektion: number; step: number } | null = null;
+    for (const l of lessons) {
+      const i = ROADMAP_STEPS.findIndex((st) => stepState(selectedLevel, l, st.mode, st.dir) !== 'done');
+      if (i !== -1) {
+        next = { lektion: l, step: i };
+        break;
+      }
+    }
+    const levelButton = (lvl: CEFRLevel, tall = false) => (
+      <button
+        key={lvl}
+        type="button"
+        onClick={() => {
+          playSound('tap');
+          setSelectedLevel(lvl);
+        }}
+        className={`${tall ? 'w-full px-4 py-3 rounded-2xl text-sm text-left' : 'px-3 py-1.5 rounded-lg text-xs'} font-black cursor-pointer transition-all ${
+          selectedLevel === lvl
+            ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs'
+            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+        }`}
+      >
+        {lvl}
+      </button>
+    );
+    const reviewButton = (tall = false) => (
+      <button
+        type="button"
+        onClick={() => handleSubModeChange('review')}
+        className={`flex items-center justify-between gap-2 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-black cursor-pointer active:scale-95 transition-all shadow-xs ${
+          tall ? 'w-full px-4 py-3 rounded-2xl text-sm' : 'px-3.5 py-2 rounded-xl text-xs'
+        }`}
+      >
+        {en ? 'Review' : 'Wiederholen'}
+        <span
+          className={`px-1.5 rounded-full text-[10px] leading-4 font-black ${
+            globalDueCount > 0 ? 'bg-rose-500 text-white' : 'bg-zinc-600 text-zinc-200 dark:bg-zinc-300 dark:text-zinc-600'
+          }`}
+        >
+          {globalDueCount}
+        </span>
+      </button>
+    );
+    const stepName = (i: number) =>
+      `${ROADMAP_STEPS[i].mode === 'learn' ? (en ? 'Learn' : 'Lernen') : en ? 'Practice' : 'Üben'} ${
+        ROADMAP_STEPS[i].dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'
+      }`;
+    const lessonsDone = lessons.filter((l) =>
+      ROADMAP_STEPS.every((st) => stepState(selectedLevel, l, st.mode, st.dir) === 'done')
+    ).length;
+    const stepsDone = lessons.reduce(
+      (n, l) => n + ROADMAP_STEPS.filter((st) => stepState(selectedLevel, l, st.mode, st.dir) === 'done').length,
+      0
+    );
+    // The path: every lesson, top to bottom, with its four steps
+    const path = (
+          <div className="h-full overflow-y-auto -mx-1 px-1 pb-4">
+            {lessons.map((l, li) => {
+              const states = ROADMAP_STEPS.map((st) => stepState(selectedLevel, l, st.mode, st.dir));
+              const allDone = states.every((x) => x === 'done');
+              const isNext = next?.lektion === l;
+              return (
+                <React.Fragment key={l}>
+                  {li > 0 && (
+                    <div className="flex justify-center">
+                      <div className={`w-1 h-5 rounded-full ${allDone || isNext ? 'bg-zinc-950 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-700'}`} />
+                    </div>
+                  )}
+                  <div
+                    ref={isNext ? roadmapNextRef : undefined}
+                    className={`rounded-3xl p-4 border-2 bg-white dark:bg-zinc-900 ${
+                      isNext ? 'border-zinc-950 dark:border-white shadow-md' : 'border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 shrink-0">
+                        {selectedLevel} · {l === 0 ? 'Intro' : `L${l}`}
+                      </span>
+                      <span className="flex-1 min-w-0 truncate font-black text-sm text-zinc-900 dark:text-zinc-100">
+                        {BOOK_LESSON_TITLES[`${selectedLevel}_${l}`] ?? ''}
+                      </span>
+                      {allDone && (
+                        <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {(['DE_TO_EN', 'EN_TO_DE'] as Direction[]).map((dir, half) => (
+                        <div key={dir} className="rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 px-2 pt-2 pb-2.5">
+                          <p className="text-[11px] font-black text-zinc-500 dark:text-zinc-400 text-center mb-2">
+                            {dir === 'DE_TO_EN' ? 'DE → EN' : 'EN → DE'}
+                          </p>
+                          <div className="flex items-start justify-around">
+                            {[0, 1].map((j) => {
+                              const i = half * 2 + j;
+                              const st = ROADMAP_STEPS[i];
+                              const state = states[i];
+                              const here = isNext && next?.step === i;
+                              const Icon = st.mode === 'learn' ? BookOpen : Keyboard;
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => openStep(selectedLevel, l, st.mode, st.dir)}
+                                  className="flex flex-col items-center gap-1 cursor-pointer group"
+                                >
+                                  <span
+                                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-[3px] transition-all group-active:scale-95 ${
+                                      state === 'done'
+                                        ? 'bg-zinc-950 border-zinc-950 text-white dark:bg-white dark:border-white dark:text-zinc-950'
+                                        : state === 'started'
+                                          ? 'bg-white border-zinc-950 text-zinc-950 dark:bg-zinc-900 dark:border-white dark:text-white'
+                                          : here
+                                            ? 'bg-white border-emerald-500 text-emerald-600 dark:bg-zinc-900 animate-pulse'
+                                            : 'bg-white border-zinc-200 text-zinc-400 dark:bg-zinc-900 dark:border-zinc-700'
+                                    }`}
+                                  >
+                                    {state === 'done' ? <Check className="w-6 h-6 stroke-[3]" /> : <Icon className="w-5 h-5 sm:w-6 sm:h-6" />}
+                                  </span>
+                                  <span
+                                    className={`text-[11px] font-black ${
+                                      state === 'done' || state === 'started' || here ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'
+                                    }`}
+                                  >
+                                    {st.mode === 'learn' ? (en ? 'Learn' : 'Lernen') : en ? 'Practice' : 'Üben'}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+    );
+
+    // Desktop (Chris, 2026-11-27, like Duolingo on a computer): three columns of
+    // the same width — level and Review on the left, the path scrolling in the
+    // middle, the next step and how far you are on the right.
+    if (wideDesktop) {
+      return (
+        <div className="max-w-6xl mx-auto w-full h-full grid grid-cols-3 gap-6 pb-14">
+          <div className="flex flex-col gap-2">
+            <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400 px-1">{en ? 'Level' : 'Niveau'}</p>
+            {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => levelButton(lvl, true))}
+            <div className="h-2" />
+            {reviewButton(true)}
+          </div>
+          <div className="min-h-0">{path}</div>
+          <div className="flex flex-col gap-3">
+            {next && (
+              <div className="rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
+                <p className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                  {selectedLevel} · {next.lektion === 0 ? 'Intro' : `L${next.lektion}`}
+                </p>
+                <p className="font-black text-base text-zinc-900 dark:text-zinc-100">{stepName(next.step)}</p>
+                <button
+                  type="button"
+                  onClick={() => openStep(selectedLevel, next!.lektion, ROADMAP_STEPS[next!.step].mode, ROADMAP_STEPS[next!.step].dir)}
+                  className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm cursor-pointer active:scale-[0.98] transition-all"
+                >
+                  {en ? 'Continue' : 'Weiter'}
+                </button>
+              </div>
+            )}
+            <div className="rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm font-black text-zinc-900 dark:text-zinc-100">
+                <span>{en ? 'Lessons' : 'Lektionen'}</span>
+                <span>
+                  {lessonsDone} / {lessons.length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm font-black text-zinc-900 dark:text-zinc-100">
+                <span>{en ? 'Steps' : 'Schritte'}</span>
+                <span>
+                  {stepsDone} / {lessons.length * 4}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full"
+                  style={{ width: `${lessons.length ? (stepsDone / (lessons.length * 4)) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="max-w-xl mx-auto w-full h-full flex flex-col sm:pb-14">
+        {/* Top: the level, and Review at the right */}
+        <div className="w-full flex items-center justify-between gap-2 mb-3 shrink-0">
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+            {(['A1', 'A2', 'B1'] as CEFRLevel[]).map((lvl) => levelButton(lvl))}
+          </div>
+          {reviewButton()}
+        </div>
+        <div className="flex-1 min-h-0">{path}</div>
+      </div>
+    );
+  };
 
   {/* Banner 2: Flashcard Sub-Mode Selector (Learn, Practice, Review) */}
   const renderModeBanner = () => (
@@ -2927,8 +3221,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           return [...groups.values()].sort((a, b) => a.order - b.order);
         })();
 
+        // Words: not in a lesson and not on Review → the roadmap of lessons and steps.
+        if (!speakOnly && !sessionStarted && flashcardSubMode !== 'review') return renderRoadmap();
+
         return (
-          <div className={`${wideDesktop ? 'max-w-6xl' : 'max-w-xl'} mx-auto w-full h-full flex flex-col justify-between`}>
+          // sm:pb-14 keeps the hotkey button (bottom right) clear of the card
+          <div className={`${wideDesktop ? 'max-w-6xl' : 'max-w-xl'} mx-auto w-full h-full flex flex-col justify-between sm:pb-14`}>
             <LeaveSessionModal
               isOpen={leavePromptOpen}
               onStay={() => setLeavePromptOpen(false)}
@@ -2938,13 +3236,27 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             />
             {/* The bars belong to Learn and to the Start screen. Once the cards
                 are up it is the header, the card and the answer. */}
-            {(flashcardSubMode === 'learn' || !sessionStarted) && (
-              <>
-                {renderModeBanner()}
-                {/* Review draws from every lesson, so there is nothing to filter */}
-                {flashcardSubMode !== 'review' && renderFilterBanner()}
-              </>
-            )}
+            {speakOnly
+              ? (flashcardSubMode === 'learn' || !sessionStarted) && (
+                  <>
+                    {renderModeBanner()}
+                    {/* Review draws from every lesson, so there is nothing to filter */}
+                    {flashcardSubMode !== 'review' && renderFilterBanner()}
+                  </>
+                )
+              : flashcardSubMode === 'review' &&
+                !sessionStarted && (
+                  <div className="w-full flex items-center mb-2.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleSubModeChange('learn')}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 text-xs font-black text-zinc-700 dark:text-zinc-300 cursor-pointer active:scale-95"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      {en ? 'Lessons' : 'Lektionen'}
+                    </button>
+                  </div>
+                )}
 
             {/* Desktop: the card, and the picture in its own column beside it */}
             <div className="flex-1 min-h-0 flex gap-5">
