@@ -1,0 +1,132 @@
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Image as ImageIcon, PanelRightClose } from 'lucide-react';
+
+/**
+ * Desktop only: a picture of the current word in the empty space right of the card.
+ * Folds into a small tab at the right edge, and remembers that on this device.
+ * iPad and iPhone never show it (it needs a mouse and a wide window), so their
+ * layout is untouched. Pictures live in public/word-pictures (made by
+ * scripts/wordPictures.py); src/data/wordPictures.json says which word shows which.
+ */
+
+const DESKTOP_QUERY = '(min-width: 1200px) and (hover: hover) and (pointer: fine)';
+const OPEN_KEY = 'dm_picture_panel_open';
+
+function useIsDesktop(): boolean {
+  const [desktop, setDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_QUERY);
+    const update = () => setDesktop(mq.matches);
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  return desktop;
+}
+
+let manifestPromise: Promise<Record<string, string>> | null = null;
+function loadManifest() {
+  manifestPromise ??= import('../data/wordPictures.json').then(
+    (m) => (m.default ?? m) as Record<string, string>
+  );
+  return manifestPromise;
+}
+
+interface Props {
+  /** The word on screen, or null when there is none (Start page, round end). */
+  wordId: string | null;
+  /** False while the picture would give the answer away. */
+  reveal: boolean;
+  appLanguage: string;
+}
+
+export const WordPicturePanel: React.FC<Props> = ({ wordId, reveal, appLanguage }) => {
+  const desktop = useIsDesktop();
+  const en = appLanguage === 'en';
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(OPEN_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const [manifest, setManifest] = useState<Record<string, string> | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (desktop) loadManifest().then(setManifest).catch(() => setManifest({}));
+  }, [desktop]);
+
+  if (!desktop || !wordId) return null;
+
+  const toggle = (next: boolean) => {
+    setOpen(next);
+    try {
+      localStorage.setItem(OPEN_KEY, next ? '1' : '0');
+    } catch {
+      /* private window: just don't remember */
+    }
+  };
+
+  const key = manifest?.[wordId];
+  const src = key ? `/word-pictures/${key}.webp` : null;
+  const hasPicture = !!src && failed !== src;
+
+  // Rendered on <body>: a parent with a transform would otherwise trap a fixed box.
+  if (!open) {
+    return createPortal(
+      <button
+        type="button"
+        onClick={() => toggle(true)}
+        title={en ? 'Show picture' : 'Bild zeigen'}
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-1 px-2 py-3 rounded-l-2xl bg-white dark:bg-zinc-900 border-2 border-r-0 border-zinc-200 dark:border-zinc-800 shadow-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+      >
+        <ImageIcon className="w-5 h-5" />
+      </button>,
+      document.body
+    );
+  }
+
+  return createPortal(
+    <aside
+      // Right of the card (max-w-xl = 36rem wide, centred), up to the window edge.
+      style={{ left: 'calc(50% + 18rem + 1.5rem)', width: 'min(24rem, calc(50% - 18rem - 3rem))' }}
+      className="fixed top-1/2 -translate-y-1/2 z-30 bg-white dark:bg-zinc-900 rounded-3xl border-2 border-zinc-200 dark:border-zinc-800 shadow-sm p-3 animate-fadeIn"
+    >
+      <div className="flex items-center justify-between mb-2 px-1">
+        <span className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+          {en ? 'Picture' : 'Bild'}
+        </span>
+        <button
+          type="button"
+          onClick={() => toggle(false)}
+          title={en ? 'Hide picture' : 'Bild ausblenden'}
+          className="p-1 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:text-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+        >
+          <PanelRightClose className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="aspect-square w-full rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center">
+        {!reveal ? (
+          <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 px-4 text-center">
+            {en ? 'Shows after you answer' : 'Erscheint nach der Antwort'}
+          </span>
+        ) : hasPicture ? (
+          <img
+            key={src}
+            src={src!}
+            alt=""
+            draggable={false}
+            onError={() => setFailed(src)}
+            className="w-full h-full object-cover animate-fadeIn select-none"
+          />
+        ) : (
+          <ImageIcon className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
+        )}
+      </div>
+    </aside>,
+    document.body
+  );
+};

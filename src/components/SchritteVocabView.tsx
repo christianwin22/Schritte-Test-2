@@ -17,6 +17,7 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import { LeaveSessionModal } from './LeaveSessionModal';
+import { WordPicturePanel } from './WordPicturePanel';
 import { BOOK_LESSON_TITLES } from '../data/bookLessonTitles';
 import { INITIAL_VOCABULARY } from '../data/vocabulary';
 import {
@@ -2812,6 +2813,23 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           <div className="max-w-xl mx-auto w-full h-full flex flex-col justify-between">
+            {/* Desktop only: the word's picture beside the card. In Practice and Review
+                DE → EN it waits for the answer, since it would give the meaning away. */}
+            <WordPicturePanel
+              wordId={
+                !sessionStarted
+                  ? null
+                  : flashcardSubMode === 'learn'
+                    ? isLearnComplete
+                      ? null
+                      : (currentLearnCard?.word.id ?? null)
+                    : isPracticeComplete
+                      ? null
+                      : (currentPracticeCard?.word.id ?? null)
+              }
+              reveal={flashcardSubMode === 'learn' || practiceDirection === 'EN_TO_DE' || practiceFeedback !== null}
+              appLanguage={appLanguage}
+            />
             <LeaveSessionModal
               isOpen={leavePromptOpen}
               onStay={() => setLeavePromptOpen(false)}
