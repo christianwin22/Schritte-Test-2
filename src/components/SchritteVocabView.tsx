@@ -202,6 +202,13 @@ export const lessonTopics = (words: WordEntry[], limit = 2): string => {
 };
 
 /** A fresh order every time a session begins. */
+/**
+ * Plural lives inside Words now (Chris, 2026-11-27): a lesson's Plural step, or
+ * Review's Plural row, opens the Plural exercise and starts it straight away.
+ * Set just before switching to it; read once the session is built.
+ */
+let pluralAutoStart = false;
+
 const shuffled = <T,>(items: T[]): T[] => {
   const out = [...items];
   for (let i = out.length - 1; i > 0; i--) {
@@ -995,6 +1002,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setDrillStarted(false); // back to the Start screen whenever the session is rebuilt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDrillSkill, drillSubMode, practiceListKey]);
+  // Opened from the Words path or Review: straight into the cards.
+  useEffect(() => {
+    if (activeDrillSkill === 'plural' && pluralAutoStart && drillQueue.length > 0) {
+      pluralAutoStart = false;
+      setDrillStarted(true);
+    }
+  }, [activeDrillSkill, drillQueue]);
 
   const drillSessionNoun = activeDrillSkill ? drillQueue[drillQueueIndex] : undefined;
   const drillReviewNoun = isDrillReview ? drillSessionNoun : undefined;
@@ -1595,12 +1609,45 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       else saveAndLeaveWordsSession();
       return true;
     }
+    // Plural is a step of the Words path: leaving it goes back to the path.
+    if (activeExerciseMode === 'plural_drill') {
+      const back = () => {
+        leaveDrillSession();
+        onSelectExerciseMode('explorer');
+      };
+      if (drillStarted && isDrillInProgress) onRequestAbandon(back);
+      else back();
+      return true;
+    }
     if (activeDrillSkill && drillStarted) {
       if (isDrillInProgress) onRequestAbandon(leaveDrillSession);
       else leaveDrillSession();
       return true;
     }
     return false;
+  };
+
+  /** Open the Plural exercise for one lesson (Practice) or for everything due (Review). */
+  const openPlural = (mode: 'practice' | 'review', level?: CEFRLevel, lektion?: number) => {
+    playSound('tap');
+    if (level && lektion !== undefined) {
+      setSelectedLevel(level);
+      setSelectedLektion(lektion);
+      try {
+        localStorage.setItem('schritte_saved_level', level);
+        localStorage.setItem('schritte_saved_lektion', String(lektion));
+      } catch {
+        // the lesson is still set for this visit
+      }
+    }
+    setDrillSubMode(mode);
+    try {
+      localStorage.setItem('schritte_saved_drill_submode', mode);
+    } catch {
+      // nothing to do
+    }
+    pluralAutoStart = true;
+    onSelectExerciseMode('plural_drill');
   };
   // --- Audio that plays by itself (German only — never the English) -----------------
   // Each card plays only itself: "der Service" on the singular card, "die
@@ -2177,11 +2224,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
           id: 'explorer',
           title: 'Words',
         },
-        {
-          id: 'plural_drill',
-          title: 'Plural',
-        },
-      ];
+      ]; // Plural is a step of each lesson in Words now
 
   // VIEW 1: VOCABULARY AREA HUB (3 Exercises Only - Clean & Centered)
   // Before the menu's early return: a hook must run on every render.
@@ -2346,8 +2389,14 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       [...new Set(INITIAL_VOCABULARY.filter((w) => w.level === level).map((w) => w.lektion ?? 0))].sort((a, b) => a - b);
     // The whole course, A1 to the last B1 lesson, in one path (Chris, 2026-11-27)
     const all = LEVELS.flatMap((level) => lessonsOf(level).map((l) => ({ level, l, key: `${level}-${l}` })));
+    // A lesson with plurals has a fifth step after the four: Plural.
+    const pluralCount = (level: string, l: number) =>
+      INITIAL_VOCABULARY.filter((w) => w.level === level && (w.lektion ?? 0) === l && isDrillable('plural', w)).length;
+    const pluralDone = (level: string, l: number) => drillPractice.plural?.[`${level}-${l}`] === 'done';
+    const stepsIn = (level: string, l: number) => 4 + (pluralCount(level, l) > 0 ? 1 : 0);
     const doneIn = (level: string, l: number) =>
-      ROADMAP_STEPS.filter((st) => stepState(level, l, st.mode, st.dir) === 'done').length;
+      ROADMAP_STEPS.filter((st) => stepState(level, l, st.mode, st.dir) === 'done').length +
+      (pluralCount(level, l) > 0 && pluralDone(level, l) ? 1 : 0);
     const lessonName = (level: string, l: number) => {
       const title = BOOK_LESSON_TITLES[`${level}_${l}`] ?? '';
       return `${l === 0 ? 'Intro' : `L${l}`}${title ? ` · ${title}` : ''}`;
@@ -2355,7 +2404,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     // The first step not yet done, in course order
     let next: { key: string; step: number } | null = null;
     for (const x of all) {
-      const i = ROADMAP_STEPS.findIndex((st) => stepState(x.level, x.l, st.mode, st.dir) !== 'done');
+      let i = ROADMAP_STEPS.findIndex((st) => stepState(x.level, x.l, st.mode, st.dir) !== 'done');
+      if (i === -1 && pluralCount(x.level, x.l) > 0 && !pluralDone(x.level, x.l)) i = 4;
       if (i !== -1) {
         next = { key: x.key, step: i };
         break;
@@ -2385,11 +2435,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     };
 
     /** A bar that fills in black as steps get done, its words white where the fill has reached. */
-    const fillBar = (done: number, label: React.ReactNode, count: React.ReactNode, big: boolean) => (
+    const fillBar = (done: number, label: React.ReactNode, count: React.ReactNode, big: boolean, total = 4) => (
       <>
         <div
           className="absolute inset-y-0 left-0 bg-zinc-900 dark:bg-zinc-100 transition-all duration-500"
-          style={{ width: `${(done / 4) * 100}%` }}
+          style={{ width: `${(done / total) * 100}%` }}
         />
         {[false, true].map((onFill) => (
           <div
@@ -2397,7 +2447,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             className={`${onFill ? 'absolute inset-0' : 'relative'} flex items-center justify-between gap-2 ${
               big ? 'px-3 py-3.5' : 'px-3 py-2.5'
             } transition-all duration-500`}
-            style={onFill ? { clipPath: `inset(0 ${100 - (done / 4) * 100}% 0 0)` } : undefined}
+            style={onFill ? { clipPath: `inset(0 ${100 - (done / total) * 100}% 0 0)` } : undefined}
             aria-hidden={onFill || undefined}
           >
             <span
@@ -2436,11 +2486,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             }}
             className="relative flex-1 min-w-0 overflow-hidden rounded-2xl bg-zinc-200 dark:bg-zinc-700 text-left cursor-pointer active:scale-[0.99] transition"
           >
-            {fillBar(shownDone, `${shownItem.level} · ${lessonName(shownItem.level, shownItem.l)}`, `${shownDone}/4`, true)}
+            {fillBar(
+              shownDone,
+              `${shownItem.level} · ${lessonName(shownItem.level, shownItem.l)}`,
+              `${shownDone}/${stepsIn(shownItem.level, shownItem.l)}`,
+              true,
+              stepsIn(shownItem.level, shownItem.l)
+            )}
           </button>
           <button
             type="button"
-            aria-label={en ? `Review, ${globalDueCount} due` : `Wiederholen, ${globalDueCount} fällig`}
+            aria-label={en ? `Review, ${globalDueCount + pluralPool.due.length} due` : `Wiederholen, ${globalDueCount + pluralPool.due.length} fällig`}
             title={en ? 'Review' : 'Wiederholen'}
             onClick={() => {
               setRoadmapPopup(null);
@@ -2449,9 +2505,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
             className="relative w-14 shrink-0 flex items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 cursor-pointer active:scale-95 transition"
           >
             <Repeat className="w-6 h-6 stroke-[2.5]" />
-            {globalDueCount > 0 && (
+            {globalDueCount + pluralPool.due.length > 0 && (
               <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-[#f8f9fa] dark:ring-[#2b303a]">
-                {globalDueCount}
+                {globalDueCount + pluralPool.due.length}
               </span>
             )}
           </button>
@@ -2519,7 +2575,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   }}
                   className="relative w-full overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-700 text-left cursor-pointer hover:brightness-95"
                 >
-                  {fillBar(d, lessonName(roadmapMapLevel, l), d === 4 ? <Check className="w-4 h-4 stroke-[3]" /> : `${d}/4`, false)}
+                  {fillBar(
+                    d,
+                    lessonName(roadmapMapLevel, l),
+                    d === stepsIn(roadmapMapLevel, l) ? <Check className="w-4 h-4 stroke-[3]" /> : `${d}/${stepsIn(roadmapMapLevel, l)}`,
+                    false,
+                    stepsIn(roadmapMapLevel, l)
+                  )}
                 </button>
               );
             })}
@@ -2527,6 +2589,11 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         </div>
       </div>
     );
+
+    // A step box opening below the screen's edge scrolls up into view.
+    const showStepBox = (el: HTMLDivElement | null) => {
+      if (el) requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+    };
 
     // The path, Duolingo style: a snake of round buttons, every level one after another.
     // Tapping one opens a box under it (as Duolingo does) with Start.
@@ -2619,6 +2686,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       {/* The step box: what it is, words done and to go, and Start */}
                       {open && words && (
                         <div
+                          ref={showStepBox}
                           className="absolute top-full mt-4 z-40 w-72 max-w-[calc(100vw-2rem)]"
                           style={{ left: '50%', transform: `translateX(calc(-50% + ${indent * 40}px))` }}
                         >
@@ -2683,6 +2751,90 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     </div>
                   );
                 })}
+                {/* The fifth step, only where the lesson has plurals: always the same
+                    plural icon, so it reads apart from the four word steps. */}
+                {pluralCount(level, l) > 0 &&
+                  (() => {
+                    const total = pluralCount(level, l);
+                    const done = pluralDone(level, l);
+                    const here = next?.key === key && next.step === 4;
+                    const cycle = nodeIndex++ % 8;
+                    const indent = cycle <= 2 ? cycle : cycle <= 6 ? 4 - cycle : cycle - 8;
+                    const open = roadmapPopup?.key === key && roadmapPopup.step === 4;
+                    const name = en ? 'Plural' : 'Plural';
+                    return (
+                      <div
+                        ref={here ? roadmapNextRef : undefined}
+                        className={`relative ${open ? 'z-40' : ''}`}
+                        style={{ right: `${indent * 40}px`, marginTop: here ? 46 : 20 }}
+                      >
+                        {here && !open && (
+                          <div className="absolute -top-9 left-1/2 z-10 -translate-x-1/2 animate-bounce whitespace-nowrap rounded-xl border-2 border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-zinc-900 dark:text-zinc-100">
+                            {en ? 'Start' : 'Los'}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          title={name}
+                          aria-label={name}
+                          aria-expanded={open}
+                          onClick={() => {
+                            playSound('tap');
+                            setRoadmapPopup(open ? null : { key, step: 4 });
+                          }}
+                          className={`relative w-[70px] h-[70px] rounded-full border-2 border-b-[8px] flex items-center justify-center cursor-pointer transition active:translate-y-[3px] active:border-b-2 ${
+                            done
+                              ? 'bg-zinc-800 border-zinc-950 text-white dark:bg-zinc-100 dark:border-white dark:text-zinc-900'
+                              : here
+                                ? 'bg-white border-zinc-900 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-100 dark:text-zinc-100'
+                                : 'bg-zinc-200 border-zinc-300 text-zinc-400 dark:bg-zinc-700 dark:border-zinc-600'
+                          }`}
+                        >
+                          <Layers className="w-8 h-8 stroke-[2.5]" />
+                        </button>
+                        {open && (
+                          <div
+                            ref={showStepBox}
+                            className="absolute top-full mt-4 z-40 w-72 max-w-[calc(100vw-2rem)]"
+                            style={{ left: '50%', transform: `translateX(calc(-50% + ${indent * 40}px))` }}
+                          >
+                            <div className="relative rounded-2xl p-4 shadow-xl animate-fadeIn bg-white text-zinc-900 border-2 border-zinc-900 dark:bg-zinc-800 dark:text-white dark:border-zinc-100">
+                              <div
+                                className="absolute w-4 h-4 rotate-45 -top-[10px] bg-white border-l-2 border-t-2 border-zinc-900 dark:bg-zinc-800 dark:border-zinc-100"
+                                style={{ left: `calc(50% - ${indent * 40}px - 8px)` }}
+                              />
+                              <div className="flex justify-center">
+                                <span className="px-3 py-1 rounded-full text-sm font-black tracking-wide border-2 border-dashed border-zinc-900 dark:border-white">
+                                  {name}
+                                </span>
+                              </div>
+                              <div className="mt-2 mb-3 space-y-1.5">
+                                <div className="flex items-center justify-between text-sm font-black">
+                                  <span>{en ? 'Practice' : 'Üben'}</span>
+                                  <span>
+                                    {done ? total : 0} / {total}
+                                  </span>
+                                </div>
+                                <div className="h-2.5 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-600">
+                                  <div className="h-full rounded-full bg-zinc-900 dark:bg-white" style={{ width: done ? '100%' : '0%' }} />
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRoadmapPopup(null);
+                                  openPlural('practice', level, l);
+                                }}
+                                className="w-full py-3 rounded-xl border-b-4 font-black text-sm uppercase tracking-wide cursor-pointer active:translate-y-[2px] active:border-b-2 transition-all bg-zinc-900 text-white border-black dark:bg-white dark:text-zinc-900 dark:border-zinc-300"
+                              >
+                                {done ? (en ? 'Do again' : 'Nochmal') : en ? 'Start' : 'Starten'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
               </div>
             </div>
           );
@@ -3442,6 +3594,18 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           : reviewWaiting.length}{' '}
                         {en ? (canResume && !reviewPicking ? 'cards left' : 'cards due') : canResume && !reviewPicking ? 'Karten offen' : 'Karten fällig'}
                       </p>
+                      {/* Plural's own review, now that Plural lives in Words */}
+                      {!speakOnly && pluralPool.due.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => openPlural('review')}
+                          className="w-full max-w-md shrink-0 flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 text-left cursor-pointer active:scale-[0.99] transition"
+                        >
+                          <Layers className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" />
+                          <span className="flex-1 font-black text-sm text-zinc-900 dark:text-zinc-100">Plural</span>
+                          <span className="text-sm font-black text-zinc-500 dark:text-zinc-400">{pluralPool.due.length}</span>
+                        </button>
+                      )}
                       {/* Tap a lesson to review only it (and see when its words come up); tap again to let it go. */}
                       <div className="flex-1 min-h-0 w-full max-w-md overflow-y-auto rounded-2xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-200 dark:divide-zinc-700 text-left">
                         {reviewByLesson.map((group, gi) => {

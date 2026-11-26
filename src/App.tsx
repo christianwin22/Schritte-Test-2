@@ -388,9 +388,22 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Vocabulary has only Words now (Plural is a step inside it): open Words straight away.
+  useEffect(() => {
+    if (currentTab === 'vocab' && activeExerciseMode === null) setActiveExerciseMode('explorer');
+  }, [currentTab, activeExerciseMode]);
+
   // Top Bar Back button handler
   const handleTopBack = () => {
     if (activeExerciseMode && exerciseBackRef.current?.()) return;
+    // Words is Vocabulary's whole page: back from it goes home, not to a one-item menu.
+    if (currentTab === 'vocab' && activeExerciseMode === 'explorer' && !isQuizActive) {
+      setPreviousTab(currentTab);
+      setActiveExerciseMode(null);
+      setCurrentTab('home');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     const up = activeExerciseMode ? EXERCISE_PARENT[activeExerciseMode] ?? null : null;
     if (isQuizActive) {
       setPendingAbandonCallback(() => () => {
