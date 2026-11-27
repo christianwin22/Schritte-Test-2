@@ -997,6 +997,37 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const drillPracticeList = (skill: DrillSkill) =>
     skill === 'article' ? nounWords : skill === 'plural' ? pluralNouns : skill === 'accusative' ? accusativeNouns : weakNouns;
 
+  // Plural Practice's place, kept as you go (Chris, 2026-11-27): one lesson at a time.
+  type PluralAsk = { id: string; s: boolean };
+  interface SavedPlural {
+    level: string;
+    lektion: string;
+    queue: PluralAsk[];
+    index: number;
+    redo: PluralAsk[];
+    round: number;
+    correct: number;
+  }
+  const PLURAL_SESSION_KEY = 'schritte_plural_session_v1';
+  const savePluralSession = (data: SavedPlural | null) => {
+    try {
+      if (!data) localStorage.removeItem(PLURAL_SESSION_KEY);
+      else localStorage.setItem(PLURAL_SESSION_KEY, JSON.stringify(data));
+    } catch {
+      // the session just won't be resumable
+    }
+  };
+  const loadPluralSession = (): SavedPlural | null => {
+    try {
+      const raw = localStorage.getItem(PLURAL_SESSION_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw) as SavedPlural;
+      return saved.level === selectedLevel && saved.lektion === String(selectedLektion) ? saved : null;
+    } catch {
+      return null;
+    }
+  };
+
   const startDrillSession = (skill: DrillSkill, mode: 'practice' | 'review') => {
     let list: WordEntry[];
     if (mode === 'review') {
@@ -1006,6 +1037,34 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       list = [...drillPracticeList(skill)];
     }
     pluralFirstAnswer.current = new Map();
+    // Plural Practice left mid-way (Save and leave, or the app closed): carry on from there.
+    const saved = skill === 'plural' && mode === 'practice' ? loadPluralSession() : null;
+    if (saved) {
+      const byId = new Map(list.map((w) => [w.id, w]));
+      const toCards = (asks: PluralAsk[]) =>
+        asks.flatMap(({ id, s: singular }) => {
+          const word = byId.get(id);
+          if (!word) return [];
+          if (!singular) return [word];
+          const copy = { ...word };
+          singularCopies.current.add(copy);
+          return [copy];
+        });
+      const queue = toCards(saved.queue);
+      if (queue.length > 0 && saved.index < queue.length) {
+        setDrillQueue(queue);
+        setDrillSessionWords(list);
+        setDrillQueueIndex(saved.index);
+        setDrillRedo(toCards(saved.redo));
+        setDrillRound(saved.round);
+        setDrillCorrectCount(saved.correct);
+        setDrillSessionDone(false);
+        setBlitzFeedback(null);
+        setPluralFeedback(null);
+        setPluralInput('');
+        return;
+      }
+    }
     if (skill === 'plural') {
       const copies = list.map((w) => {
         const copy = { ...w };
@@ -1552,17 +1611,52 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     !drillSessionDone &&
     (drillQueueIndex > 0 || drillRound > 1 || blitzFeedback !== null || pluralFeedback !== null);
 
+  // Words Learn part-way through: leaving asks too (Chris, 2026-11-27); its place is kept.
+  const isLearnInProgress =
+    activeExerciseMode === 'explorer' &&
+    flashcardSubMode === 'learn' &&
+    sessionStarted &&
+    !speakOnly &&
+    flashcardIndex > 0 &&
+    !isLearnComplete;
+  const isPluralPractice = activeDrillSkill === 'plural' && !isDrillReview;
+
   useEffect(() => {
     if (onQuizActiveChange) {
-      // In Review each answer is scheduled as it is given, so leaving loses
-      // nothing — the question asked on the way out says so.
+      // Everything here keeps its place now: Words Learn, Practice and Review,
+      // and Plural Practice (saved as you go). Review schedules each answer as
+      // it is given. The question on the way out is Save and leave / Keep going.
       onQuizActiveChange(
-        isPracticeInProgress || isDrillInProgress,
-        // Words Practice and Review both save their place now
-        isDrillInProgress ? isDrillReview : true
+        isPracticeInProgress || isDrillInProgress || isLearnInProgress,
+        isDrillInProgress ? isDrillReview || isPluralPractice : true
       );
     }
-  }, [isPracticeInProgress, isDrillInProgress, isDrillReview, flashcardSubMode, onQuizActiveChange]);
+  }, [isPracticeInProgress, isDrillInProgress, isLearnInProgress, isDrillReview, isPluralPractice, flashcardSubMode, onQuizActiveChange]);
+
+  // Plural Practice: keep the saved place in step with where you are. An answered
+  // card counts as done, so coming back starts on the next one.
+  useEffect(() => {
+    if (!isPluralPractice || !drillStarted || drillQueue.length === 0) return;
+    if (drillSessionDone) {
+      savePluralSession(null);
+      return;
+    }
+    if (!isDrillInProgress) return;
+    const ask = (w: WordEntry): PluralAsk => ({ id: w.id, s: singularCopies.current.has(w) });
+    const answered = pluralFeedback !== null;
+    const atEnd = answered && drillQueueIndex + 1 >= drillQueue.length;
+    if (atEnd && drillRedo.length === 0) return; // the session is about to finish
+    savePluralSession({
+      level: selectedLevel,
+      lektion: String(selectedLektion),
+      queue: (atEnd ? drillRedo : drillQueue).map(ask),
+      index: atEnd ? 0 : answered ? drillQueueIndex + 1 : drillQueueIndex,
+      redo: atEnd ? [] : drillRedo.map(ask),
+      round: atEnd ? drillRound + 1 : drillRound,
+      correct: drillCorrectCount,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPluralPractice, drillStarted, drillQueue, drillQueueIndex, drillRedo, drillRound, drillCorrectCount, pluralFeedback, drillSessionDone]);
 
   /** Out of a running Practice or Review, back to its Start screen. Both keep their place. */
   const leaveFlashcardSession = () => {
@@ -1607,6 +1701,17 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    * End session forgets it. Nothing done yet: it just leaves.
    */
   const [leavePromptOpen, setLeavePromptOpen] = useState(false);
+  // Plural Practice's own: Save and leave keeps the place, End session forgets it.
+  const [pluralLeaveOpen, setPluralLeaveOpen] = useState(false);
+  const leavePluralToPath = () => {
+    setPluralLeaveOpen(false);
+    leaveDrillSession();
+    onSelectExerciseMode('explorer');
+  };
+  const endPluralSession = () => {
+    savePluralSession(null);
+    leavePluralToPath();
+  };
   const wordsSessionHasPlace = () =>
     flashcardSubMode === 'learn'
       ? flashcardIndex > 0 && !isLearnComplete
@@ -1659,12 +1764,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
     // Plural is a step of the Words path: leaving it goes back to the path.
     if (activeExerciseMode === 'plural_drill') {
-      const back = () => {
-        leaveDrillSession();
-        onSelectExerciseMode('explorer');
-      };
-      if (drillStarted && isDrillInProgress) onRequestAbandon(back);
-      else back();
+      if (drillStarted && isDrillInProgress && isPluralPractice) setPluralLeaveOpen(true);
+      else if (drillStarted && isDrillInProgress) onRequestAbandon(leavePluralToPath);
+      else leavePluralToPath();
       return true;
     }
     if (activeDrillSkill && drillStarted) {
@@ -2260,7 +2362,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   //   ⌘      the sentence, once answered (before, it would give the answer)
   //   Space  the answer, once answered
   useEffect(() => {
-    if (activeExerciseMode !== 'plural_drill' || drillSubMode === 'learn' || !drillStarted || isHotkeyModalOpen) return;
+    if (activeExerciseMode !== 'plural_drill' || drillSubMode === 'learn' || !drillStarted || isHotkeyModalOpen || pluralLeaveOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return;
       const target = e.target as HTMLElement;
@@ -4404,6 +4506,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
         return (
           <div className="max-w-xl mx-auto w-full flex-1 min-h-0 flex flex-col">
+            <LeaveSessionModal
+              isOpen={pluralLeaveOpen}
+              onStay={() => setPluralLeaveOpen(false)}
+              onSave={leavePluralToPath}
+              onEnd={endPluralSession}
+              appLanguage={appLanguage}
+            />
             {/* As in Flashcard: the bars belong to the Start screen. Once the
                 cards are up it is the header, the card and the answers — the
                 back arrow takes you out to the Start screen again. Review with

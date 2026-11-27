@@ -14,7 +14,7 @@ interface LeaveSessionModalProps {
   appLanguage?: AppLanguage;
 }
 
-/** Leaving a Words session mid-way: Save or End session. */
+/** Leaving a Words session mid-way: Save and leave, Keep going, or End session. */
 export const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({ isOpen, onStay, onSave, onEnd, appLanguage = 'en' }) => {
   if (!isOpen) return null;
   const en = appLanguage === 'en';
@@ -46,14 +46,23 @@ export const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({ isOpen, on
             }}
             className="w-full py-3.5 px-4 bg-zinc-950 hover:bg-zinc-800 active:scale-98 text-white font-black text-sm rounded-2xl shadow-xs transition-all cursor-pointer dark:bg-white dark:text-zinc-950"
           >
-            {en ? 'Save' : 'Speichern'}
+            {en ? 'Save and leave' : 'Speichern und verlassen'}
+          </button>
+          <button
+            onClick={() => {
+              playSound('tap');
+              onStay();
+            }}
+            className="w-full py-3.5 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-98 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl transition-all cursor-pointer border border-zinc-200 dark:border-zinc-700"
+          >
+            {en ? 'Keep going' : 'Weitermachen'}
           </button>
           <button
             onClick={() => {
               playSound('tap');
               onEnd();
             }}
-            className="w-full py-3.5 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-98 text-zinc-900 dark:text-zinc-100 font-black text-sm rounded-2xl transition-all cursor-pointer border border-zinc-200 dark:border-zinc-700"
+            className="w-full py-2.5 px-4 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-98 text-zinc-500 dark:text-zinc-400 font-bold text-xs rounded-2xl transition-all cursor-pointer"
           >
             {en ? 'End session' : 'Sitzung beenden'}
           </button>

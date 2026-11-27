@@ -65,7 +65,7 @@ export const AbandonExerciseModal: React.FC<AbandonExerciseModalProps> = ({
             }}
             className="w-full py-3.5 px-4 bg-zinc-950 hover:bg-zinc-800 active:scale-98 text-white font-black text-sm rounded-2xl shadow-xs transition-all cursor-pointer dark:bg-white dark:text-zinc-950"
           >
-            {t.keepLearning}
+            {progressIsSaved ? (appLanguage === 'en' ? 'Keep going' : 'Weitermachen') : t.keepLearning}
           </button>
           <button
             onClick={() => {
@@ -76,8 +76,8 @@ export const AbandonExerciseModal: React.FC<AbandonExerciseModalProps> = ({
           >
             {progressIsSaved
               ? appLanguage === 'en'
-                ? 'Saved — leave'
-                : 'Gespeichert – verlassen'
+                ? 'Save and leave'
+                : 'Speichern und verlassen'
               : t.leaveExercise}
           </button>
         </div>
