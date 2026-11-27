@@ -56,6 +56,7 @@ import {
   barePlural,
   fillBlank,
   pluralSentence,
+  singularSentence,
 } from '../data/nounDrillSentences';
 import { NounChangeLearn } from './NounChangeLearn';
 import { LessonFilter } from './LessonFilter';
@@ -963,6 +964,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const [drillRound, setDrillRound] = useState(1);
   const [drillCorrectCount, setDrillCorrectCount] = useState(0);
   const [drillSessionDone, setDrillSessionDone] = useState(false);
+  // Plural mixes in the other way round (Chris, 2026-11-27): about half the cards
+  // show the plural and ask the singular, so the answer is not always "add -e".
+  const [singularAsks, setSingularAsks] = useState<Set<string>>(() => new Set());
 
   // Lessons waiting to be practised here (after their Flashcard Practice), and ones already done.
   const [drillPractice, setDrillPractice] = useState<DrillPracticeState>(loadDrillPracticeState);
@@ -999,6 +1003,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       list = [...drillPracticeList(skill)];
     }
     setDrillQueue(list);
+    setSingularAsks(
+      new Set(skill === 'plural' ? shuffled(list).slice(0, Math.floor(list.length / 2)).map((w) => w.id) : [])
+    );
     setDrillSessionWords(list);
     setDrillQueueIndex(0);
     setDrillRedo([]);
@@ -2137,15 +2144,23 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   //   Plural:                      "die Häuser" or "Häuser"
   //   a Special Case noun, once
   //   learned, in Accusative:      "den Kollegen" — article and noun, since both change
-  const typedExpected = (word: WordEntry) => (isWeakCard(word) ? weakAnswer(word) : word.nounDetails?.plural || '');
-  const typedBlankAnswer = (word: WordEntry) => (isWeakCard(word) ? weakAnswer(word) : barePlural(word));
-  const typedSentence = (word: WordEntry) => (isWeakCard(word) ? weakSentence(word) : pluralSentence(word));
+  //   Plural, asked the other way:  "der Tisch" or "Tisch"
+  const asksSingular = (word?: WordEntry | null) =>
+    !!word && activeDrillSkill === 'plural' && singularAsks.has(word.id);
+  const singularFull = (word: WordEntry) => `${word.nounDetails?.gender ?? ''} ${word.lemma}`.trim();
+  const typedExpected = (word: WordEntry) =>
+    isWeakCard(word) ? weakAnswer(word) : asksSingular(word) ? singularFull(word) : word.nounDetails?.plural || '';
+  const typedBlankAnswer = (word: WordEntry) =>
+    isWeakCard(word) ? weakAnswer(word) : asksSingular(word) ? word.lemma : barePlural(word);
+  const typedSentence = (word: WordEntry) =>
+    isWeakCard(word) ? weakSentence(word) : asksSingular(word) ? singularSentence(word) : pluralSentence(word);
 
   const isPluralCorrect = (answer: string, word: WordEntry) => {
     const cleanUser = answer.trim().replace(/[.!?,]+$/, '').toLowerCase();
     const cleanExpected = typedExpected(word).toLowerCase().replace(/\s+/g, ' ');
     const given = cleanUser.replace(/\s+/g, ' ');
     if (isWeakCard(word)) return given === cleanExpected; // the article is part of the answer here
+    if (asksSingular(word)) return given === cleanExpected || given === word.lemma.toLowerCase();
     return given === cleanExpected || given === cleanExpected.replace(/^die\s+/, '');
   };
 
@@ -2212,6 +2227,52 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setIsPluralListening(false);
     advanceDrillSession();
   };
+
+  // Plural's hotkeys (Chris, 2026-11-27), the same keys as Words:
+  //   Enter  check (in the box) / Continue
+  //   ↓      the word: the one shown before you answer, the answer after
+  //   ⌘      the sentence, once answered (before, it would give the answer)
+  //   Space  the answer, once answered
+  useEffect(() => {
+    if (activeExerciseMode !== 'plural_drill' || drillSubMode === 'learn' || !drillStarted || isHotkeyModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      const target = e.target as HTMLElement;
+      if (target?.closest?.('[data-note-dialog]') || target?.tagName === 'TEXTAREA') return;
+      const noun = activePluralNoun;
+      if (!noun || drillSessionDone) return;
+      const inBox = target?.tagName === 'INPUT';
+      const matches = (key: string) => {
+        if (!key) return false;
+        if (key === ' ' || key === 'Space') return e.code === 'Space' || e.key === ' ';
+        return e.key.toLowerCase() === key.toLowerCase() || e.code.toLowerCase() === key.toLowerCase();
+      };
+      const isExampleKey =
+        matches(hotkeys.exampleAudio) || (hotkeys.exampleAudio === 'Meta' && (e.key === 'Meta' || e.key === 'Control'));
+      if (pluralFeedback) {
+        if (inBox) return;
+        if (matches(hotkeys.practiceCheck) || e.key === 'Enter') {
+          e.preventDefault();
+          handleNextPlural();
+        } else if (matches(hotkeys.singularAudio) || matches(hotkeys.practiceAudio)) {
+          e.preventDefault();
+          playSound('tap');
+          speakGerman(typedExpected(noun));
+        } else if (isExampleKey) {
+          e.preventDefault();
+          playSound('tap');
+          speakGerman(fillBlank(typedSentence(noun), typedBlankAnswer(noun)));
+        }
+      } else if (matches(hotkeys.singularAudio)) {
+        // The clue on the card: "der Tisch", or "die Tische" when the singular is asked
+        e.preventDefault();
+        playSound('tap');
+        speakGerman(asksSingular(noun) ? `die ${barePlural(noun)}` : singularFull(noun));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const getGenderBadge = (gender?: Gender) => {
     switch (gender) {
@@ -4162,7 +4223,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
       })()}
 
       {/* Floating Hotkey Action Button (Desktop & Tablet only, stuck to bottom right) */}
-      {activeExerciseMode === 'explorer' && (
+      {(activeExerciseMode === 'explorer' || (activeExerciseMode === 'plural_drill' && drillStarted)) && (
         <button
           type="button"
           onClick={() => {
@@ -4208,7 +4269,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
             {/* Hotkey List Container */}
             <div className="bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-200 dark:divide-zinc-700/80 overflow-hidden shadow-2xs">
-              {(flashcardSubMode === 'learn'
+              {(activeExerciseMode === 'plural_drill'
+                ? [
+                    { id: 'practiceCheck' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Check / Continue' : 'Prüfen / Weiter' },
+                    { id: 'singularAudio' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Word Audio' : 'Wort Audio' },
+                    { id: 'exampleAudio' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Example Sentence Audio' : 'Beispielsatz Audio' },
+                  ]
+                : flashcardSubMode === 'learn'
                 ? [
                     { id: 'flip' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Flip Card' : 'Karte umdrehen' },
                     { id: 'next' as keyof FlashcardHotkeys, label: appLanguage === 'en' ? 'Next Card' : 'Nächste Karte', icon: ArrowRight },
@@ -4437,7 +4504,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                   <div className="flex-1 flex flex-col items-center justify-center gap-4 px-1">
                     {!isArticle && noun && (
                       <span className="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-black text-zinc-600 dark:text-zinc-300">
-                        <span className={genderText(noun.nounDetails?.gender)}>{noun.nounDetails?.gender}</span> {noun.lemma}
+                        {asksSingular(noun) ? (
+                          // Asked the other way: the plural is the clue
+                          <>
+                            <span className={pluralText()}>die</span> {barePlural(noun)}
+                          </>
+                        ) : (
+                          <>
+                            <span className={genderText(noun.nounDetails?.gender)}>{noun.nounDetails?.gender}</span> {noun.lemma}
+                          </>
+                        )}
                       </span>
                     )}
                     <p className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 leading-relaxed text-center">
@@ -4458,7 +4534,9 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                     {/* The sentence's English, as Sentence shows it (Plural, Nominative, Accusative) */}
                     {(() => {
                       const english =
-                        activeDrillSkill === 'plural'
+                        activeDrillSkill === 'plural' && asksSingular(noun)
+                          ? noun?.articleSentenceEnglish
+                          : activeDrillSkill === 'plural'
                           ? noun?.pluralSentenceEnglish
                           : activeDrillSkill === 'article'
                           ? noun?.articleSentenceEnglish
@@ -4467,8 +4545,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           : undefined;
                       // Only when the drill shows the word list's own sentence, which is what was translated
                       const own =
-                        activeDrillSkill === 'article'
-                          ? !!noun?.articleSentenceBlank && sentence === noun.articleSentenceBlank
+                        activeDrillSkill === 'article' || asksSingular(noun)
+                          ? !!noun?.articleSentenceBlank && articleSentence(noun) === noun.articleSentenceBlank
                           : true;
                       return english && own ? (
                         <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 text-center">({english})</p>

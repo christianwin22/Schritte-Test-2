@@ -74,6 +74,22 @@ export function pluralSentence(word: WordEntry): string {
   return frameFor(PLURAL_FRAMES, word.id);
 }
 
+/**
+ * Plural drill, asked the other way (Chris, 2026-11-27): the plural is shown and
+ * the singular goes in the blank. The article stays in the sentence, as "Die"
+ * does for plurals: "{{blank}} Tisch ist neu." → "Der {{blank}} ist neu."
+ */
+export function singularSentence(word: WordEntry): string {
+  const gender = (word.nounDetails?.gender ?? '').toLowerCase();
+  const given = articleSentence(word);
+  const slot = `${BLANK} ${word.lemma}`;
+  if (gender && given.includes(slot)) {
+    const article = given.startsWith(slot) ? gender.charAt(0).toUpperCase() + gender.slice(1) : gender;
+    return given.replace(slot, `${article} ${BLANK}`);
+  }
+  return `Hier ist ${gender || 'das'} ${BLANK}.`;
+}
+
 /** Accusative drill: the word list's own "Accusative example" ("Ich mag {{blank}} Tisch."). */
 export function accusativeSentence(word: WordEntry): string {
   return word.accusativeSentenceBlank ?? `Ich mag ${BLANK} ${word.lemma}.`;
