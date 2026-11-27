@@ -964,9 +964,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   const [drillRound, setDrillRound] = useState(1);
   const [drillCorrectCount, setDrillCorrectCount] = useState(0);
   const [drillSessionDone, setDrillSessionDone] = useState(false);
-  // Plural mixes in the other way round (Chris, 2026-11-27): about half the cards
-  // show the plural and ask the singular, so the answer is not always "add -e".
-  const [singularAsks, setSingularAsks] = useState<Set<string>>(() => new Set());
+  // Plural asks every noun both ways (Chris, 2026-11-27): once the plural
+  // (der Tisch → Tische), once the singular (die Tische → Tisch), mixed. The
+  // singular asks are copies of the word, marked here.
+  const singularCopies = useRef(new WeakSet<WordEntry>());
+  // Review: a noun's card is scheduled once both its asks are answered — passed only if both were right.
+  const pluralFirstAnswer = useRef(new Map<string, boolean>());
 
   // Lessons waiting to be practised here (after their Flashcard Practice), and ones already done.
   const [drillPractice, setDrillPractice] = useState<DrillPracticeState>(loadDrillPracticeState);
@@ -1002,10 +1005,24 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     } else {
       list = [...drillPracticeList(skill)];
     }
-    setDrillQueue(list);
-    setSingularAsks(
-      new Set(skill === 'plural' ? shuffled(list).slice(0, Math.floor(list.length / 2)).map((w) => w.id) : [])
-    );
+    pluralFirstAnswer.current = new Map();
+    if (skill === 'plural') {
+      const copies = list.map((w) => {
+        const copy = { ...w };
+        singularCopies.current.add(copy);
+        return copy;
+      });
+      const mixed = shuffled([...list, ...copies]);
+      // Never the same noun twice in a row
+      for (let i = 1; i < mixed.length; i++) {
+        if (mixed[i].id !== mixed[i - 1].id) continue;
+        const j = mixed.findIndex((w, k) => k > i && w.id !== mixed[i].id && (k + 1 >= mixed.length || mixed[k + 1].id !== mixed[i].id));
+        if (j > 0) [mixed[i], mixed[j]] = [mixed[j], mixed[i]];
+      }
+      setDrillQueue(mixed);
+    } else {
+      setDrillQueue(list);
+    }
     setDrillSessionWords(list);
     setDrillQueueIndex(0);
     setDrillRedo([]);
@@ -1050,11 +1067,20 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
 
   const recordDrillAnswer = (skill: DrillSkill, word: WordEntry, passed: boolean) => {
     if (passed) setDrillCorrectCount((n) => n + 1);
+    if (isDrillReview && skill === 'plural') {
+      const first = pluralFirstAnswer.current.get(word.id);
+      if (first === undefined) {
+        pluralFirstAnswer.current.set(word.id, passed);
+        return;
+      }
+      pluralFirstAnswer.current.delete(word.id);
+      passed = passed && first;
+    }
     if (isDrillReview) {
       const id = drillCardId(skill, word.id);
       setFsrsRecords((prev) => ({ ...prev, [id]: reviewCard(id, passed, prev[id]) }));
     } else if (!passed) {
-      setDrillRedo((prev) => (prev.some((w) => w.id === word.id) ? prev : [...prev, word]));
+      setDrillRedo((prev) => (prev.includes(word) ? prev : [...prev, word]));
     }
   };
 
@@ -2146,7 +2172,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   //   learned, in Accusative:      "den Kollegen" — article and noun, since both change
   //   Plural, asked the other way:  "der Tisch" or "Tisch"
   const asksSingular = (word?: WordEntry | null) =>
-    !!word && activeDrillSkill === 'plural' && singularAsks.has(word.id);
+    !!word && activeDrillSkill === 'plural' && singularCopies.current.has(word);
   const singularFull = (word: WordEntry) => `${word.nounDetails?.gender ?? ''} ${word.lemma}`.trim();
   const typedExpected = (word: WordEntry) =>
     isWeakCard(word) ? weakAnswer(word) : asksSingular(word) ? singularFull(word) : word.nounDetails?.plural || '';
@@ -4435,7 +4461,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                             : appLanguage === 'en' ? 'Plurals' : 'Pluralformen')}
                     </p>
                     <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
-                      {drillQueue.length}{' '}
+                      {drillSessionWords.length}{' '}
                       {isDrillReview
                         ? appLanguage === 'en' ? 'nouns due' : 'Nomen fällig'
                         : appLanguage === 'en' ? 'nouns' : 'Nomen'}
