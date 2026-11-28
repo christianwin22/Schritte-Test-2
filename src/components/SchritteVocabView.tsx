@@ -153,6 +153,8 @@ interface LessonProgress {
   learnEn?: boolean;
   practiceDe?: boolean;
   practiceEn?: boolean;
+  /** DE → EN Learn also went through the plural cards (Chris, 2026-11-28) */
+  learnDePlural?: boolean;
 }
 
 /** The sentence with the word in bold, and a stem like "besonder-" named above it. */
@@ -339,12 +341,26 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
    * The four stops of a lesson: Learn and Practice, each DE → EN and EN → DE.
    * A lesson finished before the directions were split counts both.
    */
+  /**
+   * DE → EN Learn before the plural cards joined it (Chris, 2026-11-28): done with the
+   * singular words, but the lesson's plural cards still to go.
+   */
+  const learnDeNeedsPlurals = (level: string, lektion: number) => {
+    const p = lessonProgress[getLessonKey(level, lektion)];
+    return (
+      !speakOnly &&
+      Boolean(p?.learnDe ?? p?.learnCompleted) &&
+      !p?.learnDePlural &&
+      (pluralCardsPerLesson.get(getLessonKey(level, lektion)) ?? 0) > 0
+    );
+  };
+
   const lessonStops = (level: string, lektion: number) => {
     const p = lessonProgress[getLessonKey(level, lektion)];
     // Practice is done in a direction when nothing in the lesson waits there any more.
     const waiting = pendingByLesson.get(getLessonKey(level, lektion));
     return {
-      learnDe: Boolean(p?.learnDe ?? p?.learnCompleted),
+      learnDe: Boolean(p?.learnDe ?? p?.learnCompleted) && !learnDeNeedsPlurals(level, lektion),
       learnEn: Boolean(p?.learnEn ?? p?.learnCompleted),
       practiceDe: waiting ? waiting.de === 0 : Boolean(p?.practiceDe ?? p?.practiceCompleted),
       practiceEn: waiting ? waiting.en === 0 : Boolean(p?.practiceEn ?? p?.practiceCompleted),
@@ -364,7 +380,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     return false;
   };
 
-  const recordLessonStop = (level: string, lektion: number, stop: 'learn' | 'practice', dir: Direction) => {
+  const recordLessonStop = (
+    level: string,
+    lektion: number,
+    stop: 'learn' | 'practice',
+    dir: Direction,
+    part: 'all' | 'singular' | 'plural' = 'all'
+  ) => {
     const key = getLessonKey(level, lektion);
     setLessonProgress((prev) => {
       const old = prev[key] ?? { learnCompleted: false, practiceCompleted: false };
@@ -377,6 +399,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         practiceEn: old.practiceEn ?? old.practiceCompleted,
       };
       if (stop === 'learn') next[dir === 'DE_TO_EN' ? 'learnDe' : 'learnEn'] = true;
+      if (stop === 'learn' && dir === 'DE_TO_EN' && part !== 'singular') next.learnDePlural = true;
       else next[dir === 'DE_TO_EN' ? 'practiceDe' : 'practiceEn'] = true;
       next.learnCompleted = !!(next.learnDe && next.learnEn);
       next.practiceCompleted = !!(next.practiceDe && next.practiceEn);
@@ -460,8 +483,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
   // DE → EN: the two little switches beside the answer box (M / F and S / P).
   const [genderPick, setGenderPick] = useState<GenderChoice>('M');
   const [numberPick, setNumberPick] = useState<NumberChoice>('S');
-  // Round end: the Progress and Mistakes boxes fold up and open again. Both open at first.
-  const [progressOpen, setProgressOpen] = useState(true);
+  // Round end: the Mistakes box folds up and opens again. Open at first.
   const [mistakesOpen, setMistakesOpen] = useState(true);
   // Left alone, the S / P button doesn't count: the typing says singular or plural.
   const [numberTouched, setNumberTouched] = useState(false);
@@ -664,6 +686,16 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     }
     return out;
   }, [allCards, practiceDone]);
+  // How many plural cards each lesson has ("der Tisch" → "die Tische" is one).
+  const pluralCardsPerLesson = useMemo(() => {
+    const out = new Map<string, number>();
+    for (const c of allCards) {
+      if (!c.plural) continue;
+      const k = `${c.word.level}_L${c.word.lektion ?? 0}`;
+      out.set(k, (out.get(k) ?? 0) + 1);
+    }
+    return out;
+  }, [allCards]);
 
   // Global due cards across all lessons in the app (decoupled from lesson selector!)
   const globalDueWords = useMemo(() => {
@@ -1415,7 +1447,7 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     setIsListening(false);
     if (flashcardIndex + 1 >= (filteredCards.length || 1)) {
       if (typeof selectedLektion === 'number') {
-        recordLessonStop(selectedLevel, selectedLektion, 'learn', learnDirection);
+        recordLessonStop(selectedLevel, selectedLektion, 'learn', learnDirection, pathPart);
       }
       setIsLearnComplete(true);
       playSound('correct');
@@ -2011,13 +2043,13 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     lektion: number,
     mode: 'learn' | 'practice',
     dir: Direction,
-    part: 'singular' | 'plural' = 'singular'
+    part: 'all' | 'singular' | 'plural' = 'singular'
   ) => {
     playSound('tap');
     const cards = cardsFor(
       INITIAL_VOCABULARY.filter((w) => w.level === level && (w.lektion ?? 0) === lektion),
       CARD_PREFIX
-    ).filter((c) => (part === 'plural' ? c.plural : !c.plural));
+    ).filter((c) => (part === 'all' ? true : part === 'plural' ? c.plural : !c.plural));
     setPathPart(part);
     setSelectedLevel(level);
     setSelectedLektion(lektion);
@@ -2601,7 +2633,8 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     // The whole course, A1 to the last B1 lesson, in one path (Chris, 2026-11-27)
     const all = LEVELS.flatMap((level) => lessonsOf(level).map((l) => ({ level, l, key: `${level}-${l}` })));
     // Each lesson (Chris, 2026-11-27): DE → EN Learn, Practice, Plural, then EN → DE
-    // Learn, Practice, Plural. Learn and Practice take the singular words; DE → EN
+    // Learn, Practice, Plural. DE → EN Learn and Practice take every card, plurals too
+    // (Chris, 2026-11-28); EN → DE Learn and Practice the singular words. DE → EN
     // Plural is the Plural exercise (der Tisch → die Tische), EN → DE Plural the
     // plural cards (tables → die Tische). A Plural step only where there are plurals.
     type PathStep = { kind: 'learn' | 'practice' | 'plural'; dir: Direction };
@@ -2627,10 +2660,19 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         const done = drillPractice.plural?.[`${level}-${l}`] === 'done';
         return { total, done: done ? total : 0, state: done ? 'done' : 'todo' };
       }
-      const cards = lessonCards(level, l).filter((c) => (st.kind === 'plural' ? c.plural : !c.plural));
+      const cards = lessonCards(level, l).filter((c) =>
+        st.kind === 'plural' ? c.plural : st.dir === 'DE_TO_EN' ? true : !c.plural
+      );
       const total = cards.length;
       if (st.kind === 'learn') {
         if (stepState(level, l, 'learn', st.dir) === 'done') return { total, done: total, state: 'done' };
+        if (st.dir === 'DE_TO_EN' && learnDeNeedsPlurals(level, l)) {
+          // The singular words were learnt before; the plural cards are what is left.
+          const plurals = cards.filter((c) => c.plural);
+          const place = loadLearnPlace(level, l, st.dir);
+          const index = typeof place === 'string' ? Math.max(0, plurals.findIndex((c) => c.key === place)) : 0;
+          return { total, done: total - plurals.length + index, state: 'started' };
+        }
         const place = loadLearnPlace(level, l, st.dir);
         const index = typeof place === 'string' ? cards.findIndex((c) => c.key === place) : place ?? 0;
         return index > 0 ? { total, done: index, state: 'started' } : { total, done: 0, state: 'todo' };
@@ -2660,7 +2702,10 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
     const openPathStep = (level: CEFRLevel, l: number, st: PathStep) => {
       if (st.kind === 'plural' && st.dir === 'DE_TO_EN') openPlural('practice', level, l);
       else if (st.kind === 'plural') openStep(level, l, 'practice', 'EN_TO_DE', 'plural');
-      else openStep(level, l, st.kind, st.dir, 'singular');
+      else if (st.dir === 'EN_TO_DE') openStep(level, l, st.kind, st.dir, 'singular');
+      // DE → EN Learn already done with the singular words: just the plural cards left
+      else if (st.kind === 'learn' && learnDeNeedsPlurals(level, l)) openStep(level, l, 'learn', st.dir, 'plural');
+      else openStep(level, l, st.kind, st.dir, 'all');
     };
 
     /** A bar that fills in black as steps get done, its words white where the fill has reached. */
@@ -3533,93 +3578,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
         );
 
         // compact: the round-end version, one slim row per line, so the Mistakes box gets the room.
-        const renderLessonProgress = (compact = false) => {
-          if (typeof selectedLektion !== 'number') return null;
-          const stops = lessonStops(selectedLevel, selectedLektion);
-          // Review: where this lesson's cards sit in the schedule — not yet in it, then each gap in days.
-          const gaps = new Map<number, number>();
-          let notYet = 0;
-          for (const card of filteredCards) {
-            const r = fsrsRecords[card.key];
-            if (!r?.isUnlocked) notYet++;
-            else {
-              const days = Math.max(1, Math.round(r.intervalDays || 1));
-              gaps.set(days, (gaps.get(days) ?? 0) + 1);
-            }
-          }
-          const reviewStations = [
-            { label: '0', done: notYet < filteredCards.length, count: notYet },
-            ...[...gaps.entries()].sort((a, b) => a[0] - b[0]).map(([days, count]) => ({
-              label: `${en ? 'Day' : 'Tag'} ${days}`,
-              done: true,
-              count,
-            })),
-          ];
-          const dot = compact ? 'w-4 h-4 text-[9px]' : 'w-6 h-6 text-[10px]';
-          const line = (title: string, stations: { label: string; done: boolean; count?: number }[]) => (
-            <div className={compact ? 'flex items-start gap-2' : 'space-y-1.5'}>
-              <p
-                className={`font-black text-zinc-700 dark:text-zinc-300 text-left ${
-                  compact ? 'text-[11px] w-16 shrink-0 leading-4' : 'text-xs'
-                }`}
-              >
-                {title}
-              </p>
-              <div className={`flex items-start ${compact ? 'flex-1 min-w-0' : ''}`}>
-                {stations.map((st, i) => (
-                  <React.Fragment key={i}>
-                    {i > 0 && (
-                      <div
-                        className={`flex-1 h-1 ${compact ? 'mt-1.5' : 'mt-[11px]'} rounded-full ${
-                          st.done ? 'bg-zinc-950 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-700'
-                        }`}
-                      />
-                    )}
-                    <div className={`flex flex-col items-center ${compact ? 'gap-0.5 min-w-[40px]' : 'gap-1 min-w-[44px]'}`}>
-                      <span
-                        className={`${dot} rounded-full border-2 flex items-center justify-center font-black ${
-                          st.done
-                            ? 'bg-zinc-950 border-zinc-950 text-white dark:bg-white dark:border-white dark:text-zinc-950'
-                            : 'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-600 text-zinc-400'
-                        }`}
-                      >
-                        {st.count !== undefined ? st.count : st.done ? <Check className={`${compact ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} stroke-[3]`} /> : ''}
-                      </span>
-                      <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} font-bold text-zinc-500 dark:text-zinc-400 whitespace-nowrap`}>{st.label}</span>
-                    </div>
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-          );
-          const lines = (
-            <>
-              {!speakOnly &&
-                line(en ? 'Learn' : 'Lernen', [
-                  { label: 'DE → EN', done: stops.learnDe },
-                  { label: 'EN → DE', done: stops.learnEn },
-                ])}
-              {line(en ? 'Practice' : 'Üben', [
-                { label: 'DE → EN', done: stops.practiceDe },
-                { label: 'EN → DE', done: stops.practiceEn },
-              ])}
-              {line(en ? 'Review' : 'Wiederholen', reviewStations)}
-            </>
-          );
-          if (!compact)
-            return (
-              <div className="w-full bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl p-3 sm:p-3.5 border border-zinc-200 dark:border-zinc-700 space-y-3">
-                {lines}
-              </div>
-            );
-          return (
-            <div className="w-full shrink-0 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 px-2.5 sm:px-3 py-2 space-y-2">
-              {foldHeader(en ? 'Progress' : 'Fortschritt', progressOpen, () => setProgressOpen((o) => !o))}
-              {progressOpen && <div className="space-y-2 px-1 pb-0.5">{lines}</div>}
-            </div>
-          );
-        };
-
         const activeQueue = practiceQueue.length > 0 ? practiceQueue : filteredCards;
         const position = (practiceQueueIndex % (activeQueue.length || 1)) + 1;
         const want = wantedMarks(currentPracticeCard);
@@ -3925,8 +3883,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       </h3>
                     </div>
 
-                    {renderLessonProgress()}
-
                     <div className="w-full max-w-sm flex flex-col sm:flex-row items-center gap-2 pt-1">
                       <button
                         type="button"
@@ -3940,7 +3896,12 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleSubModeChange('practice')}
+                        onClick={() =>
+                          // After the plural-only Learn, DE → EN Practice takes every card again
+                          learnDirection === 'DE_TO_EN' && pathPart === 'plural' && typeof selectedLektion === 'number'
+                            ? openStep(selectedLevel, selectedLektion, 'practice', 'DE_TO_EN', 'all')
+                            : handleSubModeChange('practice')
+                        }
                         className="w-full sm:flex-1 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 rounded-xl font-black text-xs border border-transparent shadow-xs cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-1.5"
                       >
                         <span>
@@ -4038,8 +3999,6 @@ export const SchritteVocabView: React.FC<SchritteVocabViewProps> = ({
                           {stat(en ? 'Correct' : 'Richtig', initialCorrectCount, 'text-zinc-900 dark:text-zinc-100')}
                           {stat(en ? 'Incorrect' : 'Falsch', initialMistakesCount, 'text-red-600 dark:text-red-400')}
                         </div>
-
-                        {flashcardSubMode === 'practice' && renderLessonProgress(true)}
 
                         {sortedMistakes.length > 0 && (
                           <div
