@@ -17,9 +17,19 @@ import { whenAppIdle } from './lib/appIdle';
 function trackVisibleHeight(): void {
   const vv = window.visualViewport;
   // The tallest the screen has been in this orientation: the height with no keyboard.
-  let fullHeight = vv?.height ?? window.innerHeight;
+  let fullHeight = vv?.height || window.innerHeight;
   const apply = () => {
-    const height = vv?.height ?? window.innerHeight;
+    const height = vv?.height || window.innerHeight;
+    /*
+     * A Mac app opened from the Dock (Safari "Add to Dock") can run this
+     * before its window has a size, and reports a height of 0. Setting that
+     * would make the whole app 0px tall — a blank white window. Until there is
+     * a real size, leave the CSS default (the full window) in charge.
+     */
+    if (!height || height < 100) {
+      document.documentElement.style.removeProperty('--app-height');
+      return;
+    }
     fullHeight = Math.max(fullHeight, height);
     document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
     /*
@@ -43,11 +53,16 @@ function trackVisibleHeight(): void {
     if (window.scrollY !== 0) window.scrollTo(0, 0);
   };
   apply();
+  // Once the window has its size (the Dock app gets it a moment after start).
+  requestAnimationFrame(apply);
+  window.addEventListener('load', apply);
+  window.addEventListener('pageshow', apply);
+  window.addEventListener('resize', apply);
   vv?.addEventListener('resize', apply);
   vv?.addEventListener('scroll', apply);
   window.addEventListener('orientationchange', () =>
     setTimeout(() => {
-      fullHeight = vv?.height ?? window.innerHeight; // a new orientation, a new full height
+      fullHeight = vv?.height || window.innerHeight; // a new orientation, a new full height
       apply();
     }, 250)
   );
